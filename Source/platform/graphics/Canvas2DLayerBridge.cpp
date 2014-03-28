@@ -215,6 +215,7 @@ void Canvas2DLayerBridge::flush()
     if (m_canvas->hasPendingCommands()) {
         TRACE_EVENT0("cc", "Canvas2DLayerBridge::flush");
         m_canvas->flush();
+        m_context->flush();
     }
 }
 
