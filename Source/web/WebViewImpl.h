@@ -170,7 +170,6 @@ public:
     virtual void setFocusedFrame(WebFrame*) OVERRIDE;
     virtual void setInitialFocus(bool reverse) OVERRIDE;
     virtual void clearFocusedElement() OVERRIDE;
-    virtual void scrollFocusedNodeIntoView() OVERRIDE;
     virtual void scrollFocusedNodeIntoRect(const WebRect&) OVERRIDE;
     virtual void zoomToFindInPageRect(const WebRect&) OVERRIDE;
     virtual void advanceFocus(bool reverse) OVERRIDE;
@@ -189,8 +188,6 @@ public:
     virtual WebFloatPoint pinchViewportOffset() const OVERRIDE;
     virtual float minimumPageScaleFactor() const OVERRIDE;
     virtual float maximumPageScaleFactor() const OVERRIDE;
-    virtual void saveScrollAndScaleState() OVERRIDE;
-    virtual void restoreScrollAndScaleState() OVERRIDE;
     virtual void resetScrollAndScaleState() OVERRIDE;
     virtual void setIgnoreViewportTagScaleLimits(bool) OVERRIDE;
     virtual WebSize contentsPreferredMinimumSize() OVERRIDE;
@@ -627,10 +624,6 @@ private:
     double m_maximumZoomLevel;
 
     PageScaleConstraintsSet m_pageScaleConstraintsSet;
-
-    // Saved page scale state.
-    float m_savedPageScaleFactor; // 0 means that no page scale factor is saved.
-    WebCore::IntSize m_savedScrollOffset;
 
     // The scale moved to by the latest double tap zoom, if any.
     float m_doubleTapZoomPageScaleFactor;
