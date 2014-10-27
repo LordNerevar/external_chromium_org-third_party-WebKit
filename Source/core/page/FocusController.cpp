@@ -365,7 +365,7 @@ bool FocusController::setInitialFocus(FocusType type)
     if (focusedOrMainFrame()->isLocalFrame()) {
         Document* document = toLocalFrame(focusedOrMainFrame())->document();
         if (AXObjectCache* cache = document->existingAXObjectCache())
-            cache->postNotification(document, AXObjectCache::AXFocusedUIElementChanged, true);
+            cache->handleInitialFocus();
     }
 
     return didAdvanceFocus;
@@ -545,10 +545,10 @@ static Node* nextNodeWithGreaterTabIndex(Node* start, int tabIndex)
     // Search is inclusive of start
     int winningTabIndex = std::numeric_limits<short>::max() + 1;
     Node* winner = 0;
-    for (Node* node = start; node; node = NodeTraversal::next(*node)) {
-        if (shouldVisit(node) && node->tabIndex() > tabIndex && node->tabIndex() < winningTabIndex) {
-            winner = node;
-            winningTabIndex = node->tabIndex();
+    for (Node& node : NodeTraversal::startsAt(start)) {
+        if (shouldVisit(&node) && node.tabIndex() > tabIndex && node.tabIndex() < winningTabIndex) {
+            winner = &node;
+            winningTabIndex = node.tabIndex();
         }
     }
 
@@ -576,9 +576,9 @@ Node* FocusController::nextFocusableNode(FocusNavigationScope scope, Node* start
         int tabIndex = adjustedTabIndex(start);
         // If a node is excluded from the normal tabbing cycle, the next focusable node is determined by tree order
         if (tabIndex < 0) {
-            for (Node* node = NodeTraversal::next(*start); node; node = NodeTraversal::next(*node)) {
-                if (shouldVisit(node) && adjustedTabIndex(node) >= 0)
-                    return node;
+            for (Node& node : NodeTraversal::startsAfter(*start)) {
+                if (shouldVisit(&node) && adjustedTabIndex(&node) >= 0)
+                    return &node;
             }
         } else {
             // First try to find a node with the same tabindex as start that comes after start in the scope.
@@ -710,7 +710,8 @@ bool FocusController::setFocusedElement(Element* element, PassRefPtrWillBeRawPtr
     setFocusedFrame(newFocusedFrame);
 
     // Setting the focused node can result in losing our last reft to node when JS event handlers fire.
-    RefPtrWillBeRawPtr<Element> protect ALLOW_UNUSED = element;
+    RefPtrWillBeRawPtr<Element> protect = element;
+    ALLOW_UNUSED_LOCAL(protect);
     if (newDocument) {
         bool successfullyFocused = newDocument->setFocusedElement(element, type);
         if (!successfullyFocused)

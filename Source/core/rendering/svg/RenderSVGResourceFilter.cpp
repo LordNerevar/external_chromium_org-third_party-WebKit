@@ -104,6 +104,7 @@ PassRefPtr<SVGFilterBuilder> RenderSVGResourceFilter::buildPrimitives(SVGFilter*
 static void beginDeferredFilter(GraphicsContext* context, FilterData* filterData)
 {
     context->beginRecording(filterData->boundaries);
+    context->setShouldSmoothFonts(false);
     // We pass the boundaries to SkPictureImageFilter so it knows the
     // world-space position of the filter primitives. It gets them
     // from the DisplayList, which also applies the inverse translate
@@ -183,19 +184,18 @@ static void drawDeferredFilter(GraphicsContext* context, FilterData* filterData,
     context->restore();
 }
 
-bool RenderSVGResourceFilter::applyResource(RenderObject* object, RenderStyle*, GraphicsContext*& context, unsigned short resourceMode)
+bool RenderSVGResourceFilter::prepareEffect(RenderObject* object, RenderStyle*, GraphicsContext*& context)
 {
     ASSERT(object);
     ASSERT(context);
-    ASSERT_UNUSED(resourceMode, resourceMode == ApplyToDefaultMode);
 
     clearInvalidationMask();
 
     if (m_filter.contains(object)) {
         FilterData* filterData = m_filter.get(object);
-        if (filterData->state == FilterData::PaintingSource || filterData->state == FilterData::Applying)
+        if (filterData->state == FilterData::PaintingSource)
             filterData->state = FilterData::CycleDetected;
-        return false; // Already built, or we're in a cycle, or we're marked for removal. Regardless, just do nothing more now.
+        return false; // Already built, or we're in a cycle. Regardless, just do nothing more now.
     }
 
     OwnPtr<FilterData> filterData(adoptPtr(new FilterData));
@@ -231,7 +231,7 @@ bool RenderSVGResourceFilter::applyResource(RenderObject* object, RenderStyle*, 
     return true;
 }
 
-void RenderSVGResourceFilter::postApplyResource(RenderObject* object, GraphicsContext*& context)
+void RenderSVGResourceFilter::finishEffect(RenderObject* object, GraphicsContext*& context)
 {
     ASSERT(object);
     ASSERT(context);
@@ -242,11 +242,10 @@ void RenderSVGResourceFilter::postApplyResource(RenderObject* object, GraphicsCo
 
     switch (filterData->state) {
     case FilterData::CycleDetected:
-    case FilterData::Applying:
-        // We have a cycle if we are already applying the data.
-        // This can occur due to FeImage referencing a source that makes use of the FEImage itself.
-        // This is the first place we've hit the cycle, so set the state back to PaintingSource so the return stack
-        // will continue correctly.
+        // applyResource detected a cycle. This can occur due to FeImage
+        // referencing a source that makes use of the FEImage itself. This is
+        // the first place we've hit the cycle, so set the state back to
+        // PaintingSource so the return stack will continue correctly.
         filterData->state = FilterData::PaintingSource;
         return;
 

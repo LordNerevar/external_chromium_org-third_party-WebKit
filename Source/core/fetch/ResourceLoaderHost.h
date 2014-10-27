@@ -37,8 +37,6 @@
 namespace blink {
 
 class Resource;
-class ResourceFetcher;
-class LocalFrame;
 class ResourceLoader;
 class ResourceRequest;
 class ResourceResponse;
@@ -68,6 +66,7 @@ public:
 
     virtual bool canAccessRedirect(Resource*, ResourceRequest&, const ResourceResponse&, ResourceLoaderOptions&) = 0;
     virtual bool canAccessResource(Resource*, SecurityOrigin* sourceOrigin, const KURL&) const = 0;
+    virtual bool isControlledByServiceWorker() const = 0;
     virtual bool defersLoading() const = 0;
     virtual bool isLoadedBy(ResourceLoaderHost*) const = 0;
 

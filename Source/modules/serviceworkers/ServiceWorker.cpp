@@ -37,7 +37,6 @@
 #include "core/dom/MessagePort.h"
 #include "core/events/Event.h"
 #include "modules/EventTargetModules.h"
-#include "platform/NotImplemented.h"
 #include "public/platform/WebMessagePortChannel.h"
 #include "public/platform/WebServiceWorkerState.h"
 #include "public/platform/WebString.h"
@@ -45,7 +44,7 @@
 
 namespace blink {
 
-class ServiceWorker::ThenFunction FINAL : public ScriptFunction {
+class ServiceWorker::ThenFunction final : public ScriptFunction {
 public:
     static v8::Handle<v8::Function> createFunction(ScriptState* scriptState, PassRefPtrWillBeRawPtr<ServiceWorker> observer)
     {
@@ -53,7 +52,7 @@ public:
         return self->bindToV8Function();
     }
 
-    virtual void trace(Visitor* visitor) OVERRIDE
+    virtual void trace(Visitor* visitor) override
     {
         visitor->trace(m_observer);
         ScriptFunction::trace(visitor);
@@ -66,7 +65,7 @@ private:
     {
     }
 
-    virtual ScriptValue call(ScriptValue value) OVERRIDE
+    virtual ScriptValue call(ScriptValue value) override
     {
         m_observer->onPromiseResolved();
         return value;

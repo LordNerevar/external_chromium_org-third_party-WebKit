@@ -66,8 +66,8 @@ public:
     void addClient(ScriptResourceClient* client)
     {
         ASSERT(!m_client);
-        ASSERT(!isFinished());
         m_client = client;
+        notifyFinishedToClient();
     }
 
     void removeClient(ScriptResourceClient* client)
@@ -84,9 +84,9 @@ public:
     // has processed it.
     void streamingComplete();
 
-    static void removeSmallScriptThresholdForTesting()
+    static void setSmallScriptThresholdForTesting(size_t threshold)
     {
-        kSmallScriptThreshold = 0;
+        kSmallScriptThreshold = threshold;
     }
 
     static size_t smallScriptThreshold() { return kSmallScriptThreshold; }
@@ -116,10 +116,11 @@ private:
     SourceStream* m_stream;
     v8::ScriptCompiler::StreamedSource m_source;
     ScriptResourceClient* m_client;
-    v8::ScriptCompiler::ScriptStreamingTask* m_task;
+    WTF::OwnPtr<v8::ScriptCompiler::ScriptStreamingTask> m_task;
     bool m_loadingFinished; // Whether loading from the network is done.
     bool m_parsingFinished; // Whether the V8 side processing is done.
-    bool m_firstDataChunkReceived;
+    // Whether we have received enough data to start the streaming.
+    bool m_haveEnoughDataForStreaming;
 
     // Whether the script source code should be retrieved from the Resource
     // instead of the ScriptStreamer.

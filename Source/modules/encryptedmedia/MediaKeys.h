@@ -29,14 +29,15 @@
 #include "bindings/core/v8/ScriptPromise.h"
 #include "bindings/core/v8/ScriptWrappable.h"
 #include "core/dom/ContextLifecycleObserver.h"
+#include "platform/Timer.h"
 #include "wtf/Forward.h"
 #include "wtf/text/WTFString.h"
 
 namespace blink {
 
-class ExceptionState;
+class DOMArrayBuffer;
+class DOMArrayBufferView;
 class ExecutionContext;
-class HTMLMediaElement;
 class MediaKeySession;
 class ScriptState;
 class WebContentDecryptionModule;
@@ -53,6 +54,9 @@ public:
 
     MediaKeySession* createSession(ScriptState*, const String& sessionType);
 
+    ScriptPromise setServerCertificate(ScriptState*, DOMArrayBuffer* serverCertificate);
+    ScriptPromise setServerCertificate(ScriptState*, DOMArrayBufferView* serverCertificate);
+
     static bool isTypeSupported(const String& keySystem, const String& contentType);
 
     blink::WebContentDecryptionModule* contentDecryptionModule();
@@ -60,14 +64,22 @@ public:
     void trace(Visitor*);
 
     // ContextLifecycleObserver
-    virtual void contextDestroyed() OVERRIDE;
+    virtual void contextDestroyed() override;
 
 private:
+    class PendingAction;
     friend class MediaKeysInitializer;
     MediaKeys(ExecutionContext*, const String& keySystem, PassOwnPtr<blink::WebContentDecryptionModule>);
 
+    ScriptPromise setServerCertificateInternal(ScriptState*, PassRefPtr<ArrayBuffer> initData);
+
+    void timerFired(Timer<MediaKeys>*);
+
     const String m_keySystem;
     OwnPtr<blink::WebContentDecryptionModule> m_cdm;
+
+    HeapDeque<Member<PendingAction> > m_pendingActions;
+    Timer<MediaKeys> m_timer;
 };
 
 } // namespace blink

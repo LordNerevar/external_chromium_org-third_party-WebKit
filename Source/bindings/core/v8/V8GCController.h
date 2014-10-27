@@ -31,6 +31,7 @@
 #ifndef V8GCController_h
 #define V8GCController_h
 
+#include "platform/heap/Handle.h"
 #include <v8.h>
 
 namespace blink {
@@ -48,9 +49,11 @@ public:
 
     static void collectGarbage(v8::Isolate*);
 
-    static Node* opaqueRootForGC(Node*, v8::Isolate*);
+    static Node* opaqueRootForGC(v8::Isolate*, Node*);
 
     static void reportDOMMemoryUsageToV8(v8::Isolate*);
+
+    static void traceDOMWrappers(v8::Isolate*, Visitor*);
 };
 
 }

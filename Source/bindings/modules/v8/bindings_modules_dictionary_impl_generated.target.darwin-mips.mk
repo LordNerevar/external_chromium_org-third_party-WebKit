@@ -7,6 +7,7 @@ LOCAL_MODULE := third_party_WebKit_Source_bindings_modules_v8_bindings_modules_d
 LOCAL_MODULE_STEM := bindings_modules_dictionary_impl_generated
 LOCAL_MODULE_SUFFIX := .stamp
 LOCAL_MODULE_TARGET_ARCH := $(TARGET_$(GYP_VAR_PREFIX)ARCH)
+LOCAL_SDK_VERSION := 21
 gyp_intermediate_dir := $(call local-intermediates-dir,,$(GYP_VAR_PREFIX))
 gyp_shared_intermediate_dir := $(call intermediates-dir-for,GYP,shared,,,$(GYP_VAR_PREFIX))
 
@@ -22,23 +23,25 @@ $(gyp_shared_intermediate_dir)/blink/modules/encoding/TextDecodeOptions.cpp: gyp
 $(gyp_shared_intermediate_dir)/blink/modules/encoding/TextDecodeOptions.cpp: gyp_intermediate_dir := $(abspath $(gyp_intermediate_dir))
 $(gyp_shared_intermediate_dir)/blink/modules/encoding/TextDecodeOptions.cpp: gyp_shared_intermediate_dir := $(abspath $(gyp_shared_intermediate_dir))
 $(gyp_shared_intermediate_dir)/blink/modules/encoding/TextDecodeOptions.cpp: export PATH := $(subst $(ANDROID_BUILD_PATHS),,$(PATH))
-$(gyp_shared_intermediate_dir)/blink/modules/encoding/TextDecodeOptions.cpp: $(LOCAL_PATH)/third_party/WebKit/Source/modules/encoding/TextDecodeOptions.idl $(LOCAL_PATH)/third_party/WebKit/Source/modules/encoding/TextDecoderOptions.idl $(LOCAL_PATH)/third_party/WebKit/Source/modules/indexeddb/IDBIndexParameters.idl $(LOCAL_PATH)/third_party/WebKit/Source/modules/notifications/NotificationOptions.idl $(LOCAL_PATH)/third_party/WebKit/Source/modules/serviceworkers/QueryParams.idl $(LOCAL_PATH)/third_party/WebKit/Source/modules/serviceworkers/RegistrationOptionList.idl $(LOCAL_PATH)/third_party/WebKit/Source/modules/serviceworkers/ServiceWorkerClientQueryParams.idl $(LOCAL_PATH)/third_party/WebKit/Source/modules/webmidi/MIDIOptions.idl $(LOCAL_PATH)/third_party/ply/lex.py $(LOCAL_PATH)/third_party/ply/yacc.py $(LOCAL_PATH)/tools/idl_parser/idl_lexer.py $(LOCAL_PATH)/tools/idl_parser/idl_node.py $(LOCAL_PATH)/tools/idl_parser/idl_parser.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/blink_idl_lexer.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/blink_idl_parser.py $(gyp_shared_intermediate_dir)/blink/bindings/scripts/lextab.py $(gyp_shared_intermediate_dir)/blink/bindings/scripts/parsetab.pickle $(gyp_shared_intermediate_dir)/blink/bindings/scripts/cached_jinja_templates.stamp $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/idl_compiler.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/idl_definitions.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/idl_reader.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/idl_types.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/idl_validator.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/interface_dependency_resolver.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/code_generator_v8.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/v8_attributes.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/v8_callback_interface.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/v8_dictionary.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/v8_globals.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/v8_interface.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/v8_methods.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/v8_types.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/v8_utilities.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/IDLExtendedAttributes.txt $(gyp_shared_intermediate_dir)/blink/bindings/modules/InterfacesInfoModules.pickle $(GYP_TARGET_DEPENDENCIES)
+$(gyp_shared_intermediate_dir)/blink/modules/encoding/TextDecodeOptions.cpp: $(LOCAL_PATH)/third_party/WebKit/Source/modules/encoding/TextDecodeOptions.idl $(LOCAL_PATH)/third_party/WebKit/Source/modules/encoding/TextDecoderOptions.idl $(LOCAL_PATH)/third_party/WebKit/Source/modules/filesystem/FileSystemFlags.idl $(LOCAL_PATH)/third_party/WebKit/Source/modules/indexeddb/IDBIndexParameters.idl $(LOCAL_PATH)/third_party/WebKit/Source/modules/notifications/NotificationOptions.idl $(LOCAL_PATH)/third_party/WebKit/Source/modules/serviceworkers/CacheQueryOptions.idl $(LOCAL_PATH)/third_party/WebKit/Source/modules/serviceworkers/RegistrationOptions.idl $(LOCAL_PATH)/third_party/WebKit/Source/modules/serviceworkers/ServiceWorkerClientQueryOptions.idl $(LOCAL_PATH)/third_party/WebKit/Source/modules/webmidi/MIDIOptions.idl $(LOCAL_PATH)/third_party/ply/lex.py $(LOCAL_PATH)/third_party/ply/yacc.py $(LOCAL_PATH)/tools/idl_parser/idl_lexer.py $(LOCAL_PATH)/tools/idl_parser/idl_node.py $(LOCAL_PATH)/tools/idl_parser/idl_parser.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/blink_idl_lexer.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/blink_idl_parser.py $(gyp_shared_intermediate_dir)/blink/bindings/scripts/lextab.py $(gyp_shared_intermediate_dir)/blink/bindings/scripts/parsetab.pickle $(gyp_shared_intermediate_dir)/blink/bindings/scripts/cached_jinja_templates.stamp $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/idl_compiler.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/idl_definitions.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/idl_reader.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/idl_types.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/idl_validator.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/interface_dependency_resolver.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/code_generator_v8.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/v8_attributes.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/v8_callback_interface.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/v8_dictionary.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/v8_globals.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/v8_interface.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/v8_methods.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/v8_types.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/v8_utilities.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/IDLExtendedAttributes.txt $(gyp_shared_intermediate_dir)/blink/bindings/modules/InterfacesInfoModules.pickle $(GYP_TARGET_DEPENDENCIES)
 	@echo "Gyp action: Generating modules IDL dictionary impl classes ($@)"
-	$(hide)cd $(gyp_local_path)/third_party/WebKit/Source/bindings/modules/v8; mkdir -p $(gyp_shared_intermediate_dir)/blink/modules/webmidi $(gyp_shared_intermediate_dir)/blink/modules/encoding $(gyp_shared_intermediate_dir)/blink/modules/indexeddb $(gyp_shared_intermediate_dir)/blink/modules/notifications $(gyp_shared_intermediate_dir)/blink/modules/serviceworkers; python ../../scripts/idl_compiler.py --cache-dir "$(gyp_shared_intermediate_dir)/blink/bindings/scripts" --output-dir "$(gyp_shared_intermediate_dir)/blink/" --interfaces-info "$(gyp_shared_intermediate_dir)/blink/bindings/modules/InterfacesInfoModules.pickle" --write-file-only-if-changed 0 --generate-dictionary-impl modules_dictionary_idl_files_list.tmp
+	$(hide)cd $(gyp_local_path)/third_party/WebKit/Source/bindings/modules/v8; mkdir -p $(gyp_shared_intermediate_dir)/blink/modules/indexeddb $(gyp_shared_intermediate_dir)/blink/modules/serviceworkers $(gyp_shared_intermediate_dir)/blink/modules/encoding $(gyp_shared_intermediate_dir)/blink/modules/notifications $(gyp_shared_intermediate_dir)/blink/modules/filesystem $(gyp_shared_intermediate_dir)/blink/modules/webmidi; python ../../scripts/idl_compiler.py --cache-dir "$(gyp_shared_intermediate_dir)/blink/bindings/scripts" --output-dir "$(gyp_shared_intermediate_dir)/blink/" --interfaces-info "$(gyp_shared_intermediate_dir)/blink/bindings/modules/InterfacesInfoModules.pickle" --write-file-only-if-changed 0 --generate-dictionary-impl modules_dictionary_idl_files_list.tmp
 
 $(gyp_shared_intermediate_dir)/blink/modules/encoding/TextDecodeOptions.h: $(gyp_shared_intermediate_dir)/blink/modules/encoding/TextDecodeOptions.cpp ;
 $(gyp_shared_intermediate_dir)/blink/modules/encoding/TextDecoderOptions.cpp: $(gyp_shared_intermediate_dir)/blink/modules/encoding/TextDecodeOptions.cpp ;
 $(gyp_shared_intermediate_dir)/blink/modules/encoding/TextDecoderOptions.h: $(gyp_shared_intermediate_dir)/blink/modules/encoding/TextDecodeOptions.cpp ;
+$(gyp_shared_intermediate_dir)/blink/modules/filesystem/FileSystemFlags.cpp: $(gyp_shared_intermediate_dir)/blink/modules/encoding/TextDecodeOptions.cpp ;
+$(gyp_shared_intermediate_dir)/blink/modules/filesystem/FileSystemFlags.h: $(gyp_shared_intermediate_dir)/blink/modules/encoding/TextDecodeOptions.cpp ;
 $(gyp_shared_intermediate_dir)/blink/modules/indexeddb/IDBIndexParameters.cpp: $(gyp_shared_intermediate_dir)/blink/modules/encoding/TextDecodeOptions.cpp ;
 $(gyp_shared_intermediate_dir)/blink/modules/indexeddb/IDBIndexParameters.h: $(gyp_shared_intermediate_dir)/blink/modules/encoding/TextDecodeOptions.cpp ;
 $(gyp_shared_intermediate_dir)/blink/modules/notifications/NotificationOptions.cpp: $(gyp_shared_intermediate_dir)/blink/modules/encoding/TextDecodeOptions.cpp ;
 $(gyp_shared_intermediate_dir)/blink/modules/notifications/NotificationOptions.h: $(gyp_shared_intermediate_dir)/blink/modules/encoding/TextDecodeOptions.cpp ;
-$(gyp_shared_intermediate_dir)/blink/modules/serviceworkers/QueryParams.cpp: $(gyp_shared_intermediate_dir)/blink/modules/encoding/TextDecodeOptions.cpp ;
-$(gyp_shared_intermediate_dir)/blink/modules/serviceworkers/QueryParams.h: $(gyp_shared_intermediate_dir)/blink/modules/encoding/TextDecodeOptions.cpp ;
-$(gyp_shared_intermediate_dir)/blink/modules/serviceworkers/RegistrationOptionList.cpp: $(gyp_shared_intermediate_dir)/blink/modules/encoding/TextDecodeOptions.cpp ;
-$(gyp_shared_intermediate_dir)/blink/modules/serviceworkers/RegistrationOptionList.h: $(gyp_shared_intermediate_dir)/blink/modules/encoding/TextDecodeOptions.cpp ;
-$(gyp_shared_intermediate_dir)/blink/modules/serviceworkers/ServiceWorkerClientQueryParams.cpp: $(gyp_shared_intermediate_dir)/blink/modules/encoding/TextDecodeOptions.cpp ;
-$(gyp_shared_intermediate_dir)/blink/modules/serviceworkers/ServiceWorkerClientQueryParams.h: $(gyp_shared_intermediate_dir)/blink/modules/encoding/TextDecodeOptions.cpp ;
+$(gyp_shared_intermediate_dir)/blink/modules/serviceworkers/CacheQueryOptions.cpp: $(gyp_shared_intermediate_dir)/blink/modules/encoding/TextDecodeOptions.cpp ;
+$(gyp_shared_intermediate_dir)/blink/modules/serviceworkers/CacheQueryOptions.h: $(gyp_shared_intermediate_dir)/blink/modules/encoding/TextDecodeOptions.cpp ;
+$(gyp_shared_intermediate_dir)/blink/modules/serviceworkers/RegistrationOptions.cpp: $(gyp_shared_intermediate_dir)/blink/modules/encoding/TextDecodeOptions.cpp ;
+$(gyp_shared_intermediate_dir)/blink/modules/serviceworkers/RegistrationOptions.h: $(gyp_shared_intermediate_dir)/blink/modules/encoding/TextDecodeOptions.cpp ;
+$(gyp_shared_intermediate_dir)/blink/modules/serviceworkers/ServiceWorkerClientQueryOptions.cpp: $(gyp_shared_intermediate_dir)/blink/modules/encoding/TextDecodeOptions.cpp ;
+$(gyp_shared_intermediate_dir)/blink/modules/serviceworkers/ServiceWorkerClientQueryOptions.h: $(gyp_shared_intermediate_dir)/blink/modules/encoding/TextDecodeOptions.cpp ;
 $(gyp_shared_intermediate_dir)/blink/modules/webmidi/MIDIOptions.cpp: $(gyp_shared_intermediate_dir)/blink/modules/encoding/TextDecodeOptions.cpp ;
 $(gyp_shared_intermediate_dir)/blink/modules/webmidi/MIDIOptions.h: $(gyp_shared_intermediate_dir)/blink/modules/encoding/TextDecodeOptions.cpp ;
 
@@ -48,16 +51,18 @@ GYP_GENERATED_OUTPUTS := \
 	$(gyp_shared_intermediate_dir)/blink/modules/encoding/TextDecodeOptions.h \
 	$(gyp_shared_intermediate_dir)/blink/modules/encoding/TextDecoderOptions.cpp \
 	$(gyp_shared_intermediate_dir)/blink/modules/encoding/TextDecoderOptions.h \
+	$(gyp_shared_intermediate_dir)/blink/modules/filesystem/FileSystemFlags.cpp \
+	$(gyp_shared_intermediate_dir)/blink/modules/filesystem/FileSystemFlags.h \
 	$(gyp_shared_intermediate_dir)/blink/modules/indexeddb/IDBIndexParameters.cpp \
 	$(gyp_shared_intermediate_dir)/blink/modules/indexeddb/IDBIndexParameters.h \
 	$(gyp_shared_intermediate_dir)/blink/modules/notifications/NotificationOptions.cpp \
 	$(gyp_shared_intermediate_dir)/blink/modules/notifications/NotificationOptions.h \
-	$(gyp_shared_intermediate_dir)/blink/modules/serviceworkers/QueryParams.cpp \
-	$(gyp_shared_intermediate_dir)/blink/modules/serviceworkers/QueryParams.h \
-	$(gyp_shared_intermediate_dir)/blink/modules/serviceworkers/RegistrationOptionList.cpp \
-	$(gyp_shared_intermediate_dir)/blink/modules/serviceworkers/RegistrationOptionList.h \
-	$(gyp_shared_intermediate_dir)/blink/modules/serviceworkers/ServiceWorkerClientQueryParams.cpp \
-	$(gyp_shared_intermediate_dir)/blink/modules/serviceworkers/ServiceWorkerClientQueryParams.h \
+	$(gyp_shared_intermediate_dir)/blink/modules/serviceworkers/CacheQueryOptions.cpp \
+	$(gyp_shared_intermediate_dir)/blink/modules/serviceworkers/CacheQueryOptions.h \
+	$(gyp_shared_intermediate_dir)/blink/modules/serviceworkers/RegistrationOptions.cpp \
+	$(gyp_shared_intermediate_dir)/blink/modules/serviceworkers/RegistrationOptions.h \
+	$(gyp_shared_intermediate_dir)/blink/modules/serviceworkers/ServiceWorkerClientQueryOptions.cpp \
+	$(gyp_shared_intermediate_dir)/blink/modules/serviceworkers/ServiceWorkerClientQueryOptions.h \
 	$(gyp_shared_intermediate_dir)/blink/modules/webmidi/MIDIOptions.cpp \
 	$(gyp_shared_intermediate_dir)/blink/modules/webmidi/MIDIOptions.h
 
@@ -125,12 +130,6 @@ MY_DEFS_Debug := \
 	'-DCLD_VERSION=1' \
 	'-DENABLE_PRINTING=1' \
 	'-DENABLE_MANAGED_USERS=1' \
-	'-DDATA_REDUCTION_FALLBACK_HOST="http://compress.googlezip.net:80/"' \
-	'-DDATA_REDUCTION_DEV_HOST="https://proxy-dev.googlezip.net:443/"' \
-	'-DDATA_REDUCTION_DEV_FALLBACK_HOST="http://proxy-dev.googlezip.net:80/"' \
-	'-DSPDY_PROXY_AUTH_ORIGIN="https://proxy.googlezip.net:443/"' \
-	'-DDATA_REDUCTION_PROXY_PROBE_URL="http://check.googlezip.net/connect"' \
-	'-DDATA_REDUCTION_PROXY_WARMUP_URL="http://www.gstatic.com/generate_204"' \
 	'-DVIDEO_HOLE=1' \
 	'-DENABLE_LOAD_COMPLETION_HACKS=1' \
 	'-DUSE_OPENSSL=1' \
@@ -147,10 +146,7 @@ MY_DEFS_Debug := \
 
 # Include paths placed before CFLAGS/CPPFLAGS
 LOCAL_C_INCLUDES_Debug := \
-	$(gyp_shared_intermediate_dir) \
-	$(PWD)/frameworks/wilhelm/include \
-	$(PWD)/bionic \
-	$(PWD)/external/stlport/stlport
+	$(gyp_shared_intermediate_dir)
 
 
 # Flags passed to only C++ (and not C) files.
@@ -222,12 +218,6 @@ MY_DEFS_Release := \
 	'-DCLD_VERSION=1' \
 	'-DENABLE_PRINTING=1' \
 	'-DENABLE_MANAGED_USERS=1' \
-	'-DDATA_REDUCTION_FALLBACK_HOST="http://compress.googlezip.net:80/"' \
-	'-DDATA_REDUCTION_DEV_HOST="https://proxy-dev.googlezip.net:443/"' \
-	'-DDATA_REDUCTION_DEV_FALLBACK_HOST="http://proxy-dev.googlezip.net:80/"' \
-	'-DSPDY_PROXY_AUTH_ORIGIN="https://proxy.googlezip.net:443/"' \
-	'-DDATA_REDUCTION_PROXY_PROBE_URL="http://check.googlezip.net/connect"' \
-	'-DDATA_REDUCTION_PROXY_WARMUP_URL="http://www.gstatic.com/generate_204"' \
 	'-DVIDEO_HOLE=1' \
 	'-DENABLE_LOAD_COMPLETION_HACKS=1' \
 	'-DUSE_OPENSSL=1' \
@@ -244,10 +234,7 @@ MY_DEFS_Release := \
 
 # Include paths placed before CFLAGS/CPPFLAGS
 LOCAL_C_INCLUDES_Release := \
-	$(gyp_shared_intermediate_dir) \
-	$(PWD)/frameworks/wilhelm/include \
-	$(PWD)/bionic \
-	$(PWD)/external/stlport/stlport
+	$(gyp_shared_intermediate_dir)
 
 
 # Flags passed to only C++ (and not C) files.
@@ -271,6 +258,10 @@ LOCAL_C_INCLUDES := $(GYP_COPIED_SOURCE_ORIGIN_DIRS) $(LOCAL_C_INCLUDES_$(GYP_CO
 LOCAL_CPPFLAGS := $(LOCAL_CPPFLAGS_$(GYP_CONFIGURATION))
 LOCAL_ASFLAGS := $(LOCAL_CFLAGS)
 ### Rules for final target.
+### Set directly by aosp_build_settings.
+LOCAL_CLANG := false
+LOCAL_NDK_STL_VARIANT := stlport_static
+
 # Add target alias to "gyp_all_modules" target.
 .PHONY: gyp_all_modules
 gyp_all_modules: third_party_WebKit_Source_bindings_modules_v8_bindings_modules_dictionary_impl_generated_gyp

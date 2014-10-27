@@ -1,8 +1,9 @@
 ../../../modules/encoding/TextDecodeOptions.idl
 ../../../modules/encoding/TextDecoderOptions.idl
+../../../modules/filesystem/FileSystemFlags.idl
 ../../../modules/indexeddb/IDBIndexParameters.idl
 ../../../modules/notifications/NotificationOptions.idl
-../../../modules/serviceworkers/QueryParams.idl
-../../../modules/serviceworkers/RegistrationOptionList.idl
-../../../modules/serviceworkers/ServiceWorkerClientQueryParams.idl
+../../../modules/serviceworkers/CacheQueryOptions.idl
+../../../modules/serviceworkers/RegistrationOptions.idl
+../../../modules/serviceworkers/ServiceWorkerClientQueryOptions.idl
 ../../../modules/webmidi/MIDIOptions.idl

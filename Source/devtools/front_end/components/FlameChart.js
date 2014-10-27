@@ -50,14 +50,15 @@ WebInspector.FlameChartDelegate.prototype = {
  */
 WebInspector.FlameChart = function(dataProvider, flameChartDelegate, isTopDown)
 {
-    WebInspector.HBox.call(this);
-    this.element.classList.add("flame-chart-main-pane");
+    WebInspector.HBox.call(this, true);
+    this.contentElement.appendChild(WebInspector.View.createStyleElement("components/flameChart.css"));
+    this.contentElement.classList.add("flame-chart-main-pane");
     this._flameChartDelegate = flameChartDelegate;
     this._isTopDown = isTopDown;
 
     this._calculator = new WebInspector.FlameChart.Calculator();
 
-    this._canvas = this.element.createChild("canvas");
+    this._canvas = this.contentElement.createChild("canvas");
     this._canvas.tabIndex = 1;
     this.setDefaultFocusedElement(this._canvas);
     this._canvas.addEventListener("mousemove", this._onMouseMove.bind(this), false);
@@ -66,14 +67,16 @@ WebInspector.FlameChart = function(dataProvider, flameChartDelegate, isTopDown)
     this._canvas.addEventListener("keydown", this._onKeyDown.bind(this), false);
     WebInspector.installDragHandle(this._canvas, this._startCanvasDragging.bind(this), this._canvasDragging.bind(this), this._endCanvasDragging.bind(this), "move", null);
 
-    this._vScrollElement = this.element.createChild("div", "flame-chart-v-scroll");
+    this._vScrollElement = this.contentElement.createChild("div", "flame-chart-v-scroll");
     this._vScrollContent = this._vScrollElement.createChild("div");
     this._vScrollElement.addEventListener("scroll", this.scheduleUpdate.bind(this), false);
 
-    this._entryInfo = this.element.createChild("div", "profile-entry-info");
-    this._markerHighlighElement = this.element.createChild("div", "flame-chart-marker-highlight-element");
-    this._highlightElement = this.element.createChild("div", "flame-chart-highlight-element");
-    this._selectedElement = this.element.createChild("div", "flame-chart-selected-element");
+    this._entryInfo = this.contentElement.createChild("div", "flame-chart-entry-info");
+    this._markerHighlighElement = this.contentElement.createChild("div", "flame-chart-marker-highlight-element");
+    this._highlightElement = this.contentElement.createChild("div", "flame-chart-highlight-element");
+    this._selectedElement = this.contentElement.createChild("div", "flame-chart-selected-element");
+    this._selectionOverlay = this.contentElement.createChild("div", "flame-chart-selection-overlay hidden");
+    this._selectedTimeSpanLabel = this._selectionOverlay.createChild("div", "time-span");
 
     this._dataProvider = dataProvider;
 
@@ -434,7 +437,7 @@ WebInspector.FlameChart.prototype = {
      */
     setWindowTimes: function(startTime, endTime)
     {
-        if (this._muteAnimation || this._timeWindowLeft === 0 || this._timeWindowRight === Infinity) {
+        if (this._muteAnimation || this._timeWindowLeft === 0 || this._timeWindowRight === Infinity || (startTime === 0 && endTime === Infinity)) {
             // Initial setup.
             this._timeWindowLeft = startTime;
             this._timeWindowRight = endTime;
@@ -471,6 +474,11 @@ WebInspector.FlameChart.prototype = {
      */
     _startCanvasDragging: function(event)
     {
+        if (event.shiftKey) {
+            this._startBoxSelection(event);
+            this._isDragging = true;
+            return true;
+        }
         if (!this._timelineData() || this._timeWindowRight === Infinity)
             return false;
         this._isDragging = true;
@@ -490,6 +498,10 @@ WebInspector.FlameChart.prototype = {
      */
     _canvasDragging: function(event)
     {
+        if (this._isSelecting) {
+            this._updateBoxSelection(event);
+            return;
+        }
         var pixelShift = this._dragStartPointX - event.pageX;
         this._dragStartPointX = event.pageX;
         this._muteAnimation = true;
@@ -503,7 +515,57 @@ WebInspector.FlameChart.prototype = {
 
     _endCanvasDragging: function()
     {
+        this._hideBoxSelection();
         this._isDragging = false;
+    },
+
+    /**
+     * @param {!MouseEvent} event
+     */
+    _startBoxSelection: function(event)
+    {
+        this._selectionOffsetShiftX = event.offsetX - event.pageX;
+        this._selectionOffsetShiftY = event.offsetY - event.pageY;
+        this._selectionStartX = event.offsetX;
+        this._selectionStartY = event.offsetY;
+        this._isSelecting = true;
+        var style = this._selectionOverlay.style;
+        style.left = this._selectionStartX + "px";
+        style.top = this._selectionStartY + "px";
+        style.width = "1px";
+        style.height = "1px";
+        this._selectedTimeSpanLabel.textContent = "";
+        this._selectionOverlay.classList.remove("hidden");
+    },
+
+    _hideBoxSelection: function()
+    {
+        this._selectionOffsetShiftX = null;
+        this._selectionOffsetShiftY = null;
+        this._selectionStartX = null;
+        this._selectionStartY = null;
+        this._isSelecting = false;
+        this._selectionOverlay.classList.add("hidden");
+    },
+
+    /**
+     * @param {!MouseEvent} event
+     */
+    _updateBoxSelection: function(event)
+    {
+        var x = event.pageX + this._selectionOffsetShiftX;
+        var y = event.pageY + this._selectionOffsetShiftY;
+        x = Number.constrain(x, 0, this._offsetWidth);
+        y = Number.constrain(y, 0, this._offsetHeight);
+        var style = this._selectionOverlay.style;
+        style.left = Math.min(x, this._selectionStartX) + "px";
+        style.top = Math.min(y, this._selectionStartY) + "px";
+        var selectionWidth = Math.abs(x - this._selectionStartX)
+        style.width =  selectionWidth + "px";
+        style.height = Math.abs(y - this._selectionStartY) + "px";
+
+        var timeSpan = selectionWidth * this._pixelToTime;
+        this._selectedTimeSpanLabel.textContent =  Number.preciseMillisToString(timeSpan, 2);
     },
 
     /**
@@ -971,7 +1033,7 @@ WebInspector.FlameChart.prototype = {
         var style = element.style;
         style.left = barX + "px";
         style.backgroundColor = this._dataProvider.markerColor(markerIndex);
-        this.element.appendChild(element);
+        this.contentElement.appendChild(element);
     },
 
     /**
@@ -1033,7 +1095,7 @@ WebInspector.FlameChart.prototype = {
         style.top = barY + "px";
         style.width = barWidth + "px";
         style.height = this._barHeight + "px";
-        this.element.appendChild(element);
+        this.contentElement.appendChild(element);
     },
 
     /**
@@ -1052,7 +1114,7 @@ WebInspector.FlameChart.prototype = {
 
     _buildEntryInfo: function(entryInfo)
     {
-        var infoTable = document.createElementWithClass("table", "info-table");
+        var infoTable = createElementWithClass("table", "info-table");
         for (var i = 0; i < entryInfo.length; ++i) {
             var row = infoTable.createChild("tr");
             row.createChild("td", "title").textContent = entryInfo[i].title;
@@ -1152,8 +1214,8 @@ WebInspector.FlameChart.prototype = {
     {
         var showScroll = this._totalHeight > this._offsetHeight;
         this._vScrollElement.classList.toggle("hidden", !showScroll);
-        this._offsetWidth = this.element.offsetWidth - (WebInspector.isMac() ? 0 : this._vScrollElement.offsetWidth);
-        this._offsetHeight = this.element.offsetHeight;
+        this._offsetWidth = this.contentElement.offsetWidth - (WebInspector.isMac() ? 0 : this._vScrollElement.offsetWidth);
+        this._offsetHeight = this.contentElement.offsetHeight;
     },
 
     scheduleUpdate: function()

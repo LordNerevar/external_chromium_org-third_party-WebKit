@@ -30,34 +30,27 @@ public:
     static v8::Handle<v8::FunctionTemplate> domTemplate(v8::Isolate*);
     static TestInterfaceEventTarget* toImpl(v8::Handle<v8::Object> object)
     {
-        return toImpl(blink::toScriptWrappableBase(object));
+        return blink::toScriptWrappableBase(object)->toImpl<TestInterfaceEventTarget>();
     }
     static TestInterfaceEventTarget* toImplWithTypeCheck(v8::Isolate*, v8::Handle<v8::Value>);
     static const WrapperTypeInfo wrapperTypeInfo;
-    static void refObject(ScriptWrappableBase* internalPointer);
-    static void derefObject(ScriptWrappableBase* internalPointer);
-    static WrapperPersistentNode* createPersistentHandle(ScriptWrappableBase* internalPointer);
+    static void refObject(ScriptWrappableBase*);
+    static void derefObject(ScriptWrappableBase*);
+    static void trace(Visitor* visitor, ScriptWrappableBase* scriptWrappableBase)
+    {
+#if ENABLE(OILPAN)
+        visitor->trace(scriptWrappableBase->toImpl<TestInterfaceEventTarget>());
+#endif
+    }
     static EventTarget* toEventTarget(v8::Handle<v8::Object>);
     static const int eventListenerCacheIndex = v8DefaultWrapperInternalFieldCount + 0;
-#if ENABLE(OILPAN)
-    static const int persistentHandleIndex = v8DefaultWrapperInternalFieldCount + 1;
-    static const int internalFieldCount = v8DefaultWrapperInternalFieldCount + 1 + 1;
-#else
     static const int internalFieldCount = v8DefaultWrapperInternalFieldCount + 1;
-#endif
     static inline ScriptWrappableBase* toScriptWrappableBase(TestInterfaceEventTarget* impl)
     {
         return impl->toScriptWrappableBase();
     }
-
-    static inline TestInterfaceEventTarget* toImpl(ScriptWrappableBase* internalPointer)
-    {
-        return internalPointer->toImpl<TestInterfaceEventTarget>();
-    }
     static void installConditionallyEnabledProperties(v8::Handle<v8::Object>, v8::Isolate*) { }
     static void installConditionallyEnabledMethods(v8::Handle<v8::Object>, v8::Isolate*) { }
-
-private:
 };
 
 inline v8::Handle<v8::Object> wrap(TestInterfaceEventTarget* impl, v8::Handle<v8::Object> creationContext, v8::Isolate* isolate)
@@ -140,4 +133,5 @@ inline void v8SetReturnValueFast(const CallbackInfo& callbackInfo, PassRefPtrWil
 }
 
 } // namespace blink
+
 #endif // V8TestInterfaceEventTarget_h

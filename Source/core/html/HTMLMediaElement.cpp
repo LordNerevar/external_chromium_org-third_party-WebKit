@@ -66,7 +66,6 @@
 #include "platform/Logging.h"
 #include "platform/MIMETypeFromURL.h"
 #include "platform/MIMETypeRegistry.h"
-#include "platform/NotImplemented.h"
 #include "platform/RuntimeEnabledFeatures.h"
 #include "platform/UserGestureIndicator.h"
 #include "platform/graphics/GraphicsLayer.h"
@@ -3249,7 +3248,7 @@ void HTMLMediaElement::mediaPlayerRepaint()
 
     updateDisplayState();
     if (renderer())
-        renderer()->setShouldDoFullPaintInvalidation(true);
+        renderer()->setShouldDoFullPaintInvalidation();
 }
 
 void HTMLMediaElement::mediaPlayerSizeChanged()
@@ -3291,12 +3290,10 @@ PassRefPtrWillBeRawPtr<TimeRanges> HTMLMediaElement::played()
 
 PassRefPtrWillBeRawPtr<TimeRanges> HTMLMediaElement::seekable() const
 {
-    if (webMediaPlayer()) {
-        double maxTimeSeekable = webMediaPlayer()->maxTimeSeekable();
-        if (maxTimeSeekable)
-            return TimeRanges::create(0, maxTimeSeekable);
-    }
-    return TimeRanges::create();
+    if (!webMediaPlayer())
+        return TimeRanges::create();
+
+    return TimeRanges::create(webMediaPlayer()->seekable());
 }
 
 bool HTMLMediaElement::potentiallyPlaying() const

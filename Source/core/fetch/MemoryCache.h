@@ -36,13 +36,9 @@
 
 namespace blink  {
 
-class CSSStyleSheetResource;
 class Resource;
-class ResourceFetcher;
 class KURL;
 class ExecutionContext;
-class SecurityOrigin;
-struct SecurityOriginHash;
 
 // This cache holds subresources used by Web pages: images, scripts, stylesheets, etc.
 
@@ -76,10 +72,16 @@ enum UpdateReason {
 // MemoryCacheEntry class is used only in MemoryCache class, but we don't make
 // MemoryCacheEntry class an inner class of MemoryCache because of dependency
 // from MemoryCacheLRUList.
-class MemoryCacheEntry FINAL : public NoBaseWillBeGarbageCollectedFinalized<MemoryCacheEntry> {
+class MemoryCacheEntry final : public NoBaseWillBeGarbageCollectedFinalized<MemoryCacheEntry> {
 public:
-    static PassOwnPtrWillBeRawPtr<MemoryCacheEntry> create(Resource* resource) { return adoptPtrWillBeNoop(new MemoryCacheEntry(resource)); }
+    static PassOwnPtrWillBeRawPtr<MemoryCacheEntry> create(Resource* resource)
+    {
+        return adoptPtrWillBeNoop(new MemoryCacheEntry(resource));
+    }
     void trace(Visitor*);
+#if ENABLE(OILPAN)
+    void dispose();
+#endif
 
     ResourcePtr<Resource> m_resource;
     bool m_inLiveDecodedResourcesList;
@@ -110,7 +112,7 @@ private:
 // MemoryCacheLRUList is used only in MemoryCache class, but we don't make
 // MemoryCacheLRUList an inner struct of MemoryCache because we can't define
 // VectorTraits for inner structs.
-struct MemoryCacheLRUList FINAL {
+struct MemoryCacheLRUList final {
     ALLOW_ONLY_INLINE_ALLOCATION();
 public:
     RawPtrWillBeMember<MemoryCacheEntry> m_head;
@@ -126,7 +128,7 @@ WTF_ALLOW_MOVE_INIT_AND_COMPARE_WITH_MEM_FUNCTIONS(blink::MemoryCacheLRUList);
 
 namespace blink {
 
-class MemoryCache FINAL : public NoBaseWillBeGarbageCollectedFinalized<MemoryCache>, public WebThread::TaskObserver {
+class MemoryCache final : public NoBaseWillBeGarbageCollectedFinalized<MemoryCache>, public WebThread::TaskObserver {
     WTF_MAKE_NONCOPYABLE(MemoryCache); WTF_MAKE_FAST_ALLOCATED_WILL_BE_REMOVED;
 public:
     static PassOwnPtrWillBeRawPtr<MemoryCache> create();
@@ -216,8 +218,8 @@ public:
     MemoryCacheLiveResourcePriority priority(Resource*) const;
 
     // TaskObserver implementation
-    virtual void willProcessTask() OVERRIDE;
-    virtual void didProcessTask() OVERRIDE;
+    virtual void willProcessTask() override;
+    virtual void didProcessTask() override;
 
 private:
     MemoryCache();
@@ -232,10 +234,12 @@ private:
     // Calls to put the cached resource into and out of LRU lists.
     void insertInLRUList(MemoryCacheEntry*, MemoryCacheLRUList*);
     void removeFromLRUList(MemoryCacheEntry*, MemoryCacheLRUList*);
+    bool containedInLRUList(MemoryCacheEntry*, MemoryCacheLRUList*);
 
     // Track decoded resources that are in the cache and referenced by a Web page.
     void insertInLiveDecodedResourcesList(MemoryCacheEntry*);
     void removeFromLiveDecodedResourcesList(MemoryCacheEntry*);
+    bool containedInLiveDecodedResourcesList(MemoryCacheEntry*);
 
     size_t liveCapacity() const;
     size_t deadCapacity() const;
@@ -276,7 +280,7 @@ private:
 
     // A URL-based map of all resources that are in the cache (including the freshest version of objects that are currently being
     // referenced by a Web page).
-    typedef WillBeHeapHashMap<String, OwnPtrWillBeMember<MemoryCacheEntry> > ResourceMap;
+    typedef WillBeHeapHashMap<String, OwnPtrWillBeMember<MemoryCacheEntry>> ResourceMap;
     ResourceMap m_resources;
 
 #if ENABLE(OILPAN)
@@ -284,7 +288,7 @@ private:
     // should not be deleted. m_allResources only contains on-cache Resource
     // objects.
     // FIXME: Can we remove manual lifetime management of Resource and this?
-    HeapHashSet<Member<Resource> > m_liveResources;
+    HeapHashSet<Member<Resource>> m_liveResources;
     friend RawPtr<MemoryCache> replaceMemoryCacheForTesting(RawPtr<MemoryCache>);
 #endif
 

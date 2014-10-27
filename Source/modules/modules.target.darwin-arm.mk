@@ -6,6 +6,7 @@ LOCAL_MODULE_CLASS := STATIC_LIBRARIES
 LOCAL_MODULE := third_party_WebKit_Source_modules_modules_gyp
 LOCAL_MODULE_SUFFIX := .a
 LOCAL_MODULE_TARGET_ARCH := $(TARGET_$(GYP_VAR_PREFIX)ARCH)
+LOCAL_SDK_VERSION := 21
 gyp_intermediate_dir := $(call local-intermediates-dir,,$(GYP_VAR_PREFIX))
 gyp_shared_intermediate_dir := $(call intermediates-dir-for,GYP,shared,,,$(GYP_VAR_PREFIX))
 
@@ -26,15 +27,17 @@ $(gyp_intermediate_dir)/TextDecodeOptions.cpp: $(gyp_shared_intermediate_dir)/bl
 	mkdir -p $(@D); cp $< $@
 $(gyp_intermediate_dir)/TextDecoderOptions.cpp: $(gyp_shared_intermediate_dir)/blink/modules/encoding/TextDecoderOptions.cpp
 	mkdir -p $(@D); cp $< $@
+$(gyp_intermediate_dir)/FileSystemFlags.cpp: $(gyp_shared_intermediate_dir)/blink/modules/filesystem/FileSystemFlags.cpp
+	mkdir -p $(@D); cp $< $@
 $(gyp_intermediate_dir)/IDBIndexParameters.cpp: $(gyp_shared_intermediate_dir)/blink/modules/indexeddb/IDBIndexParameters.cpp
 	mkdir -p $(@D); cp $< $@
 $(gyp_intermediate_dir)/NotificationOptions.cpp: $(gyp_shared_intermediate_dir)/blink/modules/notifications/NotificationOptions.cpp
 	mkdir -p $(@D); cp $< $@
-$(gyp_intermediate_dir)/QueryParams.cpp: $(gyp_shared_intermediate_dir)/blink/modules/serviceworkers/QueryParams.cpp
+$(gyp_intermediate_dir)/CacheQueryOptions.cpp: $(gyp_shared_intermediate_dir)/blink/modules/serviceworkers/CacheQueryOptions.cpp
 	mkdir -p $(@D); cp $< $@
-$(gyp_intermediate_dir)/RegistrationOptionList.cpp: $(gyp_shared_intermediate_dir)/blink/modules/serviceworkers/RegistrationOptionList.cpp
+$(gyp_intermediate_dir)/RegistrationOptions.cpp: $(gyp_shared_intermediate_dir)/blink/modules/serviceworkers/RegistrationOptions.cpp
 	mkdir -p $(@D); cp $< $@
-$(gyp_intermediate_dir)/ServiceWorkerClientQueryParams.cpp: $(gyp_shared_intermediate_dir)/blink/modules/serviceworkers/ServiceWorkerClientQueryParams.cpp
+$(gyp_intermediate_dir)/ServiceWorkerClientQueryOptions.cpp: $(gyp_shared_intermediate_dir)/blink/modules/serviceworkers/ServiceWorkerClientQueryOptions.cpp
 	mkdir -p $(@D); cp $< $@
 $(gyp_intermediate_dir)/MIDIOptions.cpp: $(gyp_shared_intermediate_dir)/blink/modules/webmidi/MIDIOptions.cpp
 	mkdir -p $(@D); cp $< $@
@@ -84,14 +87,19 @@ $(gyp_intermediate_dir)/V8GeneratedModulesBindings18.cpp: $(gyp_shared_intermedi
 	mkdir -p $(@D); cp $< $@
 $(gyp_intermediate_dir)/V8GeneratedModulesBindings19.cpp: $(gyp_shared_intermediate_dir)/blink/bindings/modules/v8/V8GeneratedModulesBindings19.cpp
 	mkdir -p $(@D); cp $< $@
+$(gyp_intermediate_dir)/V8GeneratedModulesBindingsPartial.cpp: $(gyp_shared_intermediate_dir)/blink/bindings/modules/v8/V8GeneratedModulesBindingsPartial.cpp
+	mkdir -p $(@D); cp $< $@
+$(gyp_intermediate_dir)/initPartialInterfacesInModules.cpp: $(gyp_shared_intermediate_dir)/blink/bindings/modules/v8/initPartialInterfacesInModules.cpp
+	mkdir -p $(@D); cp $< $@
 LOCAL_GENERATED_SOURCES := \
 	$(gyp_intermediate_dir)/TextDecodeOptions.cpp \
 	$(gyp_intermediate_dir)/TextDecoderOptions.cpp \
+	$(gyp_intermediate_dir)/FileSystemFlags.cpp \
 	$(gyp_intermediate_dir)/IDBIndexParameters.cpp \
 	$(gyp_intermediate_dir)/NotificationOptions.cpp \
-	$(gyp_intermediate_dir)/QueryParams.cpp \
-	$(gyp_intermediate_dir)/RegistrationOptionList.cpp \
-	$(gyp_intermediate_dir)/ServiceWorkerClientQueryParams.cpp \
+	$(gyp_intermediate_dir)/CacheQueryOptions.cpp \
+	$(gyp_intermediate_dir)/RegistrationOptions.cpp \
+	$(gyp_intermediate_dir)/ServiceWorkerClientQueryOptions.cpp \
 	$(gyp_intermediate_dir)/MIDIOptions.cpp \
 	$(gyp_intermediate_dir)/EventModules.cpp \
 	$(gyp_intermediate_dir)/EventModulesNames.cpp \
@@ -115,10 +123,13 @@ LOCAL_GENERATED_SOURCES := \
 	$(gyp_intermediate_dir)/V8GeneratedModulesBindings16.cpp \
 	$(gyp_intermediate_dir)/V8GeneratedModulesBindings17.cpp \
 	$(gyp_intermediate_dir)/V8GeneratedModulesBindings18.cpp \
-	$(gyp_intermediate_dir)/V8GeneratedModulesBindings19.cpp
+	$(gyp_intermediate_dir)/V8GeneratedModulesBindings19.cpp \
+	$(gyp_intermediate_dir)/V8GeneratedModulesBindingsPartial.cpp \
+	$(gyp_intermediate_dir)/initPartialInterfacesInModules.cpp
 
 GYP_COPIED_SOURCE_ORIGIN_DIRS := \
 	$(gyp_shared_intermediate_dir)/blink/modules/encoding \
+	$(gyp_shared_intermediate_dir)/blink/modules/filesystem \
 	$(gyp_shared_intermediate_dir)/blink/modules/indexeddb \
 	$(gyp_shared_intermediate_dir)/blink/modules/notifications \
 	$(gyp_shared_intermediate_dir)/blink/modules/serviceworkers \
@@ -133,6 +144,8 @@ LOCAL_SRC_FILES := \
 	third_party/WebKit/Source/modules/battery/BatteryStatus.cpp \
 	third_party/WebKit/Source/modules/battery/NavigatorBattery.cpp \
 	third_party/WebKit/Source/modules/beacon/NavigatorBeacon.cpp \
+	third_party/WebKit/Source/modules/bluetooth/BluetoothDiscovery.cpp \
+	third_party/WebKit/Source/modules/bluetooth/NavigatorBluetooth.cpp \
 	third_party/WebKit/Source/modules/credentialmanager/Credential.cpp \
 	third_party/WebKit/Source/modules/credentialmanager/CredentialManagerClient.cpp \
 	third_party/WebKit/Source/modules/credentialmanager/CredentialsContainer.cpp \
@@ -164,8 +177,8 @@ LOCAL_SRC_FILES := \
 	third_party/WebKit/Source/modules/encoding/TextDecoder.cpp \
 	third_party/WebKit/Source/modules/encoding/TextEncoder.cpp \
 	third_party/WebKit/Source/modules/encryptedmedia/HTMLMediaElementEncryptedMedia.cpp \
+	third_party/WebKit/Source/modules/encryptedmedia/MediaEncryptedEvent.cpp \
 	third_party/WebKit/Source/modules/encryptedmedia/MediaKeyMessageEvent.cpp \
-	third_party/WebKit/Source/modules/encryptedmedia/MediaKeyNeededEvent.cpp \
 	third_party/WebKit/Source/modules/encryptedmedia/MediaKeySession.cpp \
 	third_party/WebKit/Source/modules/encryptedmedia/MediaKeys.cpp \
 	third_party/WebKit/Source/modules/encryptedmedia/MediaKeysController.cpp \
@@ -207,12 +220,12 @@ LOCAL_SRC_FILES := \
 	third_party/WebKit/Source/modules/geofencing/CircularGeofencingRegion.cpp \
 	third_party/WebKit/Source/modules/geofencing/Geofencing.cpp \
 	third_party/WebKit/Source/modules/geofencing/GeofencingError.cpp \
-	third_party/WebKit/Source/modules/geofencing/NavigatorGeofencing.cpp \
+	third_party/WebKit/Source/modules/geofencing/GeofencingEvent.cpp \
+	third_party/WebKit/Source/modules/geofencing/ServiceWorkerRegistrationGeofencing.cpp \
 	third_party/WebKit/Source/modules/geofencing/WorkerNavigatorGeofencing.cpp \
 	third_party/WebKit/Source/modules/geolocation/Coordinates.cpp \
 	third_party/WebKit/Source/modules/geolocation/Geolocation.cpp \
 	third_party/WebKit/Source/modules/geolocation/GeolocationController.cpp \
-	third_party/WebKit/Source/modules/geolocation/GeolocationInspectorAgent.cpp \
 	third_party/WebKit/Source/modules/geolocation/GeoNotifier.cpp \
 	third_party/WebKit/Source/modules/geolocation/GeolocationWatchers.cpp \
 	third_party/WebKit/Source/modules/geolocation/NavigatorGeolocation.cpp \
@@ -437,16 +450,9 @@ LOCAL_SRC_FILES := \
 	third_party/WebKit/Source/modules/webmidi/MIDIPort.cpp \
 	third_party/WebKit/Source/modules/webmidi/NavigatorWebMIDI.cpp \
 	third_party/WebKit/Source/modules/websockets/DOMWebSocket.cpp \
-	third_party/WebKit/Source/modules/websockets/MainThreadWebSocketChannel.cpp \
 	third_party/WebKit/Source/modules/websockets/NewWebSocketChannelImpl.cpp \
 	third_party/WebKit/Source/modules/websockets/WebSocketChannel.cpp \
-	third_party/WebKit/Source/modules/websockets/WebSocketDeflateFramer.cpp \
-	third_party/WebKit/Source/modules/websockets/WebSocketDeflater.cpp \
-	third_party/WebKit/Source/modules/websockets/WebSocketExtensionDispatcher.cpp \
-	third_party/WebKit/Source/modules/websockets/WebSocketExtensionParser.cpp \
 	third_party/WebKit/Source/modules/websockets/WebSocketFrame.cpp \
-	third_party/WebKit/Source/modules/websockets/WebSocketHandshake.cpp \
-	third_party/WebKit/Source/modules/websockets/WebSocketPerMessageDeflate.cpp \
 	third_party/WebKit/Source/modules/websockets/WorkerThreadableWebSocketChannel.cpp \
 	third_party/WebKit/Source/bindings/modules/v8/custom/V8CryptoCustom.cpp \
 	third_party/WebKit/Source/bindings/modules/v8/custom/V8CryptoKeyCustom.cpp \
@@ -521,12 +527,6 @@ MY_DEFS_Debug := \
 	'-DCLD_VERSION=1' \
 	'-DENABLE_PRINTING=1' \
 	'-DENABLE_MANAGED_USERS=1' \
-	'-DDATA_REDUCTION_FALLBACK_HOST="http://compress.googlezip.net:80/"' \
-	'-DDATA_REDUCTION_DEV_HOST="https://proxy-dev.googlezip.net:443/"' \
-	'-DDATA_REDUCTION_DEV_FALLBACK_HOST="http://proxy-dev.googlezip.net:80/"' \
-	'-DSPDY_PROXY_AUTH_ORIGIN="https://proxy.googlezip.net:443/"' \
-	'-DDATA_REDUCTION_PROXY_PROBE_URL="http://check.googlezip.net/connect"' \
-	'-DDATA_REDUCTION_PROXY_WARMUP_URL="http://www.gstatic.com/generate_204"' \
 	'-DVIDEO_HOLE=1' \
 	'-DENABLE_LOAD_COMPLETION_HACKS=1' \
 	'-DBLINK_IMPLEMENTATION=1' \
@@ -534,13 +534,13 @@ MY_DEFS_Debug := \
 	'-DCHROME_PNG_WRITE_SUPPORT' \
 	'-DPNG_USER_CONFIG' \
 	'-DCHROME_PNG_READ_PACK_SUPPORT' \
-	'-DENABLE_SVG_FONTS=1' \
+	'-DENABLE_OPENTYPE_VERTICAL=1' \
 	'-DWTF_USE_CONCATENATED_IMPULSE_RESPONSES=1' \
 	'-DWTF_USE_WEBAUDIO_OPENMAX_DL_FFT=1' \
 	'-DENABLE_WEB_AUDIO=1' \
-	'-DENABLE_OPENTYPE_VERTICAL=1' \
 	'-DU_USING_ICU_NAMESPACE=0' \
 	'-DU_ENABLE_DYLOAD=0' \
+	'-DU_STATIC_IMPLEMENTATION' \
 	'-DSK_ENABLE_INST_COUNT=0' \
 	'-DSK_SUPPORT_GPU=1' \
 	'-DGR_GL_CUSTOM_SETUP_HEADER="GrGLConfig_chrome.h"' \
@@ -548,10 +548,11 @@ MY_DEFS_Debug := \
 	'-DSK_ATTR_DEPRECATED=SK_NOTHING_ARG1' \
 	'-DGR_GL_IGNORE_ES3_MSAA=0' \
 	'-DSK_WILL_NEVER_DRAW_PERSPECTIVE_TEXT' \
+	'-DSK_FM_NEW_MATCH_FAMILY_STYLE_CHARACTER=1' \
 	'-DSK_SUPPORT_LEGACY_TEXTRENDERMODE' \
+	'-DSK_LEGACY_NO_DISTANCE_FIELD_PATHS' \
 	'-DSK_BUILD_FOR_ANDROID' \
 	'-DSK_USE_POSIX_THREADS' \
-	'-DSK_DEFERRED_CANVAS_USES_FACTORIES=1' \
 	'-DUSE_OPENSSL=1' \
 	'-DUSE_OPENSSL_CERTS=1' \
 	'-D__STDC_CONSTANT_MACROS' \
@@ -568,8 +569,6 @@ MY_DEFS_Debug := \
 
 # Include paths placed before CFLAGS/CPPFLAGS
 LOCAL_C_INCLUDES_Debug := \
-	$(gyp_shared_intermediate_dir)/shim_headers/icuuc/target \
-	$(gyp_shared_intermediate_dir)/shim_headers/icui18n/target \
 	$(gyp_shared_intermediate_dir) \
 	$(LOCAL_PATH)/third_party/WebKit/Source \
 	$(LOCAL_PATH) \
@@ -586,8 +585,8 @@ LOCAL_C_INCLUDES_Debug := \
 	$(LOCAL_PATH)/third_party/ots/include \
 	$(LOCAL_PATH)/third_party/iccjpeg \
 	$(LOCAL_PATH)/third_party/libjpeg_turbo \
-	$(PWD)/external/icu/icu4c/source/common \
-	$(PWD)/external/icu/icu4c/source/i18n \
+	$(LOCAL_PATH)/third_party/icu/source/i18n \
+	$(LOCAL_PATH)/third_party/icu/source/common \
 	$(LOCAL_PATH)/third_party/skia/src/core \
 	$(LOCAL_PATH)/third_party/skia/include/core \
 	$(LOCAL_PATH)/third_party/skia/include/effects \
@@ -602,10 +601,7 @@ LOCAL_C_INCLUDES_Debug := \
 	$(LOCAL_PATH)/third_party/npapi \
 	$(LOCAL_PATH)/third_party/npapi/bindings \
 	$(LOCAL_PATH)/third_party/qcms/src \
-	$(LOCAL_PATH)/v8/include \
-	$(PWD)/frameworks/wilhelm/include \
-	$(PWD)/bionic \
-	$(PWD)/external/stlport/stlport
+	$(LOCAL_PATH)/v8/include
 
 
 # Flags passed to only C++ (and not C) files.
@@ -681,12 +677,6 @@ MY_DEFS_Release := \
 	'-DCLD_VERSION=1' \
 	'-DENABLE_PRINTING=1' \
 	'-DENABLE_MANAGED_USERS=1' \
-	'-DDATA_REDUCTION_FALLBACK_HOST="http://compress.googlezip.net:80/"' \
-	'-DDATA_REDUCTION_DEV_HOST="https://proxy-dev.googlezip.net:443/"' \
-	'-DDATA_REDUCTION_DEV_FALLBACK_HOST="http://proxy-dev.googlezip.net:80/"' \
-	'-DSPDY_PROXY_AUTH_ORIGIN="https://proxy.googlezip.net:443/"' \
-	'-DDATA_REDUCTION_PROXY_PROBE_URL="http://check.googlezip.net/connect"' \
-	'-DDATA_REDUCTION_PROXY_WARMUP_URL="http://www.gstatic.com/generate_204"' \
 	'-DVIDEO_HOLE=1' \
 	'-DENABLE_LOAD_COMPLETION_HACKS=1' \
 	'-DBLINK_IMPLEMENTATION=1' \
@@ -694,13 +684,13 @@ MY_DEFS_Release := \
 	'-DCHROME_PNG_WRITE_SUPPORT' \
 	'-DPNG_USER_CONFIG' \
 	'-DCHROME_PNG_READ_PACK_SUPPORT' \
-	'-DENABLE_SVG_FONTS=1' \
+	'-DENABLE_OPENTYPE_VERTICAL=1' \
 	'-DWTF_USE_CONCATENATED_IMPULSE_RESPONSES=1' \
 	'-DWTF_USE_WEBAUDIO_OPENMAX_DL_FFT=1' \
 	'-DENABLE_WEB_AUDIO=1' \
-	'-DENABLE_OPENTYPE_VERTICAL=1' \
 	'-DU_USING_ICU_NAMESPACE=0' \
 	'-DU_ENABLE_DYLOAD=0' \
+	'-DU_STATIC_IMPLEMENTATION' \
 	'-DSK_ENABLE_INST_COUNT=0' \
 	'-DSK_SUPPORT_GPU=1' \
 	'-DGR_GL_CUSTOM_SETUP_HEADER="GrGLConfig_chrome.h"' \
@@ -708,10 +698,11 @@ MY_DEFS_Release := \
 	'-DSK_ATTR_DEPRECATED=SK_NOTHING_ARG1' \
 	'-DGR_GL_IGNORE_ES3_MSAA=0' \
 	'-DSK_WILL_NEVER_DRAW_PERSPECTIVE_TEXT' \
+	'-DSK_FM_NEW_MATCH_FAMILY_STYLE_CHARACTER=1' \
 	'-DSK_SUPPORT_LEGACY_TEXTRENDERMODE' \
+	'-DSK_LEGACY_NO_DISTANCE_FIELD_PATHS' \
 	'-DSK_BUILD_FOR_ANDROID' \
 	'-DSK_USE_POSIX_THREADS' \
-	'-DSK_DEFERRED_CANVAS_USES_FACTORIES=1' \
 	'-DUSE_OPENSSL=1' \
 	'-DUSE_OPENSSL_CERTS=1' \
 	'-D__STDC_CONSTANT_MACROS' \
@@ -729,8 +720,6 @@ MY_DEFS_Release := \
 
 # Include paths placed before CFLAGS/CPPFLAGS
 LOCAL_C_INCLUDES_Release := \
-	$(gyp_shared_intermediate_dir)/shim_headers/icuuc/target \
-	$(gyp_shared_intermediate_dir)/shim_headers/icui18n/target \
 	$(gyp_shared_intermediate_dir) \
 	$(LOCAL_PATH)/third_party/WebKit/Source \
 	$(LOCAL_PATH) \
@@ -747,8 +736,8 @@ LOCAL_C_INCLUDES_Release := \
 	$(LOCAL_PATH)/third_party/ots/include \
 	$(LOCAL_PATH)/third_party/iccjpeg \
 	$(LOCAL_PATH)/third_party/libjpeg_turbo \
-	$(PWD)/external/icu/icu4c/source/common \
-	$(PWD)/external/icu/icu4c/source/i18n \
+	$(LOCAL_PATH)/third_party/icu/source/i18n \
+	$(LOCAL_PATH)/third_party/icu/source/common \
 	$(LOCAL_PATH)/third_party/skia/src/core \
 	$(LOCAL_PATH)/third_party/skia/include/core \
 	$(LOCAL_PATH)/third_party/skia/include/effects \
@@ -763,10 +752,7 @@ LOCAL_C_INCLUDES_Release := \
 	$(LOCAL_PATH)/third_party/npapi \
 	$(LOCAL_PATH)/third_party/npapi/bindings \
 	$(LOCAL_PATH)/third_party/qcms/src \
-	$(LOCAL_PATH)/v8/include \
-	$(PWD)/frameworks/wilhelm/include \
-	$(PWD)/bionic \
-	$(PWD)/external/stlport/stlport
+	$(LOCAL_PATH)/v8/include
 
 
 # Flags passed to only C++ (and not C) files.
@@ -790,10 +776,9 @@ LOCAL_C_INCLUDES := $(GYP_COPIED_SOURCE_ORIGIN_DIRS) $(LOCAL_C_INCLUDES_$(GYP_CO
 LOCAL_CPPFLAGS := $(LOCAL_CPPFLAGS_$(GYP_CONFIGURATION))
 LOCAL_ASFLAGS := $(LOCAL_CFLAGS)
 ### Rules for final target.
-
-LOCAL_SHARED_LIBRARIES := \
-	libstlport \
-	libdl
+### Set directly by aosp_build_settings.
+LOCAL_CLANG := false
+LOCAL_NDK_STL_VARIANT := stlport_static
 
 # Add target alias to "gyp_all_modules" target.
 .PHONY: gyp_all_modules

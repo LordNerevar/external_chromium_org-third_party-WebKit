@@ -32,7 +32,7 @@
  * @constructor
  * @implements {WebInspector.ViewportElement}
  * @param {!WebInspector.ConsoleMessage} consoleMessage
- * @param {?WebInspector.Linkifier} linkifier
+ * @param {!WebInspector.Linkifier} linkifier
  * @param {number} nestingLevel
  */
 WebInspector.ConsoleViewMessage = function(consoleMessage, linkifier, nestingLevel)
@@ -126,7 +126,7 @@ WebInspector.ConsoleViewMessage.prototype = {
 
     _formatMessage: function()
     {
-        this._formattedMessage = document.createElement("span");
+        this._formattedMessage = createElement("span");
         this._formattedMessage.className = "console-message-text source-code";
 
         /**
@@ -147,7 +147,7 @@ WebInspector.ConsoleViewMessage.prototype = {
                         this._messageElement = this._format(consoleMessage.parameters || ["console.trace()"]);
                         break;
                     case WebInspector.ConsoleMessage.MessageType.Clear:
-                        this._messageElement = document.createTextNode(WebInspector.UIString("Console was cleared"));
+                        this._messageElement = createTextNode(WebInspector.UIString("Console was cleared"));
                         this._formattedMessage.classList.add("console-info");
                         break;
                     case WebInspector.ConsoleMessage.MessageType.Assert:
@@ -171,7 +171,7 @@ WebInspector.ConsoleViewMessage.prototype = {
                 }
             } else if (consoleMessage.source === WebInspector.ConsoleMessage.MessageSource.Network) {
                 if (consoleMessage.request) {
-                    this._messageElement = document.createElement("span");
+                    this._messageElement = createElement("span");
                     if (consoleMessage.level === WebInspector.ConsoleMessage.MessageLevel.Error) {
                         this._messageElement.createTextChildren(consoleMessage.request.requestMethod, " ");
                         this._messageElement.appendChild(WebInspector.Linkifier.linkifyUsingRevealer(consoleMessage.request, consoleMessage.request.url, consoleMessage.request.url));
@@ -212,13 +212,13 @@ WebInspector.ConsoleViewMessage.prototype = {
 
         this._formattedMessage.appendChild(this._messageElement);
         if (this._anchorElement) {
-            this._formattedMessage.insertBefore(document.createTextNode(" "), this._formattedMessage.firstChild);
+            this._formattedMessage.insertBefore(createTextNode(" "), this._formattedMessage.firstChild);
             this._formattedMessage.insertBefore(this._anchorElement, this._formattedMessage.firstChild);
         }
 
         var dumpStackTrace = !!consoleMessage.stackTrace && consoleMessage.stackTrace.length && (consoleMessage.source === WebInspector.ConsoleMessage.MessageSource.Network || consoleMessage.level === WebInspector.ConsoleMessage.MessageLevel.Error || consoleMessage.type === WebInspector.ConsoleMessage.MessageType.Trace);
         if (dumpStackTrace) {
-            var ol = document.createElement("ol");
+            var ol = createElement("ol");
             ol.className = "outline-disclosure";
             var treeOutline = new TreeOutline(ol);
 
@@ -260,9 +260,8 @@ WebInspector.ConsoleViewMessage.prototype = {
      */
     _linkifyLocation: function(url, lineNumber, columnNumber)
     {
-        console.assert(this._linkifier);
         var target = this._target();
-        if (!this._linkifier || !target)
+        if (!target)
             return null;
         // FIXME(62725): stack trace line/column numbers are one-based.
         lineNumber = lineNumber ? lineNumber - 1 : 0;
@@ -282,7 +281,6 @@ WebInspector.ConsoleViewMessage.prototype = {
      */
     _linkifyCallFrame: function(callFrame)
     {
-        console.assert(this._linkifier);
         var target = this._target();
         if (!this._linkifier)
             return null;
@@ -299,9 +297,8 @@ WebInspector.ConsoleViewMessage.prototype = {
      */
     _linkifyScriptId: function(scriptId, url, lineNumber, columnNumber)
     {
-        console.assert(this._linkifier);
         var target = this._target();
-        if (!this._linkifier || !target)
+        if (!target)
             return null;
         // FIXME(62725): stack trace line/column numbers are one-based.
         lineNumber = lineNumber ? lineNumber - 1 : 0;
@@ -344,7 +341,7 @@ WebInspector.ConsoleViewMessage.prototype = {
     _format: function(parameters)
     {
         // This node is used like a Builder. Values are continually appended onto it.
-        var formattedResult = document.createElement("span");
+        var formattedResult = createElement("span");
         if (!parameters.length)
             return formattedResult;
 
@@ -389,7 +386,7 @@ WebInspector.ConsoleViewMessage.prototype = {
         for (var i = 0; i < parameters.length; ++i) {
             // Inline strings when formatting.
             if (shouldFormatMessage && parameters[i].type === "string")
-                formattedResult.appendChild(WebInspector.linkifyStringAsFragment(parameters[i].description));
+                formattedResult.appendChild(this._linkifier.linkifyStringAsFragment(this._target(), parameters[i].description));
             else
                 formattedResult.appendChild(this._formatParameter(parameters[i], false, true));
             if (i < parameters.length - 1)
@@ -408,7 +405,7 @@ WebInspector.ConsoleViewMessage.prototype = {
     {
         var type = forceObjectFormat ? "object" : (output.subtype || output.type);
         var formatter = this._customFormatters[type] || this._formatParameterAsValue;
-        var span = document.createElement("span");
+        var span = createElement("span");
         span.className = "console-formatted-" + type + " source-code";
         formatter.call(this, output, span, includePreview);
         return span;
@@ -442,7 +439,7 @@ WebInspector.ConsoleViewMessage.prototype = {
      */
     _formatParameterAsArrayOrObject: function(obj, elem, includePreview)
     {
-        var titleElement = document.createElement("span");
+        var titleElement = createElement("span");
         if (includePreview && obj.preview) {
             titleElement.classList.add("console-object-preview");
             var lossless = this._appendObjectPreview(titleElement, obj.preview, obj);
@@ -572,7 +569,7 @@ WebInspector.ConsoleViewMessage.prototype = {
      */
     _renderPropertyPreview: function(type, subtype, description)
     {
-        var span = document.createElementWithClass("span", "console-formatted-" + (subtype || type));
+        var span = createElementWithClass("span", "console-formatted-" + (subtype || type));
         description = description || "";
 
         if (type === "function") {
@@ -601,25 +598,22 @@ WebInspector.ConsoleViewMessage.prototype = {
      */
     _formatParameterAsNode: function(object, elem)
     {
+        WebInspector.Renderer.renderPromise(object).then(appendRenderer, failedToRender.bind(this)).done();
         /**
-         * @param {!WebInspector.DOMNode} node
+         * @param {!Element} rendererElement
+         */
+        function appendRenderer(rendererElement)
+        {
+            elem.appendChild(rendererElement);
+        }
+
+        /**
          * @this {WebInspector.ConsoleViewMessage}
          */
-        function printNode(node)
+        function failedToRender()
         {
-            if (!node) {
-                // Sometimes DOM is loaded after the sync message is being formatted, so we get no
-                // nodeId here. So we fall back to object formatting here.
-                this._formatParameterAsObject(object, elem, false);
-                return;
-            }
-            var renderer = self.runtime.instance(WebInspector.Renderer, node);
-            if (renderer)
-                elem.appendChild(renderer.render(node));
-            else
-                console.error("No renderer for node found");
+            this._formatParameterAsObject(object, elem, false);
         }
-        object.pushNodeToFrontend(printNode.bind(this));
     },
 
     /**
@@ -655,7 +649,7 @@ WebInspector.ConsoleViewMessage.prototype = {
      */
     _formatParameterAsTable: function(parameters)
     {
-        var element = document.createElement("span");
+        var element = createElement("span");
         var table = parameters[0];
         if (!table || !table.preview)
             return element;
@@ -720,9 +714,9 @@ WebInspector.ConsoleViewMessage.prototype = {
      */
     _formatParameterAsString: function(output, elem)
     {
-        var span = document.createElement("span");
+        var span = createElement("span");
         span.className = "console-formatted-string source-code";
-        span.appendChild(WebInspector.linkifyStringAsFragment(output.description || ""));
+        span.appendChild(this._linkifier.linkifyStringAsFragment(this._target(), output.description || ""));
 
         // Make black quotes.
         elem.classList.remove("console-formatted-string");
@@ -889,7 +883,7 @@ WebInspector.ConsoleViewMessage.prototype = {
         function styleFormatter(obj)
         {
             currentStyle = {};
-            var buffer = document.createElement("span");
+            var buffer = createElement("span");
             buffer.setAttribute("style", obj.description);
             for (var i = 0; i < buffer.style.length; i++) {
                 var property = buffer.style[i];
@@ -924,14 +918,17 @@ WebInspector.ConsoleViewMessage.prototype = {
 
         formatters._ = bypassFormatter;
 
+        /**
+         * @this {WebInspector.ConsoleViewMessage}
+         */
         function append(a, b)
         {
             if (b instanceof Node)
                 a.appendChild(b);
             else if (typeof b !== "undefined") {
-                var toAppend = WebInspector.linkifyStringAsFragment(String(b));
+                var toAppend = this._linkifier.linkifyStringAsFragment(this._target(), String(b));
                 if (currentStyle) {
-                    var wrapper = document.createElement('span');
+                    var wrapper = createElement('span');
                     for (var key in currentStyle)
                         wrapper.style[key] = currentStyle[key];
                     wrapper.appendChild(toAppend);
@@ -943,7 +940,7 @@ WebInspector.ConsoleViewMessage.prototype = {
         }
 
         // String.format does treat formattedResult like a Builder, result is an object.
-        return String.format(format, parameters, formatters, formattedResult, append);
+        return String.format(format, parameters, formatters, formattedResult, append.bind(this));
     },
 
     clearHighlight: function()
@@ -951,12 +948,7 @@ WebInspector.ConsoleViewMessage.prototype = {
         if (!this._formattedMessage)
             return;
 
-        var highlightedMessage = this._formattedMessage;
-        delete this._formattedMessage;
-        delete this._anchorElement;
-        delete this._messageElement;
-        this._formatMessage();
-        this._element.replaceChild(this._formattedMessage, highlightedMessage);
+        WebInspector.removeSearchResultsHighlight(this._formattedMessage);
     },
 
     highlightSearchResults: function(regexObject)
@@ -1023,6 +1015,8 @@ WebInspector.ConsoleViewMessage.prototype = {
 
     resetCloseGroupDecorationCount: function()
     {
+        if (!this._closeGroupDecorationCount)
+            return;
         this._closeGroupDecorationCount = 0;
         this._updateCloseGroupDecorations();
     },
@@ -1051,7 +1045,7 @@ WebInspector.ConsoleViewMessage.prototype = {
         if (this._element)
             return this._element;
 
-        var element = document.createElementWithClass("div", "console-message");
+        var element = createElementWithClass("div", "console-message");
         this._element = element;
 
         switch (this._message.level) {
@@ -1093,7 +1087,7 @@ WebInspector.ConsoleViewMessage.prototype = {
         if (this._wrapperElement)
             return this._wrapperElement;
 
-        this._wrapperElement = document.createElementWithClass("div", "console-message-wrapper");
+        this._wrapperElement = createElementWithClass("div", "console-message-wrapper");
         this._nestingLevelMarkers = [];
         for (var i = 0; i < this._nestingLevel; ++i)
             this._nestingLevelMarkers.push(this._wrapperElement.createChild("div", "nesting-level-marker"));
@@ -1121,7 +1115,7 @@ WebInspector.ConsoleViewMessage.prototype = {
             for (var i = 0; i < stackTrace.length; i++) {
                 var frame = stackTrace[i];
 
-                var content = document.createElementWithClass("div", "stacktrace-entry");
+                var content = createElementWithClass("div", "stacktrace-entry");
                 var functionName = frame.functionName || WebInspector.UIString("(anonymous function)");
                 if (frame.scriptId) {
                     var urlElement = this._linkifyCallFrame(frame);
@@ -1141,7 +1135,7 @@ WebInspector.ConsoleViewMessage.prototype = {
         for (var asyncTrace = this._message.asyncStackTrace; asyncTrace; asyncTrace = asyncTrace.asyncStackTrace) {
             if (!asyncTrace.callFrames || !asyncTrace.callFrames.length)
                 break;
-            var content = document.createElementWithClass("div", "stacktrace-entry");
+            var content = createElementWithClass("div", "stacktrace-entry");
             var description = WebInspector.asyncStackTraceLabel(asyncTrace.description);
             content.createChild("span", "console-message-text source-code console-async-trace-text").textContent = description;
             parentTreeElement.appendChild(new TreeElement(content));
@@ -1171,7 +1165,7 @@ WebInspector.ConsoleViewMessage.prototype = {
             return;
 
         if (!this._repeatCountElement) {
-            this._repeatCountElement = document.createElement("span");
+            this._repeatCountElement = createElement("span");
             this._repeatCountElement.className = "bubble-repeat-count";
 
             this._element.insertBefore(this._repeatCountElement, this._element.firstChild);
@@ -1284,7 +1278,7 @@ WebInspector.ConsoleViewMessage.prototype = {
  * @constructor
  * @extends {WebInspector.ConsoleViewMessage}
  * @param {!WebInspector.ConsoleMessage} consoleMessage
- * @param {?WebInspector.Linkifier} linkifier
+ * @param {!WebInspector.Linkifier} linkifier
  * @param {number} nestingLevel
  */
 WebInspector.ConsoleGroupViewMessage = function(consoleMessage, linkifier, nestingLevel)

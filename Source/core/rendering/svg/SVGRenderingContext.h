@@ -28,14 +28,23 @@
 #include "core/rendering/PaintInfo.h"
 #include "core/rendering/svg/RenderSVGResourceClipper.h"
 #include "platform/graphics/ImageBuffer.h"
+#include "platform/transforms/AffineTransform.h"
 
 namespace blink {
 
-class AffineTransform;
 class RenderObject;
 class FloatRect;
 class RenderSVGResourceFilter;
 class RenderSVGResourceMasker;
+
+class SubtreeContentTransformScope {
+public:
+    SubtreeContentTransformScope(const AffineTransform&);
+    ~SubtreeContentTransformScope();
+
+private:
+    AffineTransform m_savedContentTransformation;
+};
 
 // SVGRenderingContext
 class SVGRenderingContext {
@@ -73,17 +82,9 @@ public:
     void prepareToRenderSVGContent(RenderObject*, PaintInfo&);
     bool isRenderingPrepared() const { return m_renderingFlags & RenderingPrepared; }
 
-    static void renderSubtree(GraphicsContext*, RenderObject*, const AffineTransform&);
+    static void renderSubtree(GraphicsContext*, RenderObject*);
 
     static float calculateScreenFontSizeScalingFactor(const RenderObject*);
-    static void calculateDeviceSpaceTransformation(const RenderObject*, AffineTransform& absoluteTransform);
-    static FloatRect clampedAbsoluteTargetRect(const FloatRect& absoluteTargetRect);
-    static void clear2DRotation(AffineTransform&);
-
-    static IntRect calculateImageBufferRect(const FloatRect& targetRect, const AffineTransform& absoluteTransform)
-    {
-        return enclosingIntRect(absoluteTransform.mapRect(targetRect));
-    }
 
     // Support for the buffered-rendering hint.
     bool bufferForeground(OwnPtr<ImageBuffer>&);

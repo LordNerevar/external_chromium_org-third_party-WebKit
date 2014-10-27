@@ -33,13 +33,6 @@ namespace blink {
 class RenderSelectionInfoBase : public NoBaseWillBeGarbageCollected<RenderSelectionInfoBase> {
     WTF_MAKE_NONCOPYABLE(RenderSelectionInfoBase); WTF_MAKE_FAST_ALLOCATED_WILL_BE_REMOVED;
 public:
-    RenderSelectionInfoBase()
-        : m_object(nullptr)
-        , m_paintInvalidationContainer(nullptr)
-        , m_state(RenderObject::SelectionNone)
-    {
-    }
-
     RenderSelectionInfoBase(RenderObject* o)
         : m_object(o)
         , m_paintInvalidationContainer(o->isRooted() ? o->containerForPaintInvalidation() : nullptr)
@@ -53,9 +46,7 @@ public:
         visitor->trace(m_paintInvalidationContainer);
     }
 
-    RenderObject* object() const { return m_object; }
-    const RenderLayerModelObject* paintInvalidationContainer() const { return m_paintInvalidationContainer; }
-    RenderObject::SelectionState state() const { return m_state; }
+    RenderObject* object() const { return m_object.get(); }
 
 protected:
     RawPtrWillBeMember<RenderObject> m_object;
@@ -64,7 +55,7 @@ protected:
 };
 
 // This struct is used when the selection changes to cache the old and new state of the selection for each RenderObject.
-class RenderSelectionInfo FINAL : public RenderSelectionInfoBase {
+class RenderSelectionInfo final : public RenderSelectionInfoBase {
 public:
     RenderSelectionInfo(RenderObject* o)
         : RenderSelectionInfoBase(o)
@@ -81,17 +72,33 @@ public:
 
     void invalidatePaint()
     {
-        m_object->invalidatePaintUsingContainer(m_paintInvalidationContainer, enclosingIntRect(m_rect), InvalidationSelection);
+        m_object->invalidatePaintUsingContainer(m_paintInvalidationContainer, enclosingIntRect(m_rect), PaintInvalidationSelection);
     }
 
-    LayoutRect rect() const { return m_rect; }
+    LayoutRect absoluteSelectionRect() const
+    {
+        if (!m_paintInvalidationContainer)
+            return LayoutRect();
+
+        FloatQuad absQuad = m_paintInvalidationContainer->localToAbsoluteQuad(FloatRect(m_rect));
+        return absQuad.enclosingBoundingBox();
+    }
+
+    bool hasChangedFrom(const RenderSelectionInfo& other) const
+    {
+        // There is no point in comparing selection info for different objects.
+        ASSERT(m_object == other.m_object);
+        ASSERT(m_paintInvalidationContainer == other.m_paintInvalidationContainer);
+
+        return m_state != other.m_state || m_rect != other.m_rect;
+    }
 
 private:
     LayoutRect m_rect; // relative to paint invalidation container
 };
 
 // This struct is used when the selection changes to cache the old and new state of the selection for each RenderBlock.
-class RenderBlockSelectionInfo FINAL : public RenderSelectionInfoBase {
+class RenderBlockSelectionInfo final : public RenderSelectionInfoBase {
 public:
     RenderBlockSelectionInfo(RenderBlock* b)
         : RenderSelectionInfoBase(b)
@@ -110,13 +117,21 @@ public:
         // paintInvalidationContainer as the render object. Find out why it does that and fix.
         if (m_paintInvalidationContainer && m_paintInvalidationContainer->layer()->groupedMapping())
             RenderLayer::mapRectToPaintBackingCoordinates(m_paintInvalidationContainer, paintInvalidationRect);
-        m_object->invalidatePaintUsingContainer(m_paintInvalidationContainer, enclosingIntRect(paintInvalidationRect), InvalidationSelection);
+        m_object->invalidatePaintUsingContainer(m_paintInvalidationContainer, enclosingIntRect(paintInvalidationRect), PaintInvalidationSelection);
     }
 
-    RenderBlock* block() const { return toRenderBlock(m_object); }
-    GapRects rects() const { return m_rects; }
+    bool hasChangedFrom(const RenderBlockSelectionInfo& other) const
+    {
+        // There is no point in comparing selection info for different objects.
+        ASSERT(m_object == other.m_object);
+        ASSERT(m_paintInvalidationContainer == other.m_paintInvalidationContainer);
+
+        return m_state != other.m_state || m_rects != other.m_rects;
+    }
 
 private:
+    RenderBlock* block() const { return toRenderBlock(m_object); }
+
     GapRects m_rects; // relative to paint invalidation container
 };
 

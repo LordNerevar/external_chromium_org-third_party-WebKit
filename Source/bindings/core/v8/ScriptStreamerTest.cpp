@@ -69,7 +69,7 @@ public:
     {
         m_settings->setV8ScriptStreamingEnabled(true);
         m_resource->setLoading(true);
-        ScriptStreamer::removeSmallScriptThresholdForTesting();
+        ScriptStreamer::setSmallScriptThresholdForTesting(0);
     }
 
     ScriptState* scriptState() const { return m_scope.scriptState(); }
@@ -132,7 +132,7 @@ public:
     TestScriptResourceClient()
         : m_finished(false) { }
 
-    virtual void notifyFinished(Resource*) OVERRIDE { m_finished = true; }
+    virtual void notifyFinished(Resource*) override { m_finished = true; }
 
     bool finished() const { return m_finished; }
 
@@ -219,6 +219,7 @@ TEST_F(ScriptStreamingTest, CancellingStreaming)
     // away).
     EXPECT_FALSE(client.finished());
     pendingScript().stopWatchingForLoad(&client);
+    pendingScript().releaseElementAndClear();
     m_pendingScript = PendingScriptWrapper::create(); // This will destroy m_resource.
     m_resource = 0;
 
@@ -275,6 +276,59 @@ TEST_F(ScriptStreamingTest, EmptyScripts)
     ScriptSourceCode sourceCode = pendingScript().getSource(KURL(), errorOccurred);
     EXPECT_FALSE(errorOccurred);
     EXPECT_FALSE(sourceCode.streamer());
+}
+
+TEST_F(ScriptStreamingTest, SmallScripts)
+{
+    // Small scripts shouldn't be streamed.
+    ScriptStreamer::setSmallScriptThresholdForTesting(100);
+
+    ScriptStreamer::startStreaming(pendingScript(), m_settings.get(), m_scope.scriptState(), PendingScript::ParsingBlocking);
+    TestScriptResourceClient client;
+    pendingScript().watchForLoad(&client);
+
+    appendData("function foo() { }");
+
+    finish();
+
+    // The finished notification should arrive immediately and not be cycled
+    // through a background thread.
+    EXPECT_TRUE(client.finished());
+
+    bool errorOccurred = false;
+    ScriptSourceCode sourceCode = pendingScript().getSource(KURL(), errorOccurred);
+    EXPECT_FALSE(errorOccurred);
+    EXPECT_FALSE(sourceCode.streamer());
+}
+
+TEST_F(ScriptStreamingTest, ScriptsWithSmallFirstChunk)
+{
+    // If a script is long enough, if should be streamed, even if the first data
+    // chunk is small.
+    ScriptStreamer::setSmallScriptThresholdForTesting(100);
+
+    ScriptStreamer::startStreaming(pendingScript(), m_settings.get(), m_scope.scriptState(), PendingScript::ParsingBlocking);
+    TestScriptResourceClient client;
+    pendingScript().watchForLoad(&client);
+
+    // This is the first data chunk which is small.
+    appendData("function foo() { }");
+    appendPadding();
+    appendPadding();
+    appendPadding();
+
+    finish();
+
+    processTasksUntilStreamingComplete();
+    EXPECT_TRUE(client.finished());
+    bool errorOccurred = false;
+    ScriptSourceCode sourceCode = pendingScript().getSource(KURL(), errorOccurred);
+    EXPECT_FALSE(errorOccurred);
+    EXPECT_TRUE(sourceCode.streamer());
+    v8::TryCatch tryCatch;
+    v8::Handle<v8::Script> script = V8ScriptRunner::compileScript(sourceCode, isolate());
+    EXPECT_FALSE(script.IsEmpty());
+    EXPECT_FALSE(tryCatch.HasCaught());
 }
 
 } // namespace

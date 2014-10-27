@@ -101,8 +101,15 @@ ScriptController::ScriptController(LocalFrame* frame)
 
 ScriptController::~ScriptController()
 {
-    // WindowProxy::clearForClose() must be invoked before destruction starts.
-    ASSERT(!m_windowProxy->isContextInitialized());
+}
+
+void ScriptController::trace(Visitor* visitor)
+{
+#if ENABLE(OILPAN)
+    visitor->trace(m_frame);
+    visitor->trace(m_windowProxy);
+    visitor->trace(m_isolatedWorlds);
+#endif
 }
 
 void ScriptController::clearScriptObjects()
@@ -119,7 +126,7 @@ void ScriptController::clearScriptObjects()
         // to it, so that if a plugin fails to release it properly we will
         // only leak the NPObject wrapper, not the object, its document, or
         // anything else they reference.
-        disposeUnderlyingV8Object(m_windowScriptNPObject, m_isolate);
+        disposeUnderlyingV8Object(m_isolate, m_windowScriptNPObject);
         _NPN_ReleaseObject(m_windowScriptNPObject);
         m_windowScriptNPObject = 0;
     }
@@ -142,13 +149,13 @@ void ScriptController::updateSecurityOrigin(SecurityOrigin* origin)
 v8::Local<v8::Value> ScriptController::callFunction(v8::Handle<v8::Function> function, v8::Handle<v8::Value> receiver, int argc, v8::Handle<v8::Value> info[])
 {
     // Keep LocalFrame (and therefore ScriptController) alive.
-    RefPtrWillBeRawPtr<LocalFrame> protect(m_frame);
+    RefPtrWillBeRawPtr<LocalFrame> protect(m_frame.get());
     return ScriptController::callFunction(m_frame->document(), function, receiver, argc, info, m_isolate);
 }
 
 v8::Local<v8::Value> ScriptController::callFunction(ExecutionContext* context, v8::Handle<v8::Function> function, v8::Handle<v8::Value> receiver, int argc, v8::Handle<v8::Value> info[], v8::Isolate* isolate)
 {
-    TRACE_EVENT1(TRACE_DISABLED_BY_DEFAULT("devtools.timeline"), "FunctionCall", "data", devToolsTraceEventData(context, function, isolate));
+    TRACE_EVENT1(TRACE_DISABLED_BY_DEFAULT("devtools.timeline"), "FunctionCall", "data", devToolsTraceEventData(isolate, context, function));
     TRACE_EVENT_INSTANT1(TRACE_DISABLED_BY_DEFAULT("devtools.timeline.stack"), "CallStack", "stack", InspectorCallStackEvent::currentCallStack());
     // FIXME(361045): remove InspectorInstrumentation calls once DevTools Timeline migrates to tracing.
     InspectorInstrumentationCookie cookie;
@@ -192,7 +199,7 @@ v8::Local<v8::Value> ScriptController::executeScriptAndReturnValue(v8::Handle<v8
             *compilationFinishTime = WTF::monotonicallyIncreasingTime();
         }
         // Keep LocalFrame (and therefore ScriptController) alive.
-        RefPtrWillBeRawPtr<LocalFrame> protect(m_frame);
+        RefPtrWillBeRawPtr<LocalFrame> protect(m_frame.get());
         result = V8ScriptRunner::runCompiledScript(script, m_frame->document(), m_isolate);
         ASSERT(!tryCatch.HasCaught() || result.IsEmpty());
     }
@@ -223,7 +230,7 @@ WindowProxy* ScriptController::existingWindowProxy(DOMWrapperWorld& world)
 
 WindowProxy* ScriptController::windowProxy(DOMWrapperWorld& world)
 {
-    WindowProxy* windowProxy = 0;
+    WindowProxy* windowProxy = nullptr;
     if (world.isMainWorld()) {
         windowProxy = m_windowProxy.get();
     } else {
@@ -231,7 +238,7 @@ WindowProxy* ScriptController::windowProxy(DOMWrapperWorld& world)
         if (iter != m_isolatedWorlds.end()) {
             windowProxy = iter->value.get();
         } else {
-            OwnPtr<WindowProxy> isolatedWorldWindowProxy = WindowProxy::create(m_frame, world, m_isolate);
+            OwnPtrWillBeRawPtr<WindowProxy> isolatedWorldWindowProxy = WindowProxy::create(m_frame, world, m_isolate);
             windowProxy = isolatedWorldWindowProxy.get();
             m_isolatedWorlds.set(world.worldId(), isolatedWorldWindowProxy.release());
         }
@@ -263,7 +270,7 @@ TextPosition ScriptController::eventHandlerPosition() const
 void ScriptController::bindToWindowObject(LocalFrame* frame, const String& key, NPObject* object)
 {
     ScriptState* scriptState = ScriptState::forMainWorld(frame);
-    if (scriptState->contextIsValid())
+    if (!scriptState->contextIsValid())
         return;
 
     ScriptState::Scope scope(scriptState);
@@ -372,14 +379,14 @@ static NPObject* createNoScriptObject()
 static NPObject* createScriptObject(LocalFrame* frame, v8::Isolate* isolate)
 {
     ScriptState* scriptState = ScriptState::forMainWorld(frame);
-    if (scriptState->contextIsValid())
+    if (!scriptState->contextIsValid())
         return createNoScriptObject();
 
     ScriptState::Scope scope(scriptState);
     LocalDOMWindow* window = frame->domWindow();
     v8::Handle<v8::Value> global = toV8(window, scriptState->context()->Global(), scriptState->isolate());
     ASSERT(global->IsObject());
-    return npCreateV8ScriptObject(0, v8::Handle<v8::Object>::Cast(global), window, isolate);
+    return npCreateV8ScriptObject(isolate, 0, v8::Handle<v8::Object>::Cast(global), window);
 }
 
 NPObject* ScriptController::windowScriptNPObject()
@@ -408,7 +415,7 @@ NPObject* ScriptController::createScriptObjectForPluginElement(HTMLPlugInElement
         return createNoScriptObject();
 
     ScriptState* scriptState = ScriptState::forMainWorld(m_frame);
-    if (scriptState->contextIsValid())
+    if (!scriptState->contextIsValid())
         return createNoScriptObject();
 
     ScriptState::Scope scope(scriptState);
@@ -417,7 +424,7 @@ NPObject* ScriptController::createScriptObjectForPluginElement(HTMLPlugInElement
     if (!v8plugin->IsObject())
         return createNoScriptObject();
 
-    return npCreateV8ScriptObject(0, v8::Handle<v8::Object>::Cast(v8plugin), window, scriptState->isolate());
+    return npCreateV8ScriptObject(scriptState->isolate(), 0, v8::Handle<v8::Object>::Cast(v8plugin), window);
 }
 
 void ScriptController::clearWindowProxy()
@@ -537,7 +544,7 @@ bool ScriptController::executeScriptIfJavaScriptURL(const KURL& url)
 
     // We need to hold onto the LocalFrame here because executing script can
     // destroy the frame.
-    RefPtrWillBeRawPtr<LocalFrame> protect(m_frame);
+    RefPtrWillBeRawPtr<LocalFrame> protect(m_frame.get());
     RefPtrWillBeRawPtr<Document> ownerDocument(m_frame->document());
 
     const int javascriptSchemeLength = sizeof("javascript:") - 1;
@@ -600,7 +607,7 @@ v8::Local<v8::Value> ScriptController::evaluateScriptInMainWorld(const ScriptSou
     ScriptState* scriptState = ScriptState::from(context);
     ScriptState::Scope scope(scriptState);
 
-    RefPtrWillBeRawPtr<LocalFrame> protect(m_frame);
+    RefPtrWillBeRawPtr<LocalFrame> protect(m_frame.get());
     if (m_frame->loader().stateMachine()->isDisplayingInitialEmptyDocument())
         m_frame->loader().didAccessInitialDocument();
 

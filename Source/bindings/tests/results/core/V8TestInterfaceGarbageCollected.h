@@ -24,31 +24,26 @@ public:
     static v8::Handle<v8::FunctionTemplate> domTemplate(v8::Isolate*);
     static TestInterfaceGarbageCollected* toImpl(v8::Handle<v8::Object> object)
     {
-        return toImpl(blink::toScriptWrappableBase(object));
+        return blink::toScriptWrappableBase(object)->toImpl<TestInterfaceGarbageCollected>();
     }
     static TestInterfaceGarbageCollected* toImplWithTypeCheck(v8::Isolate*, v8::Handle<v8::Value>);
     static const WrapperTypeInfo wrapperTypeInfo;
-    static void refObject(ScriptWrappableBase* internalPointer);
-    static void derefObject(ScriptWrappableBase* internalPointer);
-    static WrapperPersistentNode* createPersistentHandle(ScriptWrappableBase* internalPointer);
+    static void refObject(ScriptWrappableBase*);
+    static void derefObject(ScriptWrappableBase*);
+    static void trace(Visitor* visitor, ScriptWrappableBase* scriptWrappableBase)
+    {
+        visitor->trace(scriptWrappableBase->toImpl<TestInterfaceGarbageCollected>());
+    }
     static EventTarget* toEventTarget(v8::Handle<v8::Object>);
     static void constructorCallback(const v8::FunctionCallbackInfo<v8::Value>&);
     static const int eventListenerCacheIndex = v8DefaultWrapperInternalFieldCount + 0;
-    static const int persistentHandleIndex = v8DefaultWrapperInternalFieldCount + 1;
-    static const int internalFieldCount = v8DefaultWrapperInternalFieldCount + 1 + 1;
+    static const int internalFieldCount = v8DefaultWrapperInternalFieldCount + 1;
     static inline ScriptWrappableBase* toScriptWrappableBase(TestInterfaceGarbageCollected* impl)
     {
         return impl->toScriptWrappableBase();
     }
-
-    static inline TestInterfaceGarbageCollected* toImpl(ScriptWrappableBase* internalPointer)
-    {
-        return internalPointer->toImpl<TestInterfaceGarbageCollected>();
-    }
     static void installConditionallyEnabledProperties(v8::Handle<v8::Object>, v8::Isolate*) { }
     static void installConditionallyEnabledMethods(v8::Handle<v8::Object>, v8::Isolate*) { }
-
-private:
 };
 
 inline v8::Handle<v8::Object> wrap(TestInterfaceGarbageCollected* impl, v8::Handle<v8::Object> creationContext, v8::Isolate* isolate)
@@ -131,4 +126,5 @@ inline void v8SetReturnValueFast(const CallbackInfo& callbackInfo, RawPtr<TestIn
 }
 
 } // namespace blink
+
 #endif // V8TestInterfaceGarbageCollected_h

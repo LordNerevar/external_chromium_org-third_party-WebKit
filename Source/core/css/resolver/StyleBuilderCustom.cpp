@@ -43,7 +43,6 @@
 #include "core/StyleBuilderFunctions.h"
 #include "core/StylePropertyShorthand.h"
 #include "core/css/BasicShapeFunctions.h"
-#include "core/css/CSSAspectRatioValue.h"
 #include "core/css/CSSCursorImageValue.h"
 #include "core/css/CSSFontValue.h"
 #include "core/css/CSSGradientValue.h"
@@ -230,21 +229,6 @@ void StyleBuilderFunctions::applyValueCSSPropertyDirection(StyleResolverState& s
     Element* element = state.element();
     if (element && element == element->document().documentElement())
         element->document().setDirectionSetOnDocumentElement(true);
-}
-
-void StyleBuilderFunctions::applyInitialCSSPropertyFontFamily(StyleResolverState& state)
-{
-    state.fontBuilder().setFontFamilyInitial();
-}
-
-void StyleBuilderFunctions::applyInheritCSSPropertyFontFamily(StyleResolverState& state)
-{
-    state.fontBuilder().setFontFamilyInherit(state.parentFontDescription());
-}
-
-void StyleBuilderFunctions::applyValueCSSPropertyFontFamily(StyleResolverState& state, CSSValue* value)
-{
-    state.fontBuilder().setFontFamilyValue(value);
 }
 
 void StyleBuilderFunctions::applyValueCSSPropertyGlyphOrientationVertical(StyleResolverState& state, CSSValue* value)
@@ -442,14 +426,12 @@ void StyleBuilderFunctions::applyValueCSSPropertySize(StyleResolverState& state,
     Length width;
     Length height;
     PageSizeType pageSizeType = PAGE_SIZE_AUTO;
-    CSSValueListInspector inspector(value);
-    switch (inspector.length()) {
+    CSSValueList* list = toCSSValueList(value);
+    switch (list->length()) {
     case 2: {
         // <length>{2} | <page-size> <orientation>
-        if (!inspector.first()->isPrimitiveValue() || !inspector.second()->isPrimitiveValue())
-            return;
-        CSSPrimitiveValue* first = toCSSPrimitiveValue(inspector.first());
-        CSSPrimitiveValue* second = toCSSPrimitiveValue(inspector.second());
+        CSSPrimitiveValue* first = toCSSPrimitiveValue(list->item(0));
+        CSSPrimitiveValue* second = toCSSPrimitiveValue(list->item(1));
         if (first->isLength()) {
             // <length>{2}
             if (!second->isLength())
@@ -467,9 +449,7 @@ void StyleBuilderFunctions::applyValueCSSPropertySize(StyleResolverState& state,
     }
     case 1: {
         // <length> | auto | <page-size> | [ portrait | landscape]
-        if (!inspector.first()->isPrimitiveValue())
-            return;
-        CSSPrimitiveValue* primitiveValue = toCSSPrimitiveValue(inspector.first());
+        CSSPrimitiveValue* primitiveValue = toCSSPrimitiveValue(list->item(0));
         if (primitiveValue->isLength()) {
             // <length>
             pageSizeType = PAGE_SIZE_RESOLVED;
@@ -571,121 +551,6 @@ void StyleBuilderFunctions::applyValueCSSPropertyTransform(StyleResolverState& s
     state.style()->setTransform(operations);
 }
 
-void StyleBuilderFunctions::applyInitialCSSPropertyTransformOrigin(StyleResolverState& state)
-{
-    applyInitialCSSPropertyWebkitTransformOriginX(state);
-    applyInitialCSSPropertyWebkitTransformOriginY(state);
-    applyInitialCSSPropertyWebkitTransformOriginZ(state);
-}
-
-void StyleBuilderFunctions::applyInheritCSSPropertyTransformOrigin(StyleResolverState& state)
-{
-    applyInheritCSSPropertyWebkitTransformOriginX(state);
-    applyInheritCSSPropertyWebkitTransformOriginY(state);
-    applyInheritCSSPropertyWebkitTransformOriginZ(state);
-}
-
-void StyleBuilderFunctions::applyValueCSSPropertyTransformOrigin(StyleResolverState& state, CSSValue* value)
-{
-    CSSValueList* list = toCSSValueList(value);
-    ASSERT(list->length() == 3);
-    CSSPrimitiveValue* primitiveValue = toCSSPrimitiveValue(list->item(0));
-    if (primitiveValue->isValueID()) {
-        switch (primitiveValue->getValueID()) {
-        case CSSValueLeft:
-            state.style()->setTransformOriginX(Length(0, Percent));
-            break;
-        case CSSValueRight:
-            state.style()->setTransformOriginX(Length(100, Percent));
-            break;
-        case CSSValueCenter:
-            state.style()->setTransformOriginX(Length(50, Percent));
-            break;
-        default:
-            ASSERT_NOT_REACHED();
-        }
-    } else {
-        state.style()->setTransformOriginX(StyleBuilderConverter::convertLength(state, primitiveValue));
-    }
-
-    primitiveValue = toCSSPrimitiveValue(list->item(1));
-    if (primitiveValue->isValueID()) {
-        switch (primitiveValue->getValueID()) {
-        case CSSValueTop:
-            state.style()->setTransformOriginY(Length(0, Percent));
-            break;
-        case CSSValueBottom:
-            state.style()->setTransformOriginY(Length(100, Percent));
-            break;
-        case CSSValueCenter:
-            state.style()->setTransformOriginY(Length(50, Percent));
-            break;
-        default:
-            ASSERT_NOT_REACHED();
-        }
-    } else {
-        state.style()->setTransformOriginY(StyleBuilderConverter::convertLength(state, primitiveValue));
-    }
-
-    primitiveValue = toCSSPrimitiveValue(list->item(2));
-    state.style()->setTransformOriginZ(StyleBuilderConverter::convertComputedLength<float>(state, primitiveValue));
-}
-
-void StyleBuilderFunctions::applyInitialCSSPropertyPerspectiveOrigin(StyleResolverState& state)
-{
-    applyInitialCSSPropertyWebkitPerspectiveOriginX(state);
-    applyInitialCSSPropertyWebkitPerspectiveOriginY(state);
-}
-
-void StyleBuilderFunctions::applyInheritCSSPropertyPerspectiveOrigin(StyleResolverState& state)
-{
-    applyInheritCSSPropertyWebkitPerspectiveOriginX(state);
-    applyInheritCSSPropertyWebkitPerspectiveOriginY(state);
-}
-
-void StyleBuilderFunctions::applyValueCSSPropertyPerspectiveOrigin(StyleResolverState& state, CSSValue* value)
-{
-    CSSValueList* list = toCSSValueList(value);
-    ASSERT(list->length() == 2);
-    CSSPrimitiveValue* primitiveValue = toCSSPrimitiveValue(list->item(0));
-    if (primitiveValue->isValueID()) {
-        switch (primitiveValue->getValueID()) {
-        case CSSValueLeft:
-            state.style()->setPerspectiveOriginX(Length(0, Percent));
-            break;
-        case CSSValueRight:
-            state.style()->setPerspectiveOriginX(Length(100, Percent));
-            break;
-        case CSSValueCenter:
-            state.style()->setPerspectiveOriginX(Length(50, Percent));
-            break;
-        default:
-            ASSERT_NOT_REACHED();
-        }
-    } else {
-        state.style()->setPerspectiveOriginX(StyleBuilderConverter::convertLength(state, primitiveValue));
-    }
-
-    primitiveValue = toCSSPrimitiveValue(list->item(1));
-    if (primitiveValue->isValueID()) {
-        switch (primitiveValue->getValueID()) {
-        case CSSValueTop:
-            state.style()->setPerspectiveOriginY(Length(0, Percent));
-            break;
-        case CSSValueBottom:
-            state.style()->setPerspectiveOriginY(Length(100, Percent));
-            break;
-        case CSSValueCenter:
-            state.style()->setPerspectiveOriginY(Length(50, Percent));
-            break;
-        default:
-            ASSERT_NOT_REACHED();
-        }
-    } else {
-        state.style()->setPerspectiveOriginY(StyleBuilderConverter::convertLength(state, primitiveValue));
-    }
-}
-
 void StyleBuilderFunctions::applyInheritCSSPropertyVerticalAlign(StyleResolverState& state)
 {
     EVerticalAlign verticalAlign = state.parentStyle()->verticalAlign();
@@ -751,34 +616,6 @@ void StyleBuilderFunctions::applyValueCSSPropertyZoom(StyleResolverState& state,
         if (float number = primitiveValue->getFloatValue())
             state.setZoom(number);
     }
-}
-
-void StyleBuilderFunctions::applyInitialCSSPropertyWebkitAspectRatio(StyleResolverState& state)
-{
-    state.style()->setHasAspectRatio(RenderStyle::initialHasAspectRatio());
-    state.style()->setAspectRatioDenominator(RenderStyle::initialAspectRatioDenominator());
-    state.style()->setAspectRatioNumerator(RenderStyle::initialAspectRatioNumerator());
-}
-
-void StyleBuilderFunctions::applyInheritCSSPropertyWebkitAspectRatio(StyleResolverState& state)
-{
-    if (!state.parentStyle()->hasAspectRatio())
-        return;
-    state.style()->setHasAspectRatio(true);
-    state.style()->setAspectRatioDenominator(state.parentStyle()->aspectRatioDenominator());
-    state.style()->setAspectRatioNumerator(state.parentStyle()->aspectRatioNumerator());
-}
-
-void StyleBuilderFunctions::applyValueCSSPropertyWebkitAspectRatio(StyleResolverState& state, CSSValue* value)
-{
-    if (!value->isAspectRatioValue()) {
-        state.style()->setHasAspectRatio(false);
-        return;
-    }
-    CSSAspectRatioValue* aspectRatioValue = toCSSAspectRatioValue(value);
-    state.style()->setHasAspectRatio(true);
-    state.style()->setAspectRatioDenominator(aspectRatioValue->denominatorValue());
-    state.style()->setAspectRatioNumerator(aspectRatioValue->numeratorValue());
 }
 
 void StyleBuilderFunctions::applyValueCSSPropertyWebkitBorderImage(StyleResolverState& state, CSSValue* value)
@@ -1058,51 +895,14 @@ void StyleBuilderFunctions::applyValueCSSPropertyWebkitAppRegion(StyleResolverSt
     state.document().setHasAnnotatedRegions(true);
 }
 
-void StyleBuilderFunctions::applyInitialCSSPropertyWebkitPerspective(StyleResolverState& state)
-{
-    applyInitialCSSPropertyPerspective(state);
-}
-
-void StyleBuilderFunctions::applyInheritCSSPropertyWebkitPerspective(StyleResolverState& state)
-{
-    applyInheritCSSPropertyPerspective(state);
-}
-
-void StyleBuilderFunctions::applyValueCSSPropertyWebkitPerspective(StyleResolverState& state, CSSValue* value)
-{
-    if (!value->isPrimitiveValue())
-        return;
-    CSSPrimitiveValue* primitiveValue = toCSSPrimitiveValue(value);
-    if (primitiveValue->isNumber()) {
-        float perspectiveValue = CSSPrimitiveValue::create(primitiveValue->getDoubleValue(), CSSPrimitiveValue::CSS_PX)->computeLength<float>(state.cssToLengthConversionData());
-        if (perspectiveValue >= 0.0f)
-            state.style()->setPerspective(perspectiveValue);
-    } else {
-        applyValueCSSPropertyPerspective(state, value);
-    }
-}
-
-void StyleBuilderFunctions::applyValueCSSPropertyPerspective(StyleResolverState& state, CSSValue* value)
-{
-    if (!value->isPrimitiveValue())
-        return;
-    CSSPrimitiveValue* primitiveValue = toCSSPrimitiveValue(value);
-    if (primitiveValue->getValueID() == CSSValueNone) {
-        state.style()->setPerspective(0);
-        return;
-    }
-
-    if (!primitiveValue->isLength())
-        return;
-    float perspectiveValue = primitiveValue->computeLength<float>(state.cssToLengthConversionData());
-    if (perspectiveValue >= 0.0f)
-        state.style()->setPerspective(perspectiveValue);
-}
-
 void StyleBuilderFunctions::applyValueCSSPropertyWebkitWritingMode(StyleResolverState& state, CSSValue* value)
 {
-    if (value->isPrimitiveValue())
-        state.setWritingMode(*toCSSPrimitiveValue(value));
+    if (value->isPrimitiveValue()) {
+        WritingMode writingMode = *toCSSPrimitiveValue(value);
+        state.setWritingMode(writingMode);
+        if (writingMode != TopToBottomWritingMode)
+            state.document().setContainsAnyRareWritingMode(true);
+    }
 
     // FIXME: It is not ok to modify document state while applying style.
     if (state.element() && state.element() == state.document().documentElement())
@@ -1147,62 +947,6 @@ void StyleBuilderFunctions::applyValueCSSPropertyBaselineShift(StyleResolverStat
     default:
         ASSERT_NOT_REACHED();
     }
-}
-
-void StyleBuilderFunctions::applyValueCSSPropertyGridAutoFlow(StyleResolverState& state, CSSValue* value)
-{
-    ASSERT(value->isValueList());
-    CSSValueList* list = toCSSValueList(value);
-
-    CSSPrimitiveValue* first = list->length() >= 1 ? toCSSPrimitiveValue(list->item(0)) : nullptr;
-
-    if (!first) {
-        applyInitialCSSPropertyGridAutoFlow(state);
-        return;
-    }
-
-    CSSPrimitiveValue* second = list->length() == 2 ? toCSSPrimitiveValue(list->item(1)) : nullptr;
-
-    GridAutoFlow autoFlow = RenderStyle::initialGridAutoFlow();
-    switch (first->getValueID()) {
-    case CSSValueRow:
-        if (second) {
-            if (second->getValueID() == CSSValueDense)
-                autoFlow = AutoFlowRowDense;
-            else
-                autoFlow = AutoFlowStackRow;
-        } else {
-            autoFlow = AutoFlowRow;
-        }
-        break;
-    case CSSValueColumn:
-        if (second) {
-            if (second->getValueID() == CSSValueDense)
-                autoFlow = AutoFlowColumnDense;
-            else
-                autoFlow = AutoFlowStackColumn;
-        } else {
-            autoFlow = AutoFlowColumn;
-        }
-        break;
-    case CSSValueDense:
-        if (second && second->getValueID() == CSSValueColumn)
-            autoFlow = AutoFlowColumnDense;
-        else
-            autoFlow = AutoFlowRowDense;
-        break;
-    case CSSValueStack:
-        if (second && second->getValueID() == CSSValueColumn)
-            autoFlow = AutoFlowStackColumn;
-        else
-            autoFlow = AutoFlowStackRow;
-        break;
-    default:
-        ASSERT_NOT_REACHED();
-        break;
-    }
-
-    state.style()->setGridAutoFlow(autoFlow);
 }
 
 } // namespace blink

@@ -51,14 +51,14 @@ public:
         {
         }
 
-        virtual void appendData(const char* data, int len)
+        virtual void appendData(const char* data, unsigned len)
         {
             Resource::appendData(data, len);
             setDecodedSize(this->size());
         }
 
     protected:
-        virtual void destroyDecodedDataIfPossible() OVERRIDE
+        virtual void destroyDecodedDataIfPossible() override
         {
             setDecodedSize(0);
         }
@@ -150,7 +150,7 @@ TEST_F(MemoryCacheTest, DeadResourceEviction)
     Resource* cachedResource =
         new Resource(ResourceRequest("http://test/resource"), Resource::Raw);
     const char data[5] = "abcd";
-    cachedResource->appendData(data, 3);
+    cachedResource->appendData(data, 3u);
     // The resource size has to be nonzero for this test to be meaningful, but
     // we do not rely on it having any particular value.
     ASSERT_GT(cachedResource->size(), 0u);
@@ -179,12 +179,12 @@ TEST_F(MemoryCacheTest, LiveResourceEvictionAtEndOfTask)
     const char data[6] = "abcde";
     Resource* cachedDeadResource =
         new Resource(ResourceRequest("hhtp://foo"), Resource::Raw);
-    cachedDeadResource->appendData(data, 3);
+    cachedDeadResource->appendData(data, 3u);
     ResourcePtr<Resource> cachedLiveResource =
         new FakeDecodedResource(ResourceRequest("http://test/resource"), Resource::Raw);
     MockImageResourceClient client;
     cachedLiveResource->addClient(&client);
-    cachedLiveResource->appendData(data, 4);
+    cachedLiveResource->appendData(data, 4u);
 
     class Task1 : public blink::WebThread::Task {
     public:
@@ -193,7 +193,7 @@ TEST_F(MemoryCacheTest, LiveResourceEvictionAtEndOfTask)
             , m_dead(dead)
         { }
 
-        virtual void run() OVERRIDE
+        virtual void run() override
         {
             // The resource size has to be nonzero for this test to be meaningful, but
             // we do not rely on it having any particular value.
@@ -226,7 +226,7 @@ TEST_F(MemoryCacheTest, LiveResourceEvictionAtEndOfTask)
         Task2(unsigned liveSizeWithoutDecode)
             : m_liveSizeWithoutDecode(liveSizeWithoutDecode) { }
 
-        virtual void run() OVERRIDE
+        virtual void run() override
         {
             // Next task: now, the live resource was evicted.
             ASSERT_EQ(0u, memoryCache()->deadSize());
@@ -254,12 +254,12 @@ TEST_F(MemoryCacheTest, ClientRemoval)
         new FakeDecodedResource(ResourceRequest("http://foo.com"), Resource::Raw);
     MockImageResourceClient client1;
     resource1->addClient(&client1);
-    resource1->appendData(data, 4);
+    resource1->appendData(data, 4u);
     ResourcePtr<Resource> resource2 =
         new FakeDecodedResource(ResourceRequest("http://test/resource"), Resource::Raw);
     MockImageResourceClient client2;
     resource2->addClient(&client2);
-    resource2->appendData(data, 4);
+    resource2->appendData(data, 4u);
 
     const unsigned minDeadCapacity = 0;
     const unsigned maxDeadCapacity = ((resource1->size() + resource2->size()) / 2) - 1;
@@ -313,8 +313,8 @@ TEST_F(MemoryCacheTest, DecodeCacheOrder)
     cachedImageHighPriority->addClient(&clientHighPriority);
 
     const char data[5] = "abcd";
-    cachedImageLowPriority->appendData(data, 1);
-    cachedImageHighPriority->appendData(data, 4);
+    cachedImageLowPriority->appendData(data, 1u);
+    cachedImageHighPriority->appendData(data, 4u);
     const unsigned lowPrioritySize = cachedImageLowPriority->size();
     const unsigned highPrioritySize = cachedImageHighPriority->size();
     const unsigned lowPriorityMockDecodeSize = cachedImageLowPriority->decodedSize();

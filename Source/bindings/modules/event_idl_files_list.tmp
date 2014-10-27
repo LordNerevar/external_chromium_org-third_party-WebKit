@@ -1,9 +1,10 @@
 ../../modules/device_light/DeviceLightEvent.idl
 ../../modules/device_orientation/DeviceMotionEvent.idl
 ../../modules/device_orientation/DeviceOrientationEvent.idl
+../../modules/encryptedmedia/MediaEncryptedEvent.idl
 ../../modules/encryptedmedia/MediaKeyMessageEvent.idl
-../../modules/encryptedmedia/MediaKeyNeededEvent.idl
 ../../modules/gamepad/GamepadEvent.idl
+../../modules/geofencing/GeofencingEvent.idl
 ../../modules/indexeddb/IDBVersionChangeEvent.idl
 ../../modules/mediastream/MediaStreamEvent.idl
 ../../modules/mediastream/MediaStreamTrackEvent.idl

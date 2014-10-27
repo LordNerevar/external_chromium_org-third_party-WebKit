@@ -32,6 +32,7 @@
 #include "wtf/OwnPtr.h"
 #include "wtf/PassOwnPtr.h"
 #include "wtf/text/WTFString.h"
+#include <v8.h>
 
 namespace blink {
 
@@ -133,7 +134,6 @@ public:
         SubFrameBeforeUnloadFired = 98,
         TextReplaceWholeText = 100,
         ConsoleMarkTimeline = 102,
-        CSSPseudoElementUserAgentCustomPseudo = 103,
         ElementGetAttributeNode = 107, // Removed from DOM4.
         ElementSetAttributeNode = 108, // Removed from DOM4.
         ElementRemoveAttributeNode = 109, // Removed from DOM4.
@@ -522,6 +522,31 @@ public:
         AnimationPlayerPlay = 553,
         AnimationPlayerPause = 554,
         AnimationPlayerReverse = 555,
+        // The above items are available in M39 branch.
+
+        BreakIterator = 556,
+        ScreenOrientationAngle = 557,
+        ScreenOrientationType = 558,
+        ScreenOrientationLock = 559,
+        ScreenOrientationUnlock = 560,
+        GeolocationSecureOrigin = 561,
+        GeolocationInsecureOrigin = 562,
+        NotificationSecureOrigin = 563,
+        NotificationInsecureOrigin = 564,
+        NotificationShowEvent = 565,
+        CSSXGetComputedStyleQueries = 566,
+        SVG1DOM = 567,
+        SVGPathSegDOM = 568,
+        SVGTransformListConsolidate = 569,
+        SVGAnimatedTransformListBaseVal = 570,
+        QuotedAnimationName = 571,
+        QuotedKeyframesRule = 572,
+        SrcsetDroppedCandidate = 573,
+        RenderRuby = 574,
+
+        WindowPostMessage = 574,
+        WindowPostMessageWithLegacyTargetOriginArgument = 575,
+
         // Add new features immediately above this line. Don't change assigned
         // numbers of any item, and don't reuse removed slots.
         // Also, run update_use_counter_feature_enum.py in chromium/src/tools/metrics/histograms/
@@ -534,6 +559,12 @@ public:
     // This doesn't count for ExecutionContexts for shared workers and service
     // workers.
     static void count(const ExecutionContext*, Feature);
+    // Use countIfNotPrivateScript() instead of count() if you don't want
+    // to count metrics in private scripts. You should use
+    // countIfNotPrivateScript() in a binding layer.
+    static void countIfNotPrivateScript(v8::Isolate*, const Document&, Feature);
+    static void countIfNotPrivateScript(v8::Isolate*, const ExecutionContext*, Feature);
+
     void count(CSSParserContext, CSSPropertyID);
     void count(Feature);
 
@@ -549,6 +580,10 @@ public:
     static void countDeprecation(const LocalDOMWindow*, Feature);
     static void countDeprecation(ExecutionContext*, Feature);
     static void countDeprecation(const Document&, Feature);
+    // Use countDeprecationIfNotPrivateScript() instead of countDeprecation()
+    // if you don't want to count metrics in private scripts. You should use
+    // countDeprecationIfNotPrivateScript() in a binding layer.
+    static void countDeprecationIfNotPrivateScript(v8::Isolate*, ExecutionContext*, Feature);
     String deprecationMessage(Feature);
 
     void didCommitLoad();

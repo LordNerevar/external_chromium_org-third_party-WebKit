@@ -42,6 +42,7 @@
 #include "core/css/resolver/ViewportStyleResolver.h"
 #include "core/dom/ClientRect.h"
 #include "core/dom/ClientRectList.h"
+#include "core/dom/DOMArrayBuffer.h"
 #include "core/dom/DOMPoint.h"
 #include "core/dom/DOMStringList.h"
 #include "core/dom/Document.h"
@@ -67,6 +68,7 @@
 #include "core/editing/SpellChecker.h"
 #include "core/editing/SurroundingText.h"
 #include "core/editing/TextIterator.h"
+#include "core/editing/markup.h"
 #include "core/fetch/MemoryCache.h"
 #include "core/fetch/ResourceFetcher.h"
 #include "core/frame/EventHandlerRegistry.h"
@@ -106,6 +108,8 @@
 #include "core/page/Page.h"
 #include "core/page/PagePopupController.h"
 #include "core/page/PrintContext.h"
+#include "core/plugins/testing/DictionaryPluginPlaceholder.h"
+#include "core/plugins/testing/DocumentFragmentPluginPlaceholder.h"
 #include "core/rendering/RenderLayer.h"
 #include "core/rendering/RenderMenuList.h"
 #include "core/rendering/RenderObject.h"
@@ -148,11 +152,11 @@ namespace blink {
 
 namespace {
 
-class InternalsIterator FINAL : public Iterator {
+class InternalsIterator final : public Iterator {
 public:
     InternalsIterator() : m_current(0) { }
 
-    virtual ScriptValue next(ScriptState* scriptState, ExceptionState& exceptionState) OVERRIDE
+    virtual ScriptValue next(ScriptState* scriptState, ExceptionState& exceptionState) override
     {
         v8::Isolate* isolate = scriptState->isolate();
         int value = m_current * m_current;
@@ -162,7 +166,7 @@ public:
         return ScriptValue(scriptState, v8IteratorResult(scriptState, value));
     }
 
-    virtual ScriptValue next(ScriptState* scriptState, ScriptValue value, ExceptionState& exceptionState) OVERRIDE
+    virtual ScriptValue next(ScriptState* scriptState, ScriptValue value, ExceptionState& exceptionState) override
     {
         exceptionState.throwTypeError("Not implemented");
         return ScriptValue();
@@ -541,6 +545,12 @@ PassRefPtrWillBeRawPtr<CSSStyleDeclaration> Internals::computedStyleIncludingVis
     return CSSComputedStyleDeclaration::create(node, allowVisitedStyle);
 }
 
+PassRefPtrWillBeRawPtr<ShadowRoot> Internals::createUserAgentShadowRoot(Element* host)
+{
+    ASSERT(host);
+    return PassRefPtrWillBeRawPtr<ShadowRoot>(host->ensureUserAgentShadowRoot());
+}
+
 ShadowRoot* Internals::shadowRoot(Element* host)
 {
     // FIXME: Internals::shadowRoot() in tests should be converted to youngestShadowRoot() or oldestShadowRoot().
@@ -682,6 +692,20 @@ PassRefPtrWillBeRawPtr<PagePopupController> Internals::pagePopupController()
     return s_pagePopupDriver ? s_pagePopupDriver->pagePopupController() : 0;
 }
 
+LocalDOMWindow* Internals::pagePopupWindow() const
+{
+    Document* document = contextDocument();
+    if (!document)
+        return nullptr;
+    Page* page = document->page();
+    if (!page)
+        return nullptr;
+    PagePopupDriver* pagePopupDriver = page->chrome().client().pagePopupDriver();
+    if (!pagePopupDriver)
+        return nullptr;
+    return pagePopupDriver->pagePopupWindow();
+}
+
 PassRefPtrWillBeRawPtr<ClientRect> Internals::absoluteCaretBounds(ExceptionState& exceptionState)
 {
     Document* document = contextDocument();
@@ -786,7 +810,7 @@ void Internals::setMarkedTextMatchesAreHighlighted(Document* document, bool high
     document->frame()->editor().setMarkedTextMatchesAreHighlighted(highlight);
 }
 
-void Internals::setScrollViewPosition(Document* document, long x, long y, ExceptionState& exceptionState)
+void Internals::setFrameViewPosition(Document* document, long x, long y, ExceptionState& exceptionState)
 {
     ASSERT(document);
     if (!document->view()) {
@@ -1432,11 +1456,11 @@ String Internals::dumpRefCountedInstanceCounts() const
 
 Vector<String> Internals::consoleMessageArgumentCounts(Document* document) const
 {
-    LocalFrame* frame = document->frame();
-    if (!frame)
+    FrameHost* host = document->frameHost();
+    if (!host)
         return Vector<String>();
 
-    Vector<unsigned> counts = frame->console().messageStorage()->argumentCounts();
+    Vector<unsigned> counts = host->consoleMessageStorage().argumentCounts();
     Vector<String> result(counts.size());
     for (size_t i = 0; i < counts.size(); i++)
         result[i] = String::number(counts[i]);
@@ -1461,6 +1485,17 @@ void Internals::setInspectorResourcesDataSizeLimits(int maximumResourcesContentS
         return;
     }
     page->inspectorController().setResourcesDataSizeLimitsFromInternals(maximumResourcesContentSize, maximumSingleResourceContentSize);
+}
+
+String Internals::inspectorHighlightJSON(Node* node, ExceptionState& exceptionState)
+{
+    Page* page = contextDocument()->frame()->page();
+    if (!page) {
+        exceptionState.throwDOMException(InvalidAccessError, "No page can be obtained from the current context document.");
+        return String();
+    }
+    RefPtr<JSONObject> json(page->inspectorController().highlightJSONForNode(node));
+    return json->toPrettyJSONString();
 }
 
 bool Internals::hasGrammarMarker(Document* document, int from, int length)
@@ -1745,6 +1780,14 @@ void Internals::mediaPlayerRemoteRouteAvailabilityChanged(HTMLMediaElement* medi
     mediaElement->remoteRouteAvailabilityChanged(available);
 }
 
+void Internals::mediaPlayerPlayingRemotelyChanged(HTMLMediaElement* mediaElement, bool remote)
+{
+    if (remote)
+        mediaElement->connectedToRemoteDevice();
+    else
+        mediaElement->disconnectedFromRemoteDevice();
+}
+
 void Internals::registerURLSchemeAsBypassingContentSecurityPolicy(const String& scheme)
 {
     SchemeRegistry::registerURLSchemeAsBypassingContentSecurityPolicy(scheme);
@@ -1762,7 +1805,7 @@ TypeConversions* Internals::typeConversions() const
 
 PrivateScriptTest* Internals::privateScriptTest() const
 {
-    return PrivateScriptTest::create(frame());
+    return PrivateScriptTest::create(frame()->document());
 }
 
 DictionaryTest* Internals::dictionaryTest() const
@@ -1950,15 +1993,15 @@ String Internals::getCurrentCursorInfo(Document* document, ExceptionState& excep
     return result.toString();
 }
 
-PassRefPtr<ArrayBuffer> Internals::serializeObject(PassRefPtr<SerializedScriptValue> value) const
+PassRefPtr<DOMArrayBuffer> Internals::serializeObject(PassRefPtr<SerializedScriptValue> value) const
 {
     String stringValue = value->toWireString();
     RefPtr<ArrayBuffer> buffer = ArrayBuffer::createUninitialized(stringValue.length(), sizeof(UChar));
     stringValue.copyTo(static_cast<UChar*>(buffer->data()), 0, stringValue.length());
-    return buffer.release();
+    return DOMArrayBuffer::create(buffer.release());
 }
 
-PassRefPtr<SerializedScriptValue> Internals::deserializeBuffer(PassRefPtr<ArrayBuffer> buffer) const
+PassRefPtr<SerializedScriptValue> Internals::deserializeBuffer(PassRefPtr<DOMArrayBuffer> buffer) const
 {
     String value(static_cast<const UChar*>(buffer->data()), buffer->byteLength() / sizeof(UChar));
     return SerializedScriptValue::createFromWire(value);
@@ -2097,7 +2140,7 @@ private:
     {
     }
 
-    virtual ScriptValue call(ScriptValue value) OVERRIDE
+    virtual ScriptValue call(ScriptValue value) override
     {
         v8::Local<v8::Value> v8Value = value.v8Value();
         ASSERT(v8Value->IsNumber());
@@ -2143,6 +2186,21 @@ ScriptPromise Internals::promiseCheckWithoutExceptionState(ScriptState* scriptSt
 }
 
 ScriptPromise Internals::promiseCheckRange(ScriptState* scriptState, long arg1)
+{
+    return ScriptPromise::cast(scriptState, v8String(scriptState->isolate(), "done"));
+}
+
+ScriptPromise Internals::promiseCheckOverload(ScriptState* scriptState, Location*)
+{
+    return ScriptPromise::cast(scriptState, v8String(scriptState->isolate(), "done"));
+}
+
+ScriptPromise Internals::promiseCheckOverload(ScriptState* scriptState, Document*)
+{
+    return ScriptPromise::cast(scriptState, v8String(scriptState->isolate(), "done"));
+}
+
+ScriptPromise Internals::promiseCheckOverload(ScriptState* scriptState, Location*, long, long)
 {
     return ScriptPromise::cast(scriptState, v8String(scriptState->isolate(), "done"));
 }
@@ -2235,18 +2293,13 @@ void Internals::hideAllTransitionElements()
         frame()->document()->hideTransitionElements(AtomicString(iter->selector));
 }
 
-void Internals::forcePluginPlaceholder(HTMLElement* element, const String& htmlSource, ExceptionState& exceptionState)
+void Internals::forcePluginPlaceholder(HTMLElement* element, PassRefPtrWillBeRawPtr<DocumentFragment> fragment, ExceptionState& exceptionState)
 {
     if (!element->isPluginElement()) {
         exceptionState.throwDOMException(InvalidNodeTypeError, "The element provided is not a plugin.");
         return;
     }
-
-    element->ensureUserAgentShadowRoot().setInnerHTML(htmlSource, exceptionState);
-    if (exceptionState.hadException())
-        return;
-
-    toHTMLPlugInElement(element)->setUsePlaceholderContent(true);
+    toHTMLPlugInElement(element)->setPlaceholder(DocumentFragmentPluginPlaceholder::create(fragment));
 }
 
 void Internals::forcePluginPlaceholder(HTMLElement* element, const Dictionary& options, ExceptionState& exceptionState)
@@ -2255,19 +2308,7 @@ void Internals::forcePluginPlaceholder(HTMLElement* element, const Dictionary& o
         exceptionState.throwDOMException(InvalidNodeTypeError, "The element provided is not a plugin.");
         return;
     }
-
-    RefPtrWillBeRawPtr<PluginPlaceholderElement> placeholder = PluginPlaceholderElement::create(element->document());
-    String stringValue;
-    if (DictionaryHelper::get(options, "message", stringValue))
-        placeholder->setMessage(stringValue);
-
-    ShadowRoot& shadowRoot = element->ensureUserAgentShadowRoot();
-    shadowRoot.removeChildren();
-    shadowRoot.appendChild(placeholder.release(), exceptionState);
-    if (exceptionState.hadException())
-        return;
-
-    toHTMLPlugInElement(element)->setUsePlaceholderContent(true);
+    toHTMLPlugInElement(element)->setPlaceholder(DictionaryPluginPlaceholder::create(element->document(), options));
 }
 
 Iterator* Internals::iterator(ScriptState* scriptState, ExceptionState& exceptionState)

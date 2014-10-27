@@ -1,5 +1,6 @@
 ../../../core/css/FontFaceDescriptors.idl
 ../../../core/dom/DOMPointInit.idl
+../../../core/dom/ElementRegistrationOptions.idl
 ../../../core/dom/MutationObserverInit.idl
 ../../../core/frame/ScrollOptions.idl
 ../../../core/html/canvas/HitRegionOptions.idl

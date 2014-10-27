@@ -85,17 +85,17 @@ class WebMediaStreamCenter;
 class WebMediaStreamCenterClient;
 class WebMessagePortChannel;
 class WebMimeRegistry;
-class WebNotificationPresenter;
+class WebNotificationManager;
 class WebPluginListBuilder;
 class WebPrescientNetworking;
 class WebPublicSuffixList;
 class WebRTCPeerConnectionHandler;
 class WebRTCPeerConnectionHandlerClient;
 class WebSandboxSupport;
+class WebScheduler;
 class WebSecurityOrigin;
 class WebScrollbarBehavior;
 class WebSocketHandle;
-class WebSocketStreamHandle;
 class WebSpeechSynthesizer;
 class WebSpeechSynthesizerClient;
 class WebStorageNamespace;
@@ -307,9 +307,6 @@ public:
     // May return null.
     virtual WebPrescientNetworking* prescientNetworking() { return 0; }
 
-    // Returns a new WebSocketStreamHandle instance.
-    virtual WebSocketStreamHandle* createSocketStreamHandle() { return 0; }
-
     // Returns a new WebSocketHandle instance.
     virtual WebSocketHandle* createWebSocketHandle() { return 0; }
 
@@ -360,6 +357,8 @@ public:
     // Yield the current thread so another thread can be scheduled.
     virtual void yieldCurrentThread() { }
 
+    // May return null.
+    virtual WebScheduler* scheduler() { return 0; }
 
     // WaitableEvent -------------------------------------------------------
 
@@ -632,7 +631,7 @@ public:
 
     // Web Notifications --------------------------------------------------
 
-    virtual WebNotificationPresenter* notificationPresenter() { return 0; }
+    virtual WebNotificationManager* notificationManager() { return 0; }
 
 
     // Geofencing ---------------------------------------------------------

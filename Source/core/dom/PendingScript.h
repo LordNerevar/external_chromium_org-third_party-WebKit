@@ -45,7 +45,7 @@ class ScriptStreamer;
 // A ResourcePtr alone does not prevent the underlying Resource
 // from purging its data buffer. This class holds a dummy client open for its
 // lifetime in order to guarantee that the data buffer will not be purged.
-class PendingScript FINAL : public ResourceOwner<ScriptResource> {
+class PendingScript final : public ResourceOwner<ScriptResource> {
     ALLOW_ONLY_INLINE_ALLOCATION();
 public:
     enum Type {
@@ -128,6 +128,6 @@ private:
     RefPtr<ScriptStreamer> m_streamer;
 };
 
-}
+} // namespace blink
 
-#endif
+#endif // PendingScript_h

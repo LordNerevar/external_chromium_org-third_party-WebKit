@@ -34,6 +34,7 @@
 #include "platform/network/FormData.h"
 #include "platform/network/ResourceResponse.h"
 #include "platform/weborigin/SecurityOrigin.h"
+#include "wtf/Forward.h"
 #include "wtf/OwnPtr.h"
 #include "wtf/text/AtomicStringHash.h"
 #include "wtf/text/StringBuilder.h"
@@ -41,6 +42,8 @@
 namespace blink {
 
 class Blob;
+class BlobDataHandle;
+class DOMArrayBuffer;
 class DOMFormData;
 class Document;
 class DocumentParser;
@@ -52,10 +55,11 @@ class Stream;
 class TextResourceDecoder;
 class ThreadableLoader;
 class UnderlyingSource;
+class XMLHttpRequestUpload;
 
 typedef int ExceptionCode;
 
-class XMLHttpRequest FINAL
+class XMLHttpRequest final
     : public RefCountedWillBeGarbageCollectedFinalized<XMLHttpRequest>
     , public XMLHttpRequestEventTarget
     , private ThreadableLoaderClient
@@ -89,15 +93,18 @@ public:
         ResponseTypeStream,
     };
 
-    virtual void contextDestroyed() OVERRIDE;
-    virtual void suspend() OVERRIDE;
-    virtual void resume() OVERRIDE;
-    virtual void stop() OVERRIDE;
-    virtual bool hasPendingActivity() const OVERRIDE;
+    // ActiveDOMObject
+    virtual void contextDestroyed() override;
+    virtual ExecutionContext* executionContext() const override;
+    virtual bool hasPendingActivity() const override;
+    virtual void suspend() override;
+    virtual void resume() override;
+    virtual void stop() override;
 
-    virtual const AtomicString& interfaceName() const OVERRIDE;
-    virtual ExecutionContext* executionContext() const OVERRIDE;
+    // XMLHttpRequestEventTarget
+    virtual const AtomicString& interfaceName() const override;
 
+    // JavaScript attributes and methods
     const KURL& url() const { return m_url; }
     String statusText() const;
     int status() const;
@@ -124,52 +131,51 @@ public:
     ScriptString responseJSONSource();
     Document* responseXML(ExceptionState&);
     Blob* responseBlob();
+    DOMArrayBuffer* responseArrayBuffer();
     Stream* responseLegacyStream();
     ReadableStream* responseStream();
     unsigned long timeout() const { return m_timeoutMilliseconds; }
     void setTimeout(unsigned long timeout, ExceptionState&);
-
-    void sendForInspectorXHRReplay(PassRefPtr<FormData>, ExceptionState&);
-
-    // Expose HTTP validation methods for other untrusted requests.
-    static AtomicString uppercaseKnownHTTPMethod(const AtomicString&);
-
-    void setResponseType(const String&, ExceptionState&);
-    String responseType();
     ResponseTypeCode responseTypeCode() const { return m_responseTypeCode; }
-
+    String responseType();
+    void setResponseType(const String&, ExceptionState&);
     String responseURL();
 
-    // response attribute has custom getter.
-    ArrayBuffer* responseArrayBuffer();
-
-    void setLastSendLineNumber(unsigned lineNumber) { m_lastSendLineNumber = lineNumber; }
-    void setLastSendURL(const String& url) { m_lastSendURL = url; }
+    // For Inspector.
+    void sendForInspectorXHRReplay(PassRefPtr<FormData>, ExceptionState&);
 
     XMLHttpRequestUpload* upload();
 
     DEFINE_ATTRIBUTE_EVENT_LISTENER(readystatechange);
 
-    virtual void trace(Visitor*) OVERRIDE;
+    virtual void trace(Visitor*) override;
 
 private:
+    class BlobLoader;
     XMLHttpRequest(ExecutionContext*, PassRefPtr<SecurityOrigin>);
 
     Document* document() const;
     SecurityOrigin* securityOrigin() const;
 
-    virtual void didSendData(unsigned long long bytesSent, unsigned long long totalBytesToBeSent) OVERRIDE;
-    virtual void didReceiveResponse(unsigned long identifier, const ResourceResponse&) OVERRIDE;
-    virtual void didReceiveData(const char* data, int dataLength) OVERRIDE;
+    virtual void didSendData(unsigned long long bytesSent, unsigned long long totalBytesToBeSent) override;
+    virtual void didReceiveResponse(unsigned long identifier, const ResourceResponse&) override;
+    virtual void didReceiveData(const char* data, unsigned dataLength) override;
     // When responseType is set to "blob", didDownloadData() is called instead
     // of didReceiveData().
-    virtual void didDownloadData(int dataLength) OVERRIDE;
-    virtual void didFinishLoading(unsigned long identifier, double finishTime) OVERRIDE;
-    virtual void didFail(const ResourceError&) OVERRIDE;
-    virtual void didFailRedirectCheck() OVERRIDE;
+    virtual void didDownloadData(int dataLength) override;
+    virtual void didFinishLoading(unsigned long identifier, double finishTime) override;
+    virtual void didFail(const ResourceError&) override;
+    virtual void didFailRedirectCheck() override;
+
+    // BlobLoader notifications.
+    void didFinishLoadingInternal();
+    void didFinishLoadingFromBlob();
+    void didFailLoadingFromBlob();
+
+    PassRefPtr<BlobDataHandle> createBlobDataHandleFromResponse();
 
     // DocumentParserClient
-    virtual void notifyParserStopped() OVERRIDE;
+    virtual void notifyParserStopped() override;
 
     void endLoading();
 
@@ -191,7 +197,7 @@ private:
     PassOwnPtr<TextResourceDecoder> createDecoder() const;
 
     void initResponseDocument();
-    void parseDocumentChunk(const char* data, int dataLength);
+    void parseDocumentChunk(const char* data, unsigned dataLength);
 
     bool areMethodAndURLValidForSend();
 
@@ -201,7 +207,7 @@ private:
     const AtomicString& getRequestHeader(const AtomicString& name) const;
     void setRequestHeaderInternal(const AtomicString& name, const AtomicString& value);
 
-    void trackProgress(int dataLength);
+    void trackProgress(long long dataLength);
     // Changes m_state and dispatches a readyStateChange event if new m_state
     // value is different from last one.
     void changeState(State newState);
@@ -210,6 +216,10 @@ private:
     // Clears variables used only while the resource is being loaded.
     void clearVariablesForLoading();
     // Returns false iff reentry happened and a new load is started.
+    //
+    // This method may invoke V8 GC with m_loader unset. If you touch the
+    // XMLHttpRequest instance after internalAbort() call, you must hold a
+    // refcount on it to prevent it from destroyed.
     bool internalAbort();
     // Clears variables holding response header and body data.
     void clearResponse();
@@ -243,9 +253,9 @@ private:
     // using case insensitive comparison functions if needed.
     AtomicString m_mimeTypeOverride;
     unsigned long m_timeoutMilliseconds;
-    RefPtrWillBeMember<Blob> m_responseBlob;
+    PersistentWillBeMember<Blob> m_responseBlob;
     RefPtrWillBeMember<Stream> m_responseLegacyStream;
-    PersistentWillBeMember<ReadableStreamImpl<ReadableStreamChunkTypeTraits<ArrayBuffer> > > m_responseStream;
+    PersistentWillBeMember<ReadableStreamImpl<ReadableStreamChunkTypeTraits<DOMArrayBuffer> > > m_responseStream;
     PersistentWillBeMember<UnderlyingSource> m_streamSource;
 
     RefPtr<ThreadableLoader> m_loader;
@@ -264,13 +274,11 @@ private:
     RefPtr<SharedBuffer> m_binaryResponseBuilder;
     long long m_lengthDownloadedToFile;
 
-    RefPtr<ArrayBuffer> m_responseArrayBuffer;
+    RefPtr<DOMArrayBuffer> m_responseArrayBuffer;
 
     // Used for onprogress tracking
     long long m_receivedLength;
 
-    unsigned m_lastSendLineNumber;
-    String m_lastSendURL;
     // An exception to throw in synchronous mode. It's set when failure
     // notification is received from m_loader and thrown at the end of send() if
     // any.
@@ -281,6 +289,10 @@ private:
     // An enum corresponding to the allowed string values for the responseType attribute.
     ResponseTypeCode m_responseTypeCode;
     RefPtr<SecurityOrigin> m_securityOrigin;
+
+    // This blob loader will be used if |m_downloadingToFile| is true and
+    // |m_responseTypeCode| is NOT ResponseTypeBlob.
+    OwnPtrWillBeMember<BlobLoader> m_blobLoader;
 
     bool m_async;
     bool m_includeCredentials;

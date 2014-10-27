@@ -50,10 +50,8 @@ using namespace blink;
 
 namespace {
 
-WrapperPersistentNode* createPersistentHandle(ScriptWrappableBase* internalPointer)
+void trace(Visitor*, ScriptWrappableBase*)
 {
-    ASSERT_NOT_REACHED();
-    return 0;
 }
 
 } // namespace
@@ -62,7 +60,7 @@ namespace blink {
 
 const WrapperTypeInfo* npObjectTypeInfo()
 {
-    static const WrapperTypeInfo typeInfo = { gin::kEmbedderBlink, 0, 0, 0, createPersistentHandle, 0, 0, 0, 0, 0, 0, WrapperTypeInfo::WrapperTypeObjectPrototype, WrapperTypeInfo::ObjectClassId, WrapperTypeInfo::Dependent, WrapperTypeInfo::RefCountedObject };
+    static const WrapperTypeInfo typeInfo = { gin::kEmbedderBlink, 0, 0, 0, trace, 0, 0, 0, 0, 0, 0, WrapperTypeInfo::WrapperTypeObjectPrototype, WrapperTypeInfo::ObjectClassId, WrapperTypeInfo::Dependent, WrapperTypeInfo::RefCountedObject };
     return &typeInfo;
 }
 
@@ -75,7 +73,7 @@ static NPObject* allocV8NPObject(NPP, NPClass*)
 static void freeV8NPObject(NPObject* npObject)
 {
     V8NPObject* v8NpObject = reinterpret_cast<V8NPObject*>(npObject);
-    disposeUnderlyingV8Object(npObject, v8::Isolate::GetCurrent());
+    disposeUnderlyingV8Object(v8::Isolate::GetCurrent(), npObject);
     free(v8NpObject);
 }
 
@@ -134,7 +132,7 @@ bool isWrappedNPObject(v8::Handle<v8::Object> object)
     return false;
 }
 
-NPObject* npCreateV8ScriptObject(NPP npp, v8::Handle<v8::Object> object, LocalDOMWindow* root, v8::Isolate* isolate)
+NPObject* npCreateV8ScriptObject(v8::Isolate* isolate, NPP npp, v8::Handle<v8::Object> object, LocalDOMWindow* root)
 {
     // Check to see if this object is already wrapped.
     if (isWrappedNPObject(object)) {
@@ -192,7 +190,7 @@ ScriptWrappableBase* npObjectToScriptWrappableBase(NPObject* npObject)
     return reinterpret_cast<ScriptWrappableBase*>(npObject);
 }
 
-void disposeUnderlyingV8Object(NPObject* npObject, v8::Isolate* isolate)
+void disposeUnderlyingV8Object(v8::Isolate* isolate, NPObject* npObject)
 {
     ASSERT(npObject);
     V8NPObject* v8NpObject = npObjectToV8NPObject(npObject);
@@ -226,8 +224,6 @@ void disposeUnderlyingV8Object(NPObject* npObject, v8::Isolate* isolate)
 
 bool _NPN_Invoke(NPP npp, NPObject* npObject, NPIdentifier methodName, const NPVariant* arguments, uint32_t argumentCount, NPVariant* result)
 {
-    ScriptForbiddenScope::AllowSuperUnsafeScript thisShouldBeRemoved;
-
     if (!npObject)
         return false;
 
@@ -293,8 +289,6 @@ bool _NPN_Invoke(NPP npp, NPObject* npObject, NPIdentifier methodName, const NPV
 // FIXME: Fix it same as _NPN_Invoke (HandleScope and such).
 bool _NPN_InvokeDefault(NPP npp, NPObject* npObject, const NPVariant* arguments, uint32_t argumentCount, NPVariant* result)
 {
-    ScriptForbiddenScope::AllowSuperUnsafeScript thisShouldBeRemoved;
-
     if (!npObject)
         return false;
 
@@ -350,8 +344,6 @@ bool _NPN_Evaluate(NPP npp, NPObject* npObject, NPString* npScript, NPVariant* r
 
 bool _NPN_EvaluateHelper(NPP npp, bool popupsAllowed, NPObject* npObject, NPString* npScript, NPVariant* result)
 {
-    ScriptForbiddenScope::AllowSuperUnsafeScript thisShouldBeRemoved;
-
     VOID_TO_NPVARIANT(*result);
     if (!npObject)
         return false;

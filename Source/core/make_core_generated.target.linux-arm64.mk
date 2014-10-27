@@ -7,6 +7,7 @@ LOCAL_MODULE := third_party_WebKit_Source_core_make_core_generated_gyp
 LOCAL_MODULE_STEM := make_core_generated
 LOCAL_MODULE_SUFFIX := .stamp
 LOCAL_MODULE_TARGET_ARCH := $(TARGET_$(GYP_VAR_PREFIX)ARCH)
+LOCAL_SDK_VERSION := 21
 gyp_intermediate_dir := $(call local-intermediates-dir,,$(GYP_VAR_PREFIX))
 gyp_shared_intermediate_dir := $(call intermediates-dir-for,GYP,shared,,,$(GYP_VAR_PREFIX))
 
@@ -96,15 +97,15 @@ $(gyp_shared_intermediate_dir)/blink/core/MediaTypeNames.cpp: $(LOCAL_PATH)/thir
 
 $(gyp_shared_intermediate_dir)/blink/core/MediaTypeNames.h: $(gyp_shared_intermediate_dir)/blink/core/MediaTypeNames.cpp ;
 
-### Rules for action "MediaQueryTokenizerCodepoints":
-$(gyp_shared_intermediate_dir)/blink/core/MediaQueryTokenizerCodepoints.cpp: gyp_local_path := $(LOCAL_PATH)
-$(gyp_shared_intermediate_dir)/blink/core/MediaQueryTokenizerCodepoints.cpp: gyp_var_prefix := $(GYP_VAR_PREFIX)
-$(gyp_shared_intermediate_dir)/blink/core/MediaQueryTokenizerCodepoints.cpp: gyp_intermediate_dir := $(abspath $(gyp_intermediate_dir))
-$(gyp_shared_intermediate_dir)/blink/core/MediaQueryTokenizerCodepoints.cpp: gyp_shared_intermediate_dir := $(abspath $(gyp_shared_intermediate_dir))
-$(gyp_shared_intermediate_dir)/blink/core/MediaQueryTokenizerCodepoints.cpp: export PATH := $(subst $(ANDROID_BUILD_PATHS),,$(PATH))
-$(gyp_shared_intermediate_dir)/blink/core/MediaQueryTokenizerCodepoints.cpp: $(LOCAL_PATH)/third_party/WebKit/Source/build/scripts/make_mediaquery_tokenizer_codepoints.py $(GYP_TARGET_DEPENDENCIES)
-	@echo "Gyp action: third_party_WebKit_Source_core_core_generated_gyp_make_core_generated_target_MediaQueryTokenizerCodepoints ($@)"
-	$(hide)cd $(gyp_local_path)/third_party/WebKit/Source/core; mkdir -p $(gyp_shared_intermediate_dir)/blink/core; python ../build/scripts/make_mediaquery_tokenizer_codepoints.py --output_dir "$(gyp_shared_intermediate_dir)/blink/core"
+### Rules for action "CSSTokenizerCodepoints":
+$(gyp_shared_intermediate_dir)/blink/core/CSSTokenizerCodepoints.cpp: gyp_local_path := $(LOCAL_PATH)
+$(gyp_shared_intermediate_dir)/blink/core/CSSTokenizerCodepoints.cpp: gyp_var_prefix := $(GYP_VAR_PREFIX)
+$(gyp_shared_intermediate_dir)/blink/core/CSSTokenizerCodepoints.cpp: gyp_intermediate_dir := $(abspath $(gyp_intermediate_dir))
+$(gyp_shared_intermediate_dir)/blink/core/CSSTokenizerCodepoints.cpp: gyp_shared_intermediate_dir := $(abspath $(gyp_shared_intermediate_dir))
+$(gyp_shared_intermediate_dir)/blink/core/CSSTokenizerCodepoints.cpp: export PATH := $(subst $(ANDROID_BUILD_PATHS),,$(PATH))
+$(gyp_shared_intermediate_dir)/blink/core/CSSTokenizerCodepoints.cpp: $(LOCAL_PATH)/third_party/WebKit/Source/build/scripts/make_css_tokenizer_codepoints.py $(GYP_TARGET_DEPENDENCIES)
+	@echo "Gyp action: third_party_WebKit_Source_core_core_generated_gyp_make_core_generated_target_CSSTokenizerCodepoints ($@)"
+	$(hide)cd $(gyp_local_path)/third_party/WebKit/Source/core; mkdir -p $(gyp_shared_intermediate_dir)/blink/core; python ../build/scripts/make_css_tokenizer_codepoints.py --output_dir "$(gyp_shared_intermediate_dir)/blink/core"
 
 
 ### Rules for action "StylePropertyShorthand":
@@ -350,14 +351,14 @@ $(gyp_shared_intermediate_dir)/blink/core/XMLNames.cpp: $(LOCAL_PATH)/third_part
 $(gyp_shared_intermediate_dir)/blink/core/XMLNames.h: $(gyp_shared_intermediate_dir)/blink/core/XMLNames.cpp ;
 
 ### Rules for action "MakeTokenMatcher":
-$(gyp_shared_intermediate_dir)/blink/core/CSSTokenizer.cpp: gyp_local_path := $(LOCAL_PATH)
-$(gyp_shared_intermediate_dir)/blink/core/CSSTokenizer.cpp: gyp_var_prefix := $(GYP_VAR_PREFIX)
-$(gyp_shared_intermediate_dir)/blink/core/CSSTokenizer.cpp: gyp_intermediate_dir := $(abspath $(gyp_intermediate_dir))
-$(gyp_shared_intermediate_dir)/blink/core/CSSTokenizer.cpp: gyp_shared_intermediate_dir := $(abspath $(gyp_shared_intermediate_dir))
-$(gyp_shared_intermediate_dir)/blink/core/CSSTokenizer.cpp: export PATH := $(subst $(ANDROID_BUILD_PATHS),,$(PATH))
-$(gyp_shared_intermediate_dir)/blink/core/CSSTokenizer.cpp: $(LOCAL_PATH)/third_party/jinja2/__init__.py $(LOCAL_PATH)/third_party/markupsafe/__init__.py $(LOCAL_PATH)/third_party/WebKit/Source/build/scripts/hasher.py $(LOCAL_PATH)/third_party/WebKit/Source/build/scripts/in_file.py $(LOCAL_PATH)/third_party/WebKit/Source/build/scripts/in_generator.py $(LOCAL_PATH)/third_party/WebKit/Source/build/scripts/license.py $(LOCAL_PATH)/third_party/WebKit/Source/build/scripts/name_utilities.py $(LOCAL_PATH)/third_party/WebKit/Source/build/scripts/template_expander.py $(LOCAL_PATH)/third_party/WebKit/Source/build/scripts/templates/macros.tmpl $(LOCAL_PATH)/third_party/WebKit/Source/build/scripts/make_token_matcher.py $(LOCAL_PATH)/third_party/WebKit/Source/core/css/parser/CSSTokenizer-in.cpp $(GYP_TARGET_DEPENDENCIES)
+$(gyp_shared_intermediate_dir)/blink/core/BisonCSSTokenizer.cpp: gyp_local_path := $(LOCAL_PATH)
+$(gyp_shared_intermediate_dir)/blink/core/BisonCSSTokenizer.cpp: gyp_var_prefix := $(GYP_VAR_PREFIX)
+$(gyp_shared_intermediate_dir)/blink/core/BisonCSSTokenizer.cpp: gyp_intermediate_dir := $(abspath $(gyp_intermediate_dir))
+$(gyp_shared_intermediate_dir)/blink/core/BisonCSSTokenizer.cpp: gyp_shared_intermediate_dir := $(abspath $(gyp_shared_intermediate_dir))
+$(gyp_shared_intermediate_dir)/blink/core/BisonCSSTokenizer.cpp: export PATH := $(subst $(ANDROID_BUILD_PATHS),,$(PATH))
+$(gyp_shared_intermediate_dir)/blink/core/BisonCSSTokenizer.cpp: $(LOCAL_PATH)/third_party/jinja2/__init__.py $(LOCAL_PATH)/third_party/markupsafe/__init__.py $(LOCAL_PATH)/third_party/WebKit/Source/build/scripts/hasher.py $(LOCAL_PATH)/third_party/WebKit/Source/build/scripts/in_file.py $(LOCAL_PATH)/third_party/WebKit/Source/build/scripts/in_generator.py $(LOCAL_PATH)/third_party/WebKit/Source/build/scripts/license.py $(LOCAL_PATH)/third_party/WebKit/Source/build/scripts/name_utilities.py $(LOCAL_PATH)/third_party/WebKit/Source/build/scripts/template_expander.py $(LOCAL_PATH)/third_party/WebKit/Source/build/scripts/templates/macros.tmpl $(LOCAL_PATH)/third_party/WebKit/Source/build/scripts/make_token_matcher.py $(LOCAL_PATH)/third_party/WebKit/Source/core/css/parser/BisonCSSTokenizer-in.cpp $(GYP_TARGET_DEPENDENCIES)
 	@echo "Gyp action: third_party_WebKit_Source_core_core_generated_gyp_make_core_generated_target_MakeTokenMatcher ($@)"
-	$(hide)cd $(gyp_local_path)/third_party/WebKit/Source/core; mkdir -p $(gyp_shared_intermediate_dir)/blink/core; python ../build/scripts/make_token_matcher.py ../core/css/parser/CSSTokenizer-in.cpp "$(gyp_shared_intermediate_dir)/blink/core/CSSTokenizer.cpp"
+	$(hide)cd $(gyp_local_path)/third_party/WebKit/Source/core; mkdir -p $(gyp_shared_intermediate_dir)/blink/core; python ../build/scripts/make_token_matcher.py ../core/css/parser/BisonCSSTokenizer-in.cpp "$(gyp_shared_intermediate_dir)/blink/core/BisonCSSTokenizer.cpp"
 
 
 ### Rules for action "MakeParser":
@@ -430,7 +431,7 @@ GYP_GENERATED_OUTPUTS := \
 	$(gyp_shared_intermediate_dir)/blink/core/MediaFeatures.h \
 	$(gyp_shared_intermediate_dir)/blink/core/MediaTypeNames.cpp \
 	$(gyp_shared_intermediate_dir)/blink/core/MediaTypeNames.h \
-	$(gyp_shared_intermediate_dir)/blink/core/MediaQueryTokenizerCodepoints.cpp \
+	$(gyp_shared_intermediate_dir)/blink/core/CSSTokenizerCodepoints.cpp \
 	$(gyp_shared_intermediate_dir)/blink/core/StylePropertyShorthand.cpp \
 	$(gyp_shared_intermediate_dir)/blink/core/StylePropertyShorthand.h \
 	$(gyp_shared_intermediate_dir)/blink/core/StyleBuilder.cpp \
@@ -473,7 +474,7 @@ GYP_GENERATED_OUTPUTS := \
 	$(gyp_shared_intermediate_dir)/blink/core/XMLNSNames.h \
 	$(gyp_shared_intermediate_dir)/blink/core/XMLNames.cpp \
 	$(gyp_shared_intermediate_dir)/blink/core/XMLNames.h \
-	$(gyp_shared_intermediate_dir)/blink/core/CSSTokenizer.cpp \
+	$(gyp_shared_intermediate_dir)/blink/core/BisonCSSTokenizer.cpp \
 	$(gyp_shared_intermediate_dir)/blink/core/BisonCSSParser.cpp \
 	$(gyp_shared_intermediate_dir)/blink/core/HTMLMetaElement.cpp \
 	$(gyp_shared_intermediate_dir)/blink/core/HTMLElementLookupTrie.cpp \
@@ -540,12 +541,6 @@ MY_DEFS_Debug := \
 	'-DCLD_VERSION=1' \
 	'-DENABLE_PRINTING=1' \
 	'-DENABLE_MANAGED_USERS=1' \
-	'-DDATA_REDUCTION_FALLBACK_HOST="http://compress.googlezip.net:80/"' \
-	'-DDATA_REDUCTION_DEV_HOST="https://proxy-dev.googlezip.net:443/"' \
-	'-DDATA_REDUCTION_DEV_FALLBACK_HOST="http://proxy-dev.googlezip.net:80/"' \
-	'-DSPDY_PROXY_AUTH_ORIGIN="https://proxy.googlezip.net:443/"' \
-	'-DDATA_REDUCTION_PROXY_PROBE_URL="http://check.googlezip.net/connect"' \
-	'-DDATA_REDUCTION_PROXY_WARMUP_URL="http://www.gstatic.com/generate_204"' \
 	'-DVIDEO_HOLE=1' \
 	'-DENABLE_LOAD_COMPLETION_HACKS=1' \
 	'-DUSE_OPENSSL=1' \
@@ -566,10 +561,7 @@ MY_DEFS_Debug := \
 LOCAL_C_INCLUDES_Debug := \
 	$(gyp_shared_intermediate_dir) \
 	$(LOCAL_PATH)/third_party/WebKit/Source \
-	$(LOCAL_PATH)/third_party/WebKit \
-	$(PWD)/frameworks/wilhelm/include \
-	$(PWD)/bionic \
-	$(PWD)/external/stlport/stlport
+	$(LOCAL_PATH)/third_party/WebKit
 
 
 # Flags passed to only C++ (and not C) files.
@@ -633,12 +625,6 @@ MY_DEFS_Release := \
 	'-DCLD_VERSION=1' \
 	'-DENABLE_PRINTING=1' \
 	'-DENABLE_MANAGED_USERS=1' \
-	'-DDATA_REDUCTION_FALLBACK_HOST="http://compress.googlezip.net:80/"' \
-	'-DDATA_REDUCTION_DEV_HOST="https://proxy-dev.googlezip.net:443/"' \
-	'-DDATA_REDUCTION_DEV_FALLBACK_HOST="http://proxy-dev.googlezip.net:80/"' \
-	'-DSPDY_PROXY_AUTH_ORIGIN="https://proxy.googlezip.net:443/"' \
-	'-DDATA_REDUCTION_PROXY_PROBE_URL="http://check.googlezip.net/connect"' \
-	'-DDATA_REDUCTION_PROXY_WARMUP_URL="http://www.gstatic.com/generate_204"' \
 	'-DVIDEO_HOLE=1' \
 	'-DENABLE_LOAD_COMPLETION_HACKS=1' \
 	'-DUSE_OPENSSL=1' \
@@ -660,10 +646,7 @@ MY_DEFS_Release := \
 LOCAL_C_INCLUDES_Release := \
 	$(gyp_shared_intermediate_dir) \
 	$(LOCAL_PATH)/third_party/WebKit/Source \
-	$(LOCAL_PATH)/third_party/WebKit \
-	$(PWD)/frameworks/wilhelm/include \
-	$(PWD)/bionic \
-	$(PWD)/external/stlport/stlport
+	$(LOCAL_PATH)/third_party/WebKit
 
 
 # Flags passed to only C++ (and not C) files.
@@ -686,6 +669,10 @@ LOCAL_C_INCLUDES := $(GYP_COPIED_SOURCE_ORIGIN_DIRS) $(LOCAL_C_INCLUDES_$(GYP_CO
 LOCAL_CPPFLAGS := $(LOCAL_CPPFLAGS_$(GYP_CONFIGURATION))
 LOCAL_ASFLAGS := $(LOCAL_CFLAGS)
 ### Rules for final target.
+### Set directly by aosp_build_settings.
+LOCAL_CLANG := false
+LOCAL_NDK_STL_VARIANT := stlport_static
+
 # Add target alias to "gyp_all_modules" target.
 .PHONY: gyp_all_modules
 gyp_all_modules: third_party_WebKit_Source_core_make_core_generated_gyp

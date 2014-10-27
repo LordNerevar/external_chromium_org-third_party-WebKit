@@ -40,6 +40,7 @@ WebInspector.UISourceCodeFrame = function(uiSourceCode)
 
     this._uiSourceCode.addEventListener(WebInspector.UISourceCode.Events.WorkingCopyChanged, this._onWorkingCopyChanged, this);
     this._uiSourceCode.addEventListener(WebInspector.UISourceCode.Events.WorkingCopyCommitted, this._onWorkingCopyCommitted, this);
+    this._uiSourceCode.addEventListener(WebInspector.UISourceCode.Events.SavedStateUpdated, this._onSavedStateUpdated, this);
     this._updateStyle();
 }
 
@@ -61,14 +62,14 @@ WebInspector.UISourceCodeFrame.prototype = {
     {
         WebInspector.SourceFrame.prototype.wasShown.call(this);
         this._boundWindowFocused = this._windowFocused.bind(this);
-        window.addEventListener("focus", this._boundWindowFocused, false);
+        this.element.ownerDocument.defaultView.addEventListener("focus", this._boundWindowFocused, false);
         this._checkContentUpdated();
     },
 
     willHide: function()
     {
         WebInspector.SourceFrame.prototype.willHide.call(this);
-        window.removeEventListener("focus", this._boundWindowFocused, false);
+        this.element.ownerDocument.defaultView.removeEventListener("focus", this._boundWindowFocused, false);
         delete this._boundWindowFocused;
         this._uiSourceCode.removeWorkingCopyGetter();
     },
@@ -149,6 +150,14 @@ WebInspector.UISourceCodeFrame.prototype = {
         });
     },
 
+    /**
+     * @param {!WebInspector.Event} event
+     */
+    _onSavedStateUpdated: function(event)
+    {
+        this._updateStyle();
+    },
+
     _updateStyle: function()
     {
         this.element.classList.toggle("source-frame-unsaved-committed-changes", this._uiSourceCode.hasUnsavedCommittedChanges());
@@ -207,14 +216,14 @@ WebInspector.UISourceCodeFrame.prototype = {
  */
 WebInspector.UISourceCodeFrame.Infobar = function(level, message)
 {
-    this.element = document.createElementWithClass("div", "source-frame-infobar source-frame-infobar-" + level);
+    this.element = createElementWithClass("div", "source-frame-infobar source-frame-infobar-" + level);
     this._mainRow = this.element.createChild("div", "source-frame-infobar-main-row");
     this._detailsContainer = this.element.createChild("span", "source-frame-infobar-details-container");
 
     this._mainRow.createChild("span", "source-frame-infobar-icon");
     this._mainRow.createChild("span", "source-frame-infobar-row-message").textContent = message;
 
-    this._toggleElement = this._mainRow.createChild("div", "source-frame-infobar-toggle source-frame-infobar-link");
+    this._toggleElement = this._mainRow.createChild("div", "source-frame-infobar-toggle link");
     this._toggleElement.addEventListener("click", this._onToggleDetails.bind(this), false);
 
     this._closeElement = this._mainRow.createChild("div", "close-button");

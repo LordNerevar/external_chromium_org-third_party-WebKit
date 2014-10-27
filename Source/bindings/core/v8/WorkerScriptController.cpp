@@ -43,7 +43,6 @@
 #include "bindings/core/v8/V8SharedWorkerGlobalScope.h"
 #include "bindings/core/v8/V8WorkerGlobalScope.h"
 #include "bindings/core/v8/WrapperTypeInfo.h"
-#include "bindings/modules/v8/V8ServiceWorkerGlobalScope.h"
 #include "core/events/ErrorEvent.h"
 #include "core/frame/DOMTimer.h"
 #include "core/inspector/ScriptCallStack.h"
@@ -58,7 +57,7 @@
 
 namespace blink {
 
-class WorkerScriptController::WorkerGlobalScopeExecutionState FINAL {
+class WorkerScriptController::WorkerGlobalScopeExecutionState final {
     STACK_ALLOCATED();
 public:
     explicit WorkerGlobalScopeExecutionState(WorkerScriptController* controller)
@@ -116,6 +115,7 @@ WorkerScriptController::WorkerScriptController(WorkerGlobalScope& workerGlobalSc
     m_world = DOMWrapperWorld::create(WorkerWorldId);
     m_interruptor = adoptPtr(new V8IsolateInterruptor(m_isolate));
     ThreadState::current()->addInterruptor(m_interruptor.get());
+    ThreadState::current()->registerTraceDOMWrappers(m_isolate, V8GCController::traceDOMWrappers);
 }
 
 // We need to postpone V8 Isolate destruction until the very end of

@@ -274,6 +274,14 @@ bool WebAXObject::isEnabled() const
     return m_private->isEnabled();
 }
 
+bool WebAXObject::isExpanded() const
+{
+    if (isDetached())
+        return 0;
+
+    return m_private->isExpanded();
+}
+
 bool WebAXObject::isFocused() const
 {
     if (isDetached())
@@ -753,6 +761,14 @@ void WebAXObject::setSelectedTextRange(int selectionStart, int selectionEnd) con
     m_private->setSelectedTextRange(AXObject::PlainTextRange(selectionStart, selectionEnd - selectionStart));
 }
 
+void WebAXObject::setValue(WebString value) const
+{
+    if (isDetached())
+        return;
+
+    m_private->setValue(value);
+}
+
 WebString WebAXObject::stringValue() const
 {
     if (isDetached())
@@ -913,6 +929,14 @@ bool WebAXObject::lineBreaks(WebVector<int>& result) const
     result.swap(lineBreaksWebVector);
 
     return true;
+}
+
+WebString WebAXObject::textInputType() const
+{
+    if (isDetached())
+        return WebString();
+
+    return WebString(m_private->textInputType());
 }
 
 unsigned WebAXObject::columnCount() const

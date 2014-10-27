@@ -43,27 +43,27 @@ public:
 
     static RenderFlexibleBox* createAnonymous(Document*);
 
-    virtual const char* renderName() const OVERRIDE;
+    virtual const char* renderName() const override;
 
-    virtual bool isFlexibleBox() const OVERRIDE FINAL { return true; }
-    virtual bool canCollapseAnonymousBlockChild() const OVERRIDE { return false; }
-    virtual void layoutBlock(bool relayoutChildren) OVERRIDE FINAL;
+    virtual bool isFlexibleBox() const override final { return true; }
+    virtual bool canCollapseAnonymousBlockChild() const override { return false; }
+    virtual void layoutBlock(bool relayoutChildren) override final;
 
-    virtual int baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const OVERRIDE;
-    virtual int firstLineBoxBaseline() const OVERRIDE;
-    virtual int inlineBlockBaseline(LineDirectionMode) const OVERRIDE;
+    virtual int baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const override;
+    virtual int firstLineBoxBaseline() const override;
+    virtual int inlineBlockBaseline(LineDirectionMode) const override;
 
-    virtual void paintChildren(PaintInfo&, const LayoutPoint&) OVERRIDE FINAL;
+    virtual void paintChildren(PaintInfo&, const LayoutPoint&) override final;
 
     bool isHorizontalFlow() const;
 
     OrderIterator& orderIterator() { return m_orderIterator; }
 
 protected:
-    virtual void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const OVERRIDE;
+    virtual void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const override;
 
-    virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) OVERRIDE;
-    virtual void removeChild(RenderObject*) OVERRIDE;
+    virtual void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
+    virtual void removeChild(RenderObject*) override;
 
 private:
     enum FlexSign {
@@ -149,7 +149,6 @@ private:
 
     void resetAutoMarginsAndLogicalTopInCrossAxis(RenderBox& child);
     void setLogicalOverrideSize(RenderBox& child, LayoutUnit childPreferredSize);
-    void clearLogicalOverrideSize(RenderBox& child);
     void prepareChildForPositionedLayout(RenderBox& child, LayoutUnit mainAxisOffset, LayoutUnit crossAxisOffset, PositionedLayoutMode);
     size_t numberOfInFlowPositionedChildren(const OrderedFlexItemList&) const;
     void layoutAndPlaceChildren(LayoutUnit& crossAxisOffset, const OrderedFlexItemList&, const Vector<LayoutUnit, 16>& childSizes, LayoutUnit availableFreeSpace, bool relayoutChildren, Vector<LineContext>&, bool hasInfiniteLineLength);

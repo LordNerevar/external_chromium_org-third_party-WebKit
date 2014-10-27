@@ -97,6 +97,7 @@ public:
     BLINK_EXPORT bool isCollapsed() const;
     BLINK_EXPORT bool isControl() const;
     BLINK_EXPORT bool isEnabled() const;
+    BLINK_EXPORT bool isExpanded() const;
     BLINK_EXPORT bool isFocused() const;
     BLINK_EXPORT bool isHovered() const;
     BLINK_EXPORT bool isIndeterminate() const;
@@ -158,6 +159,7 @@ public:
     BLINK_EXPORT WebString computedStyleDisplay() const;
     BLINK_EXPORT bool accessibilityIsIgnored() const;
     BLINK_EXPORT bool lineBreaks(WebVector<int>&) const;
+    BLINK_EXPORT WebString textInputType() const;
 
     // Actions
     BLINK_EXPORT WebString actionVerb() const; // The verb corresponding to performDefaultAction.
@@ -173,6 +175,7 @@ public:
     BLINK_EXPORT bool decrement() const;
     BLINK_EXPORT void setFocused(bool) const;
     BLINK_EXPORT void setSelectedTextRange(int selectionStart, int selectionEnd) const;
+    BLINK_EXPORT void setValue(WebString) const;
 
     // For a table
     BLINK_EXPORT unsigned columnCount() const;

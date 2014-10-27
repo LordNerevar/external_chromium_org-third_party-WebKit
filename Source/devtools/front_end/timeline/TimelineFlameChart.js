@@ -42,7 +42,8 @@ WebInspector.TimelineFlameChartDataProvider = function(model, frameModel)
     this._frameModel = frameModel;
     this._font = "12px " + WebInspector.fontFamily();
     this._linkifier = new WebInspector.Linkifier();
-    this._captureStacksSetting = WebInspector.settings.createSetting("timelineCaptureStacks", true);
+    if (Runtime.experiments.isEnabled("timelineJSCPUProfile"))
+        this._enableJSSamplingSettingSetting = WebInspector.settings.createSetting("timelineEnableJSSampling", false);
     this._filters = [];
     this.addFilter(WebInspector.TracingTimelineUIUtils.hiddenEventsFilter());
     this.addFilter(new WebInspector.TracingTimelineModel.ExclusiveEventNameFilter([WebInspector.TracingTimelineModel.RecordType.Program]));
@@ -197,11 +198,9 @@ WebInspector.TimelineFlameChartDataProvider.prototype = {
     _appendThreadTimelineData: function(threadTitle, syncEvents, asyncEvents)
     {
         var levelCount = this._appendAsyncEvents(threadTitle, asyncEvents);
-        if (Runtime.experiments.isEnabled("timelineJSCPUProfile")) {
-            if (this._captureStacksSetting.get()) {
-                var jsFrameEvents = this._generateJSFrameEvents(syncEvents);
-                syncEvents = jsFrameEvents.mergeOrdered(syncEvents, WebInspector.TracingModel.Event.orderedCompareStartTime);
-            }
+        if (this._enableJSSamplingSettingSetting && this._enableJSSamplingSettingSetting.get()) {
+            var jsFrameEvents = this._generateJSFrameEvents(syncEvents);
+            syncEvents = jsFrameEvents.mergeOrdered(syncEvents, WebInspector.TracingModel.Event.orderedCompareStartTime);
         }
         levelCount += this._appendSyncEvents(levelCount ? null : threadTitle, syncEvents);
         if (levelCount)
@@ -226,6 +225,8 @@ WebInspector.TimelineFlameChartDataProvider.prototype = {
                 this._timelineData.markerTimestamps.push(e.startTime);
             }
             if (!e.endTime && e.phase !== WebInspector.TracingModel.Phase.Instant)
+                continue;
+            if (WebInspector.TracingModel.isAsyncPhase(e.phase))
                 continue;
             if (!this._isVisible(e))
                 continue;
@@ -264,9 +265,17 @@ WebInspector.TimelineFlameChartDataProvider.prototype = {
             }
             var level;
             for (level = 0; level < lastUsedTimeByLevel.length && lastUsedTimeByLevel[level] > e.startTime; ++level) {}
-            this._appendAsyncEventSteps(eventSteps[i], this._currentLevel + level);
+            if (WebInspector.TracingModel.isNestableAsyncPhase(e.phase))
+                this._appendEvent(e, this._currentLevel + level);
+            else
+                this._appendAsyncEventSteps(eventSteps[i], this._currentLevel + level);
             var lastStep = eventSteps[i].peekLast();
-            lastUsedTimeByLevel[level] = lastStep.phase === WebInspector.TracingModel.Phase.AsyncEnd ? lastStep.startTime : Infinity;
+            if (lastStep.phase === WebInspector.TracingModel.Phase.AsyncEnd || lastStep.phase === WebInspector.TracingModel.Phase.NestableAsyncInstant)
+                lastUsedTimeByLevel[level] = lastStep.startTime;
+            else if (lastStep.phase === WebInspector.TracingModel.Phase.NestableAsyncBegin && lastStep.endTime)
+                lastUsedTimeByLevel[level] = lastStep.endTime;
+            else
+                lastUsedTimeByLevel[level] = Infinity;
         }
         this._currentLevel += lastUsedTimeByLevel.length;
         return lastUsedTimeByLevel.length;
@@ -733,7 +742,6 @@ WebInspector.TimelineFlameChart = function(delegate, tracingModel, frameModel)
 {
     WebInspector.VBox.call(this);
     this.element.classList.add("timeline-flamechart");
-    this.registerRequiredCSS("flameChart.css");
     this._delegate = delegate;
     this._model = tracingModel;
     this._dataProvider = new WebInspector.TimelineFlameChartDataProvider(tracingModel, frameModel)

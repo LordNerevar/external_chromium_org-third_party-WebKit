@@ -60,7 +60,7 @@ using blink::WebSocketHandle;
 
 namespace blink {
 
-class NewWebSocketChannelImpl::BlobLoader FINAL : public GarbageCollectedFinalized<NewWebSocketChannelImpl::BlobLoader>, public FileReaderLoaderClient {
+class NewWebSocketChannelImpl::BlobLoader final : public GarbageCollectedFinalized<NewWebSocketChannelImpl::BlobLoader>, public FileReaderLoaderClient {
 public:
     BlobLoader(PassRefPtr<BlobDataHandle>, NewWebSocketChannelImpl*);
     virtual ~BlobLoader() { }
@@ -68,10 +68,10 @@ public:
     void cancel();
 
     // FileReaderLoaderClient functions.
-    virtual void didStartLoading() OVERRIDE { }
-    virtual void didReceiveData() OVERRIDE { }
-    virtual void didFinishLoading() OVERRIDE;
-    virtual void didFail(FileError::ErrorCode) OVERRIDE;
+    virtual void didStartLoading() override { }
+    virtual void didReceiveData() override { }
+    virtual void didFinishLoading() override;
+    virtual void didFail(FileError::ErrorCode) override;
 
     void trace(Visitor* visitor)
     {
@@ -247,7 +247,7 @@ void NewWebSocketChannelImpl::fail(const String& reason, MessageLevel level, con
     executionContext()->addConsoleMessage(ConsoleMessage::create(JSMessageSource, level, message, sourceURL, lineNumber));
 
     if (m_client)
-        m_client->didReceiveMessageError();
+        m_client->didError();
     // |reason| is only for logging and should not be provided for scripts,
     // hence close reason must be empty.
     handleDidClose(false, CloseEventCodeAbnormalClosure, String());
@@ -493,12 +493,12 @@ void NewWebSocketChannelImpl::didReceiveData(WebSocketHandle* handle, bool fin, 
             failAsError("Could not decode a text frame as UTF-8.");
             // failAsError may delete this object.
         } else {
-            m_client->didReceiveMessage(message);
+            m_client->didReceiveTextMessage(message);
         }
     } else {
         OwnPtr<Vector<char> > binaryData = adoptPtr(new Vector<char>);
         binaryData->swap(m_receivingMessageData);
-        m_client->didReceiveBinaryData(binaryData.release());
+        m_client->didReceiveBinaryMessage(binaryData.release());
     }
 }
 

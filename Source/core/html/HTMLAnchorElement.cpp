@@ -195,8 +195,6 @@ void HTMLAnchorElement::parseAttribute(const QualifiedName& name, const AtomicSt
         if (wasLink || isLink()) {
             pseudoStateChanged(CSSSelector::PseudoLink);
             pseudoStateChanged(CSSSelector::PseudoVisited);
-            if (wasLink != isLink())
-                pseudoStateChanged(CSSSelector::PseudoEnabled);
         }
         if (wasLink && !isLink() && treeScope().adjustedFocusedElement() == this) {
             // We might want to call blur(), but it's dangerous to dispatch
@@ -345,12 +343,6 @@ void HTMLAnchorElement::handleClick(Event* event)
     ResourceRequest request(completedURL);
     if (hasAttribute(downloadAttr)) {
         request.setRequestContext(blink::WebURLRequest::RequestContextDownload);
-        if (!hasRel(RelationNoReferrer)) {
-            String referrer = SecurityPolicy::generateReferrerHeader(document().referrerPolicy(), completedURL, document().outgoingReferrer());
-            if (!referrer.isEmpty())
-                request.setHTTPReferrer(Referrer(referrer, document().referrerPolicy()));
-        }
-
         bool isSameOrigin = completedURL.protocolIsData() || document().securityOrigin()->canRequest(completedURL);
         const AtomicString& suggestedName = (isSameOrigin ? fastGetAttribute(downloadAttr) : nullAtom);
 

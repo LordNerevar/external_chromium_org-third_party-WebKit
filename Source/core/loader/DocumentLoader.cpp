@@ -37,6 +37,7 @@
 #include "core/fetch/MemoryCache.h"
 #include "core/fetch/ResourceFetcher.h"
 #include "core/fetch/ResourceLoader.h"
+#include "core/frame/FrameHost.h"
 #include "core/frame/LocalDOMWindow.h"
 #include "core/frame/LocalFrame.h"
 #include "core/frame/csp/ContentSecurityPolicy.h"
@@ -509,7 +510,7 @@ void DocumentLoader::ensureWriter(const AtomicString& mimeType, const KURL& over
     if (m_writer)
         return;
 
-    const AtomicString& encoding = overrideEncoding().isNull() ? response().textEncodingName() : overrideEncoding();
+    const AtomicString& encoding = m_frame->host()->overrideEncoding().isNull() ? response().textEncodingName() : m_frame->host()->overrideEncoding();
 
     // Prepare a DocumentInit before clearing the frame, because it may need to
     // inherit an aliased security context.
@@ -520,6 +521,10 @@ void DocumentLoader::ensureWriter(const AtomicString& mimeType, const KURL& over
 
     m_writer = createWriterFor(0, init, mimeType, encoding, false);
     m_writer->setDocumentWasLoadedAsPartOfNavigation();
+
+    if (m_substituteData.isValid() && m_substituteData.forceSynchronousLoad())
+        m_writer->forceSynchronousParse();
+
     // This should be set before receivedFirstData().
     if (!overridingURL.isEmpty())
         m_frame->document()->setBaseURLOverride(overridingURL);
@@ -536,7 +541,7 @@ void DocumentLoader::commitData(const char* bytes, size_t length)
     m_writer->addData(bytes, length);
 }
 
-void DocumentLoader::dataReceived(Resource* resource, const char* data, int length)
+void DocumentLoader::dataReceived(Resource* resource, const char* data, unsigned length)
 {
     ASSERT(data);
     ASSERT(length);

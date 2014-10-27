@@ -215,7 +215,7 @@ private:
     bool handleMousePressEventSingleClick(const MouseEventWithHitTestResults&);
     bool handleMousePressEventDoubleClick(const MouseEventWithHitTestResults&);
     bool handleMousePressEventTripleClick(const MouseEventWithHitTestResults&);
-    bool handleMouseFocus(const PlatformMouseEvent&);
+    bool handleMouseFocus(const MouseEventWithHitTestResults&);
     bool handleMouseDraggedEvent(const MouseEventWithHitTestResults&);
     bool handleMouseReleaseEvent(const MouseEventWithHitTestResults&);
 
@@ -245,8 +245,6 @@ private:
     void cancelFakeMouseMoveEvent();
     bool isCursorVisible() const;
     void updateCursor();
-
-    bool isInsideScrollbar(const IntPoint&) const;
 
     ScrollableArea* associatedScrollableArea(const RenderLayer*) const;
 
@@ -342,7 +340,6 @@ private:
     Timer<EventHandler> m_cursorUpdateTimer;
 
     bool m_mouseDownMayStartAutoscroll;
-    bool m_mouseDownWasInSubframe;
 
     Timer<EventHandler> m_fakeMouseMoveEventTimer;
 
@@ -356,7 +353,7 @@ private:
     RefPtrWillBeMember<Node> m_nodeUnderMouse;
     RefPtrWillBeMember<Node> m_lastNodeUnderMouse;
     RefPtrWillBeMember<LocalFrame> m_lastMouseMoveEventSubframe;
-    RefPtr<Scrollbar> m_lastScrollbarUnderMouse;
+    RefPtrWillBeMember<Scrollbar> m_lastScrollbarUnderMouse;
     Cursor m_currentMouseCursor;
 
     int m_clickCount;
@@ -395,7 +392,7 @@ private:
     RefPtrWillBeMember<Node> m_scrollGestureHandlingNode;
     bool m_lastGestureScrollOverWidget;
     RefPtrWillBeMember<Node> m_previousGestureScrolledNode;
-    RefPtr<Scrollbar> m_scrollbarHandlingScrollGesture;
+    RefPtrWillBeMember<Scrollbar> m_scrollbarHandlingScrollGesture;
 
     double m_maxMouseMovedDuration;
     bool m_didStartDrag;

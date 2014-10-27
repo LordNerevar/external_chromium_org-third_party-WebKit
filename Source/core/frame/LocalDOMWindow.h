@@ -28,6 +28,7 @@
 #define LocalDOMWindow_h
 
 #include "core/events/EventTarget.h"
+#include "core/frame/DOMWindow.h"
 #include "core/frame/DOMWindowBase64.h"
 #include "core/frame/FrameDestructionObserver.h"
 #include "platform/LifecycleContext.h"
@@ -83,7 +84,7 @@ enum PageshowEventPersistence {
 
 enum SetLocationLocking { LockHistoryBasedOnGestureState, LockHistoryAndBackForwardList };
 
-class LocalDOMWindow FINAL : public RefCountedWillBeGarbageCollectedFinalized<LocalDOMWindow>, public EventTargetWithInlineData, public DOMWindowBase64, public FrameDestructionObserver, public WillBeHeapSupplementable<LocalDOMWindow>, public LifecycleContext<LocalDOMWindow> {
+class LocalDOMWindow final : public RefCountedWillBeGarbageCollectedFinalized<LocalDOMWindow>, public EventTargetWithInlineData, public DOMWindow, public DOMWindowBase64, public FrameDestructionObserver, public WillBeHeapSupplementable<LocalDOMWindow>, public LifecycleContext<LocalDOMWindow> {
     DEFINE_WRAPPERTYPEINFO();
     REFCOUNTED_EVENT_TARGET(LocalDOMWindow);
     WILL_BE_USING_GARBAGE_COLLECTED_MIXIN(LocalDOMWindow);
@@ -97,10 +98,13 @@ public:
 
     PassRefPtrWillBeRawPtr<Document> installNewDocument(const String& mimeType, const DocumentInit&, bool forceXHTML = false);
 
-    virtual const AtomicString& interfaceName() const OVERRIDE;
-    virtual ExecutionContext* executionContext() const OVERRIDE;
+    // EventTarget overrides:
+    virtual const AtomicString& interfaceName() const override;
+    virtual ExecutionContext* executionContext() const override;
+    virtual LocalDOMWindow* toDOMWindow() override;
 
-    virtual LocalDOMWindow* toDOMWindow() OVERRIDE;
+    // DOMWindow overrides:
+    ScriptWrappable* toScriptWrappable() override { return this; }
 
     void registerProperty(DOMWindowProperty*);
     void unregisterProperty(DOMWindowProperty*);
@@ -244,9 +248,9 @@ public:
 
     // Events
     // EventTarget API
-    virtual bool addEventListener(const AtomicString& eventType, PassRefPtr<EventListener>, bool useCapture = false) OVERRIDE;
-    virtual bool removeEventListener(const AtomicString& eventType, PassRefPtr<EventListener>, bool useCapture = false) OVERRIDE;
-    virtual void removeAllEventListeners() OVERRIDE;
+    virtual bool addEventListener(const AtomicString& eventType, PassRefPtr<EventListener>, bool useCapture = false) override;
+    virtual bool removeEventListener(const AtomicString& eventType, PassRefPtr<EventListener>, bool useCapture = false) override;
+    virtual void removeAllEventListeners() override;
 
     using EventTarget::dispatchEvent;
     bool dispatchEvent(PassRefPtrWillBeRawPtr<Event> prpEvent, PassRefPtrWillBeRawPtr<EventTarget> prpTarget);
@@ -278,6 +282,10 @@ public:
 
     ApplicationCache* applicationCache() const;
     ApplicationCache* optionalApplicationCache() const { return m_applicationCache.get(); }
+
+    // Dispatch the (deprecated) orientationchange event to this DOMWindow and
+    // recurse on its child frames.
+    void sendOrientationChangeEvent();
 
     // This is the interface orientation in degrees. Some examples are:
     //  0 is straight up; -90 is when the device is rotated 90 clockwise;
@@ -320,9 +328,9 @@ public:
 
     void acceptLanguagesChanged();
 
-    virtual void trace(Visitor*) OVERRIDE;
+    virtual void trace(Visitor*) override;
 
-    virtual v8::Handle<v8::Object> wrap(v8::Handle<v8::Object> creationContext, v8::Isolate*) OVERRIDE;
+    virtual v8::Handle<v8::Object> wrap(v8::Handle<v8::Object> creationContext, v8::Isolate*) override;
 
 protected:
     DOMWindowLifecycleNotifier& lifecycleNotifier();
@@ -333,7 +341,7 @@ private:
     Page* page();
 
     // FrameDestructionObserver
-    virtual void willDetachFrameHost() OVERRIDE;
+    virtual void willDetachFrameHost() override;
 
     void clearDocument();
     void willDestroyDocumentInFrame();

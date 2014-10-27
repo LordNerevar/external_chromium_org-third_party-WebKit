@@ -233,6 +233,9 @@ Document& document = *toDocument(currentExecutionContext(info.GetIsolate()));
 {{method.cpp_type}} result{{method.cpp_type_initializer}};
 if (!{{method.cpp_value}})
     return;
+{% elif method.use_output_parameter_for_result %}
+{{method.cpp_type}} result;
+{{cpp_value}};
 {% elif method.is_constructor %}
 {{method.cpp_type}} impl = {{cpp_value}};
 {% elif method.use_local_result and not method.union_arguments %}
@@ -269,7 +272,7 @@ else
 {# Length check needed to skip action on legacy calls without enough arguments.
    http://crbug.com/353484 #}
 if (info.Length() >= {{argument_index}} + 1 && listener && !impl->toNode())
-    {{hidden_dependency_action}}(info.Holder(), info[{{argument_index}}], {{v8_class}}::eventListenerCacheIndex, info.GetIsolate());
+    {{hidden_dependency_action}}(info.GetIsolate(), info.Holder(), info[{{argument_index}}], {{v8_class}}::eventListenerCacheIndex);
 {% endif %}
 {% endmacro %}
 
@@ -323,8 +326,8 @@ ExceptionMessages::failedToExecute("{{method.name}}", "{{interface_name}}", {{er
 
 
 {######################################}
-{% macro throw_from_exception_state(method) %}
-{% if method.idl_type == 'Promise' %}
+{% macro throw_from_exception_state(method_or_overloads) %}
+{% if method_or_overloads.idl_type == 'Promise' or method_or_overloads.returns_promise_all %}
 v8SetReturnValue(info, exceptionState.reject(ScriptState::current(info.GetIsolate())).v8Value())
 {%- else %}
 exceptionState.throwIfNeeded()
@@ -364,10 +367,10 @@ static void {{overloads.name}}Method{{world_suffix}}(const v8::FunctionCallbackI
 {
     ExceptionState exceptionState(ExceptionState::ExecutionContext, "{{overloads.name}}", "{{interface_name}}", info.Holder(), info.GetIsolate());
     {% if overloads.measure_all_as %}
-    UseCounter::count(callingExecutionContext(info.GetIsolate()), UseCounter::{{overloads.measure_all_as}});
+    UseCounter::countIfNotPrivateScript(info.GetIsolate(), callingExecutionContext(info.GetIsolate()), UseCounter::{{overloads.measure_all_as}});
     {% endif %}
     {% if overloads.deprecate_all_as %}
-    UseCounter::countDeprecation(callingExecutionContext(info.GetIsolate()), UseCounter::{{overloads.deprecate_all_as}});
+    UseCounter::countDeprecationIfNotPrivateScript(info.GetIsolate(), callingExecutionContext(info.GetIsolate()), UseCounter::{{overloads.deprecate_all_as}});
     {% endif %}
     {# First resolve by length #}
     {# 2. Initialize argcount to be min(maxarg, n). #}
@@ -378,40 +381,53 @@ static void {{overloads.name}}Method{{world_suffix}}(const v8::FunctionCallbackI
     case {{length}}:
         {# Then resolve by testing argument #}
         {% for test, method in tests_methods %}
+        {% if method.visible %}
         {% filter runtime_enabled(not overloads.runtime_enabled_function_all and
                                   method.runtime_enabled_function) %}
         if ({{test}}) {
             {% if method.measure_as and not overloads.measure_all_as %}
-            UseCounter::count(callingExecutionContext(info.GetIsolate()), UseCounter::{{method.measure_as}});
+            UseCounter::countIfNotPrivateScript(info.GetIsolate(), callingExecutionContext(info.GetIsolate()), UseCounter::{{method.measure_as}});
             {% endif %}
             {% if method.deprecate_as and not overloads.deprecate_all_as %}
-            UseCounter::countDeprecation(callingExecutionContext(info.GetIsolate()), UseCounter::{{method.deprecate_as}});
+            UseCounter::countDeprecationIfNotPrivateScript(info.GetIsolate(), callingExecutionContext(info.GetIsolate()), UseCounter::{{method.deprecate_as}});
             {% endif %}
             {{method.name}}{{method.overload_index}}Method{{world_suffix}}(info);
             return;
         }
         {% endfilter %}
+        {% endif %}
         {% endfor %}
         break;
     {% endfor %}
+    {% if is_partial or not overloads.has_partial_overloads %}
     default:
+        {# If methods are overloaded between interface and partial interface #}
+        {# definitions, need to invoke methods defined in the partial #}
+        {# interface. #}
+        {# FIXME: we do not need to always generate this code. #}
         {# Invalid arity, throw error #}
         {# Report full list of valid arities if gaps and above minimum #}
         {% if overloads.valid_arities %}
         if (info.Length() >= {{overloads.minarg}}) {
             setArityTypeError(exceptionState, "{{overloads.valid_arities}}", info.Length());
-            exceptionState.throwIfNeeded();
+            {{throw_from_exception_state(overloads)}};
             return;
         }
         {% endif %}
         {# Otherwise just report "not enough arguments" #}
         exceptionState.throwTypeError(ExceptionMessages::notEnoughArguments({{overloads.minarg}}, info.Length()));
-        exceptionState.throwIfNeeded();
+        {{throw_from_exception_state(overloads)}};
         return;
+    {% endif %}
     }
+    {% if not is_partial and overloads.has_partial_overloads %}
+    ASSERT({{overloads.name}}MethodForPartialInterface);
+    ({{overloads.name}}MethodForPartialInterface)(info);
+    {% else %}
     {# No match, throw error #}
     exceptionState.throwTypeError("No function was found that matched the signature provided.");
-    exceptionState.throwIfNeeded();
+    {{throw_from_exception_state(overloads)}};
+    {% endif %}
 }
 {% endmacro %}
 
@@ -424,10 +440,10 @@ static void {{method.name}}MethodCallback{{world_suffix}}(const v8::FunctionCall
     TRACE_EVENT_SET_SAMPLING_STATE("blink", "DOMMethod");
     {% if not method.overloads %}{# Overloaded methods are measured in overload_resolution_method() #}
     {% if method.measure_as %}
-    UseCounter::count(callingExecutionContext(info.GetIsolate()), UseCounter::{{method.measure_as}});
+    UseCounter::countIfNotPrivateScript(info.GetIsolate(), callingExecutionContext(info.GetIsolate()), UseCounter::{{method.measure_as}});
     {% endif %}
     {% if method.deprecate_as %}
-    UseCounter::countDeprecation(callingExecutionContext(info.GetIsolate()), UseCounter::{{method.deprecate_as}});
+    UseCounter::countDeprecationIfNotPrivateScript(info.GetIsolate(), callingExecutionContext(info.GetIsolate()), UseCounter::{{method.deprecate_as}});
     {% endif %}
     {% endif %}{# not method.overloads #}
     {% if world_suffix in method.activity_logging_world_list %}
@@ -446,7 +462,7 @@ static void {{method.name}}MethodCallback{{world_suffix}}(const v8::FunctionCall
     {% if method.is_custom %}
     {{v8_class}}::{{method.name}}MethodCustom(info);
     {% else %}
-    {{cpp_class}}V8Internal::{{method.name}}Method{{world_suffix}}(info);
+    {{cpp_class_or_partial}}V8Internal::{{method.name}}Method{{world_suffix}}(info);
     {% endif %}
     TRACE_EVENT_SET_SAMPLING_STATE("v8", "V8Execution");
 }
@@ -600,9 +616,9 @@ v8SetReturnValue(info, wrapper);
 {##############################################################################}
 {% macro method_configuration(method) %}
 {% set method_callback =
-   '%sV8Internal::%sMethodCallback' % (cpp_class, method.name) %}
+   '%sV8Internal::%sMethodCallback' % (cpp_class_or_partial, method.name) %}
 {% set method_callback_for_main_world =
-   '%sV8Internal::%sMethodCallbackForMainWorld' % (cpp_class, method.name)
+   '%sV8Internal::%sMethodCallbackForMainWorld' % (cpp_class_or_partial, method.name)
    if method.is_per_world_bindings else '0' %}
 {% set only_exposed_to_private_script = 'V8DOMConfiguration::OnlyExposedToPrivateScript' if method.only_exposed_to_private_script else 'V8DOMConfiguration::ExposedToAllScripts' %}
 {"{{method.name}}", {{method_callback}}, {{method_callback_for_main_world}}, {{method.length}}, {{only_exposed_to_private_script}}}
@@ -611,7 +627,7 @@ v8SetReturnValue(info, wrapper);
 
 {######################################}
 {% macro install_custom_signature(method) %}
-{% set method_callback = '%sV8Internal::%sMethodCallback' % (cpp_class, method.name) %}
+{% set method_callback = '%sV8Internal::%sMethodCallback' % (cpp_class_or_partial, method.name) %}
 {% set method_callback_for_main_world = '%sForMainWorld' % method_callback
   if method.is_per_world_bindings else '0' %}
 {% set property_attribute =
@@ -622,4 +638,28 @@ static const V8DOMConfiguration::MethodConfiguration {{method.name}}MethodConfig
     "{{method.name}}", {{method_callback}}, {{method_callback_for_main_world}}, {{method.length}}, {{only_exposed_to_private_script}},
 };
 V8DOMConfiguration::installMethod({{method.function_template}}, {{method.signature}}, {{property_attribute}}, {{method.name}}MethodConfiguration, isolate);
+{%- endmacro %}
+
+{######################################}
+{% macro install_conditionally_enabled_methods() %}
+void {{v8_class_or_partial}}::installConditionallyEnabledMethods(v8::Handle<v8::Object> prototypeObject, v8::Isolate* isolate)
+{
+    {% if is_partial %}
+    {{v8_class}}::installConditionallyEnabledMethods(prototypeObject, isolate);
+    {% endif %}
+    {% if conditionally_enabled_methods %}
+    {# Define per-context enabled operations #}
+    v8::Local<v8::Signature> defaultSignature = v8::Signature::New(isolate, domTemplate(isolate));
+    ExecutionContext* context = toExecutionContext(prototypeObject->CreationContext());
+    ASSERT(context);
+
+    {% for method in conditionally_enabled_methods %}
+    {% filter per_context_enabled(method.per_context_enabled_function) %}
+    {% filter exposed(method.exposed_test) %}
+    prototypeObject->Set(v8AtomicString(isolate, "{{method.name}}"), v8::FunctionTemplate::New(isolate, {{cpp_class_or_partial}}V8Internal::{{method.name}}MethodCallback, v8Undefined(), defaultSignature, {{method.number_of_required_arguments}})->GetFunction());
+    {% endfilter %}
+    {% endfilter %}
+    {% endfor %}
+    {% endif %}
+}
 {%- endmacro %}

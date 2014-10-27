@@ -113,7 +113,7 @@ float deviceScaleFactor(LocalFrame* frame)
 
 Page::Page(PageClients& pageClients)
     : SettingsDelegate(Settings::create())
-    , m_animator(this)
+    , m_animator(PageAnimator::create(*this))
     , m_autoscrollController(AutoscrollController::create(*this))
     , m_chrome(Chrome::create(this, pageClients.chromeClient))
     , m_dragCaretController(DragCaretController::create())
@@ -128,7 +128,6 @@ Page::Page(PageClients& pageClients)
     , m_editorClient(pageClients.editorClient)
     , m_spellCheckerClient(pageClients.spellCheckerClient)
     , m_storageClient(pageClients.storageClient)
-    , m_subframeCount(0)
     , m_openedByDOM(false)
     , m_tabKeyCyclesThroughElements(true)
     , m_defersLoading(false)
@@ -234,7 +233,7 @@ void Page::scheduleForcedStyleRecalcForAllPages()
     for (HashSet<Page*>::iterator it = allPages().begin(); it != end; ++it)
         for (Frame* frame = (*it)->mainFrame(); frame; frame = frame->tree().traverseNext()) {
             if (frame->isLocalFrame())
-                toLocalFrame(frame)->document()->setNeedsStyleRecalc(SubtreeStyleChange);
+                toLocalFrame(frame)->document()->setNeedsStyleRecalc(SubtreeStyleChange, StyleChangeReasonForTracing::create(StyleChangeReason::PlatformColorChange));
         }
 }
 
@@ -285,12 +284,13 @@ void Page::refreshPlugins(bool reload)
     }
 
     for (size_t i = 0; i < framesNeedingReload.size(); ++i)
-        framesNeedingReload[i]->loader().reload();
+        framesNeedingReload[i]->loader().reload(NormalReload);
 }
 
 PluginData* Page::pluginData() const
 {
-    if (!deprecatedLocalMainFrame()->loader().allowPlugins(NotAboutToInstantiatePlugin))
+    if (!mainFrame()->isLocalFrame()
+        || !deprecatedLocalMainFrame()->loader().allowPlugins(NotAboutToInstantiatePlugin))
         return 0;
     if (!m_pluginData)
         m_pluginData = PluginData::create(this);
@@ -440,19 +440,6 @@ double Page::timerAlignmentInterval() const
     return m_timerAlignmentInterval;
 }
 
-#if ENABLE(ASSERT)
-void Page::checkSubframeCountConsistency() const
-{
-    ASSERT(m_subframeCount >= 0);
-
-    int subframeCount = 0;
-    for (Frame* frame = mainFrame(); frame; frame = frame->tree().traverseNext())
-        ++subframeCount;
-
-    ASSERT(m_subframeCount + 1 == subframeCount);
-}
-#endif
-
 void Page::setVisibilityState(PageVisibilityState visibilityState, bool isInitialState)
 {
     if (m_visibilityState == visibilityState)
@@ -553,6 +540,10 @@ void Page::settingsChanged(SettingsDelegate::ChangeType changeType)
         }
         setNeedsRecalcStyleInAllFrames();
         break;
+    case SettingsDelegate::AccessibilityStateChange:
+        if (!mainFrame() || !mainFrame()->isLocalFrame())
+            break;
+        deprecatedLocalMainFrame()->document()->axObjectCacheOwner().clearAXObjectCache();
     }
 }
 
@@ -605,6 +596,7 @@ PassOwnPtr<LifecycleNotifier<Page> > Page::createLifecycleNotifier()
 void Page::trace(Visitor* visitor)
 {
 #if ENABLE(OILPAN)
+    visitor->trace(m_animator);
     visitor->trace(m_dragCaretController);
     visitor->trace(m_dragController);
     visitor->trace(m_focusController);

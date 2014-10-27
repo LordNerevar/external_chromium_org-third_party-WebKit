@@ -238,8 +238,8 @@
         # Generated from MediaTypeNames.in
         '<(blink_core_output_dir)/MediaTypeNames.cpp',
 
-        # Generated from CSSTokenizer-in.cpp
-        '<(blink_core_output_dir)/CSSTokenizer.cpp',
+        # Generated from BisonCSSTokenizer-in.cpp
+        '<(blink_core_output_dir)/BisonCSSTokenizer.cpp',
 
         # Generated from BisonCSSParser-in.cpp
         '<(blink_core_output_dir)/BisonCSSParser.cpp',
@@ -318,7 +318,7 @@
         '../platform/blink_platform.gyp:blink_platform',
         '<(DEPTH)/gpu/gpu.gyp:gles2_c_lib',
         '<(DEPTH)/skia/skia.gyp:skia',
-        '<(angle_path)/src/build_angle.gyp:translator',
+        '<(angle_path)/src/angle.gyp:translator',
         '<(DEPTH)/third_party/iccjpeg/iccjpeg.gyp:iccjpeg',
         '<(DEPTH)/third_party/libpng/libpng.gyp:libpng',
         '<(DEPTH)/third_party/libwebp/libwebp.gyp:libwebp',
@@ -337,7 +337,7 @@
         '../config.gyp:config',
         '<(DEPTH)/gpu/gpu.gyp:gles2_c_lib',
         '<(DEPTH)/skia/skia.gyp:skia',
-        '<(angle_path)/src/build_angle.gyp:translator',
+        '<(angle_path)/src/angle.gyp:translator',
         '<(DEPTH)/third_party/iccjpeg/iccjpeg.gyp:iccjpeg',
         '<(DEPTH)/third_party/libpng/libpng.gyp:libpng',
         '<(DEPTH)/third_party/libwebp/libwebp.gyp:libwebp',
@@ -620,9 +620,9 @@
         ['exclude', '(?<!Chromium)(CF|CG|Mac|Win)\\.(cpp|mm?)$'],
       ],
       'conditions': [
-        # Shard this taret into parts to work around linker limitations.
+        # Shard this target into parts to work around linker limitations.
         # on link time code generation builds.
-        ['OS=="win" and buildtype=="Official"', {
+        ['OS=="win" and (buildtype=="Official" or (fastbuild==0 and win_z7==1))', {
           'msvs_shard': 19,
         }],
         ['OS != "linux"', {

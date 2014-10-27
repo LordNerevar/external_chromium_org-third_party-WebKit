@@ -69,7 +69,7 @@ WebInspector.DockController.prototype = {
             return;
 
         this._states = [WebInspector.DockController.State.DockedToRight, WebInspector.DockController.State.DockedToBottom, WebInspector.DockController.State.Undocked];
-        this._titles = [WebInspector.UIString("Dock to main window."), WebInspector.UIString("Undock into separate window."), WebInspector.UIString("Dock to main window.")];
+        this._titles = [WebInspector.UIString("Dock to main window."), WebInspector.UIString("Dock to main window."), WebInspector.UIString("Undock into separate window.")];
         if (Runtime.experiments.isEnabled("dockToLeft")) {
             this._states.push(WebInspector.DockController.State.DockedToLeft);
             this._titles.push(WebInspector.UIString("Dock to main window."));
@@ -128,9 +128,13 @@ WebInspector.DockController.prototype = {
         this.dispatchEventToListeners(WebInspector.DockController.Events.AfterDockSideChanged, eventData);
     },
 
+    /**
+     * @private // FIXME: this is a workaround for validator bug (crbug.com/425506).
+     * @suppressGlobalPropertiesCheck
+     */
     _updateUI: function()
     {
-        var body = document.body;
+        var body = document.body;  // Only for main window.
         switch (this._dockSide) {
         case WebInspector.DockController.State.DockedToBottom:
             body.classList.remove("undocked");

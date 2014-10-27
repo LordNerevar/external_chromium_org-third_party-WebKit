@@ -32,7 +32,7 @@ namespace blink {
 struct GlyphData;
 class GlyphPage;
 class SimpleFontData;
-struct WidthIterator;
+struct SimpleShaper;
 
 class PLATFORM_EXPORT CustomFontData : public RefCounted<CustomFontData> {
 public:
@@ -46,11 +46,10 @@ public:
     virtual bool shouldSkipDrawing() const { return false; }
     virtual void clearFontFaceSource() { }
 
-    virtual bool isSVGFont() const { return false; }
     virtual void initializeFontData(SimpleFontData*, float) { }
     virtual float widthForSVGGlyph(Glyph, float) const { return 0.0f; }
     virtual bool fillSVGGlyphPage(GlyphPage*, unsigned, unsigned, UChar*, unsigned, const SimpleFontData*) const { return false; }
-    virtual bool applySVGGlyphSelection(WidthIterator&, GlyphData&, bool, int, unsigned&) const { return false; }
+    virtual bool applySVGGlyphSelection(SimpleShaper&, GlyphData&, bool, int, unsigned&) const { return false; }
 
 protected:
     CustomFontData() { }

@@ -53,7 +53,6 @@ class StyleFilterData;
 class StyleFlexibleBoxData;
 class StyleGridData;
 class StyleGridItemData;
-class StyleMarqueeData;
 class StyleMultiColData;
 class StyleReflection;
 class StyleTransformData;
@@ -87,24 +86,21 @@ public:
     bool reflectionDataEquivalent(const StyleRareNonInheritedData&) const;
     bool animationDataEquivalent(const StyleRareNonInheritedData&) const;
     bool transitionDataEquivalent(const StyleRareNonInheritedData&) const;
+    bool shapeOutsideDataEquivalent(const StyleRareNonInheritedData&) const;
+    bool clipPathDataEquivalent(const StyleRareNonInheritedData&) const;
     bool hasFilters() const;
     bool hasOpacity() const { return opacity < 1; }
 
     float opacity; // Whether or not we're transparent.
 
-    float m_aspectRatioDenominator;
-    float m_aspectRatioNumerator;
-
     float m_perspective;
-    Length m_perspectiveOriginX;
-    Length m_perspectiveOriginY;
+    LengthPoint m_perspectiveOrigin;
 
     LineClampValue lineClamp; // An Apple extension.
     DraggableRegionMode m_draggableRegionMode;
 
     DataRef<StyleDeprecatedFlexibleBoxData> m_deprecatedFlexibleBox; // Flexible box properties
     DataRef<StyleFlexibleBoxData> m_flexibleBox;
-    DataRef<StyleMarqueeData> m_marquee; // Marquee properties
     DataRef<StyleMultiColData> m_multiCol; //  CSS3 multicol properties
     DataRef<StyleTransformData> m_transform; // Transform properties (rotate, scale, skew, etc.)
     DataRef<StyleWillChangeData> m_willChange; // CSS Will Change
@@ -121,8 +117,8 @@ public:
 
     RefPtr<StyleReflection> m_boxReflect;
 
-    OwnPtrWillBePersistent<CSSAnimationData> m_animations;
-    OwnPtrWillBePersistent<CSSTransitionData> m_transitions;
+    OwnPtr<CSSAnimationData> m_animations;
+    OwnPtr<CSSTransitionData> m_transitions;
 
     FillLayer m_mask;
     NinePieceImage m_maskBoxImage;
@@ -166,7 +162,6 @@ public:
     unsigned marginBeforeCollapse : 2; // EMarginCollapse
     unsigned marginAfterCollapse : 2; // EMarginCollapse
     unsigned m_appearance : 6; // EAppearance
-    unsigned m_borderFit : 1; // EBorderFit
     unsigned m_textCombine : 1; // CSS3 text-combine properties
 
     unsigned m_textDecorationStyle : 3; // TextDecorationStyle
@@ -179,8 +174,6 @@ public:
     unsigned m_runningOpacityAnimationOnCompositor : 1;
     unsigned m_runningTransformAnimationOnCompositor : 1;
     unsigned m_runningFilterAnimationOnCompositor : 1;
-
-    unsigned m_hasAspectRatio : 1; // Whether or not an aspect ratio has been specified.
 
     unsigned m_effectiveBlendMode: 5; // EBlendMode
 
@@ -209,6 +202,7 @@ public:
 
     // Whether the transform (if it exists) is stored in the element's inline style.
     unsigned m_hasInlineTransform : 1;
+    unsigned m_resize : 2; // EResize
 
 private:
     StyleRareNonInheritedData();

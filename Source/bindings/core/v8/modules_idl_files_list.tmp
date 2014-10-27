@@ -1,12 +1,16 @@
 ../../../modules/encoding/TextDecodeOptions.idl
 ../../../modules/encoding/TextDecoderOptions.idl
+../../../modules/filesystem/FileSystemFlags.idl
 ../../../modules/indexeddb/IDBIndexParameters.idl
 ../../../modules/notifications/NotificationOptions.idl
-../../../modules/serviceworkers/QueryParams.idl
-../../../modules/serviceworkers/RegistrationOptionList.idl
-../../../modules/serviceworkers/ServiceWorkerClientQueryParams.idl
+../../../modules/serviceworkers/CacheQueryOptions.idl
+../../../modules/serviceworkers/RegistrationOptions.idl
+../../../modules/serviceworkers/ServiceWorkerClientQueryOptions.idl
 ../../../modules/webmidi/MIDIOptions.idl
 ../../../modules/battery/BatteryManager.idl
+../../../modules/bluetooth/Bluetooth.idl
+../../../modules/bluetooth/BluetoothDevice.idl
+../../../modules/bluetooth/BluetoothDiscovery.idl
 ../../../modules/credentialmanager/Credential.idl
 ../../../modules/credentialmanager/CredentialsContainer.idl
 ../../../modules/credentialmanager/FederatedCredential.idl
@@ -21,8 +25,8 @@
 ../../../modules/device_orientation/DeviceRotationRate.idl
 ../../../modules/encoding/TextDecoder.idl
 ../../../modules/encoding/TextEncoder.idl
+../../../modules/encryptedmedia/MediaEncryptedEvent.idl
 ../../../modules/encryptedmedia/MediaKeyMessageEvent.idl
-../../../modules/encryptedmedia/MediaKeyNeededEvent.idl
 ../../../modules/encryptedmedia/MediaKeySession.idl
 ../../../modules/encryptedmedia/MediaKeys.idl
 ../../../modules/filesystem/DOMFileSystem.idl
@@ -53,6 +57,7 @@
 ../../../modules/gamepad/WebKitGamepadList.idl
 ../../../modules/geofencing/CircularGeofencingRegion.idl
 ../../../modules/geofencing/Geofencing.idl
+../../../modules/geofencing/GeofencingEvent.idl
 ../../../modules/geofencing/GeofencingRegion.idl
 ../../../modules/geolocation/Coordinates.idl
 ../../../modules/geolocation/Geolocation.idl
@@ -121,7 +126,6 @@
 ../../../modules/serviceworkers/ExtendableEvent.idl
 ../../../modules/serviceworkers/FetchEvent.idl
 ../../../modules/serviceworkers/Headers.idl
-../../../modules/serviceworkers/HeadersForEachCallback.idl
 ../../../modules/serviceworkers/InstallEvent.idl
 ../../../modules/serviceworkers/Request.idl
 ../../../modules/serviceworkers/Response.idl

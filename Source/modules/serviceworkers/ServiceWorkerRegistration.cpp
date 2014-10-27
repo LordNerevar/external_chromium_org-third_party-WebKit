@@ -90,7 +90,8 @@ ServiceWorkerRegistration* ServiceWorkerRegistration::take(ScriptPromiseResolver
 
 void ServiceWorkerRegistration::dispose(WebType* registration)
 {
-    delete registration;
+    if (registration && !registration->proxy())
+        delete registration;
 }
 
 String ServiceWorkerRegistration::scope() const
@@ -134,7 +135,7 @@ ServiceWorkerRegistration* ServiceWorkerRegistration::getOrCreate(ExecutionConte
         }
     }
 
-    ServiceWorkerRegistration* registration = adoptRefCountedGarbageCollectedWillBeNoop(new ServiceWorkerRegistration(executionContext, adoptPtr(outerRegistration)));
+    ServiceWorkerRegistration* registration = new ServiceWorkerRegistration(executionContext, adoptPtr(outerRegistration));
     registration->suspendIfNeeded();
     return registration;
 }
@@ -161,6 +162,7 @@ void ServiceWorkerRegistration::trace(Visitor* visitor)
     visitor->trace(m_waiting);
     visitor->trace(m_active);
     EventTargetWithInlineData::trace(visitor);
+    HeapSupplementable<ServiceWorkerRegistration>::trace(visitor);
 }
 
 bool ServiceWorkerRegistration::hasPendingActivity() const

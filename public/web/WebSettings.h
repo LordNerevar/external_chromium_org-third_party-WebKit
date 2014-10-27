@@ -111,6 +111,7 @@ public:
     virtual void setAllowScriptsToCloseWindows(bool) = 0;
     virtual void setAllowUniversalAccessFromFileURLs(bool) = 0;
     virtual void setAntialiased2dCanvasEnabled(bool) = 0;
+    virtual void setAntialiasedClips2dCanvasEnabled(bool) = 0;
     virtual void setAsynchronousSpellCheckingEnabled(bool) = 0;
     virtual void setAutoZoomFocusedNodeToLegibleScale(bool) = 0;
     virtual void setCaretBrowsingEnabled(bool) = 0;
@@ -125,9 +126,7 @@ public:
     virtual void setDefaultFontSize(int) = 0;
     virtual void setDefaultTextEncodingName(const WebString&) = 0;
     virtual void setDefaultVideoPosterURL(const WebString&) = 0;
-    virtual void setDisallowFullscreenForNonMediaElements(bool) = 0;
     void setDeferred2dCanvasEnabled(bool) { } // temporary stub
-    virtual void setDeferredFiltersEnabled(bool) = 0;
     virtual void setDeferredImageDecodingEnabled(bool) = 0;
     virtual void setDeviceScaleAdjustment(float) = 0;
     virtual void setDeviceSupportsMouse(bool) = 0;

@@ -36,8 +36,8 @@
 WebInspector.PieChart = function(size, formatter)
 {
     var shadowSize = WebInspector.PieChart._ShadowSizePercent;
-    this.element = document.createElementWithClass("div", "pie-chart");
-    this.element.appendChild(WebInspector.View.createStyleElement("pieChart.css"));
+    this.element = createElementWithClass("div", "pie-chart");
+    this.element.appendChild(WebInspector.View.createStyleElement("ui/pieChart.css"));
     var svg = this._createSVGChild(this.element, "svg");
     svg.setAttribute("width", (100 * (1 + 2 * shadowSize)) + "%");
     svg.setAttribute("height", (100 * (1 + 2 * shadowSize)) + "%");
@@ -114,6 +114,7 @@ WebInspector.PieChart.prototype = {
      * @param {!Element} parent
      * @param {string} childType
      * @return {!Element}
+     * @suppressGlobalPropertiesCheck
      */
     _createSVGChild: function(parent, childType)
     {

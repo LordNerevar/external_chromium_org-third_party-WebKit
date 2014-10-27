@@ -82,20 +82,8 @@ public:
 
     ~GraphicsContext();
 
-    // Returns the canvas used for painting. Must not be called if painting is disabled.
-    // Accessing the backing canvas this way flushes all queued save ops,
-    // so it should be avoided. Use the corresponding draw/matrix/clip methods instead.
-    SkCanvas* canvas()
-    {
-        // Flush any pending saves.
-        realizeCanvasSave();
-
-        return m_canvas;
-    }
-    const SkCanvas* canvas() const
-    {
-        return m_canvas;
-    }
+    SkCanvas* canvas() { return m_canvas; }
+    const SkCanvas* canvas() const { return m_canvas; }
 
     void resetCanvas(SkCanvas*);
 
@@ -104,13 +92,11 @@ public:
     // ---------- State management methods -----------------
     void save();
     void restore();
-    unsigned saveCount() { return m_canvasStateStack.size(); }
+
 #if ENABLE(ASSERT)
+    unsigned saveCount() const;
     void disableDestructionChecks() { m_disableDestructionChecks = true; }
 #endif
-
-    void saveLayer(const SkRect* bounds, const SkPaint*);
-    void restoreLayer();
 
     bool hasStroke() const { return strokeStyle() != NoStroke && strokeThickness() > 0; }
 
@@ -251,7 +237,8 @@ public:
     // stroke color).
     void drawRect(const IntRect&);
     void drawLine(const IntPoint&, const IntPoint&);
-    void drawConvexPolygon(size_t numPoints, const FloatPoint*, bool shouldAntialias = false);
+
+    void fillPolygon(size_t numPoints, const FloatPoint*, const Color&, bool shouldAntialias);
 
     void fillPath(const Path&);
     void strokePath(const Path&);
@@ -295,7 +282,6 @@ public:
     // These methods write to the canvas and modify the opaque region, if tracked.
     // Also drawLine(const IntPoint& point1, const IntPoint& point2) and fillRoundedRect
     void writePixels(const SkImageInfo&, const void* pixels, size_t rowBytes, int x, int y);
-    void writePixels(const SkBitmap&, int x, int y);
     void drawBitmap(const SkBitmap&, SkScalar, SkScalar, const SkPaint* = 0);
     void drawBitmapRect(const SkBitmap&, const SkRect*, const SkRect&, const SkPaint* = 0);
     void drawOval(const SkRect&, const SkPaint&);
@@ -317,12 +303,12 @@ public:
     void clipOut(const Path&);
     void clipOutRoundedRect(const RoundedRect&);
     void clipPath(const Path&, WindRule = RULE_EVENODD);
-    void clipConvexPolygon(size_t numPoints, const FloatPoint*, bool antialias = true);
+    void clipPolygon(size_t numPoints, const FloatPoint*, bool antialias);
     void clipRect(const SkRect&, AntiAliasingMode = NotAntiAliased, SkRegion::Op = SkRegion::kIntersect_Op);
     // This clip function is used only by <canvas> code. It allows
     // implementations to handle clipping on the canvas differently since
     // the discipline is different.
-    void canvasClip(const Path&, WindRule = RULE_EVENODD);
+    void canvasClip(const Path&, WindRule = RULE_EVENODD, AntiAliasingMode = NotAntiAliased);
 
     void drawText(const Font&, const TextRunPaintInfo&, const FloatPoint&);
     void drawEmphasisMarks(const Font&, const TextRunPaintInfo&, const AtomicString& mark, const FloatPoint&);
@@ -336,7 +322,10 @@ public:
     };
     void drawLineForDocumentMarker(const FloatPoint&, float width, DocumentMarkerLineStyle);
 
+    // beginLayer()/endLayer() behaves like save()/restore() for only CTM and clip states.
     void beginTransparencyLayer(float opacity, const FloatRect* = 0);
+    // Apply CompositeOperator when the layer is composited on the backdrop (i.e. endLayer()).
+    // Don't change the current CompositeOperator state.
     void beginLayer(float opacity, CompositeOperator, const FloatRect* = 0, ColorFilter = ColorFilterNone, ImageFilter* = 0);
     void endLayer();
 
@@ -352,7 +341,7 @@ public:
     bool hasShadow() const;
     void setShadow(const FloatSize& offset, float blur, const Color&,
         DrawLooperBuilder::ShadowTransformMode = DrawLooperBuilder::ShadowRespectsTransforms,
-        DrawLooperBuilder::ShadowAlphaMode = DrawLooperBuilder::ShadowRespectsAlpha);
+        DrawLooperBuilder::ShadowAlphaMode = DrawLooperBuilder::ShadowRespectsAlpha, ShadowMode = DrawShadowAndForeground);
     void clearShadow() { clearDrawLooper(); }
 
     // It is assumed that this draw looper is used only for shadows
@@ -429,7 +418,7 @@ private:
         return m_paintState;
     }
 
-    static void setPathFromConvexPoints(SkPath*, size_t, const FloatPoint*);
+    static void setPathFromPoints(SkPath*, size_t, const FloatPoint*);
     static void setRadii(SkVector*, IntSize, IntSize, IntSize, IntSize);
 
     static PassRefPtr<SkColorFilter> WebCoreColorFilterToSkiaColorFilter(ColorFilter);
@@ -446,6 +435,9 @@ private:
     static void draw1xMarker(SkBitmap*, int);
     static void draw2xMarker(SkBitmap*, int);
 #endif
+
+    void saveLayer(const SkRect* bounds, const SkPaint*);
+    void restoreLayer();
 
     // Helpers for drawing a focus ring (drawFocusRing)
     float prepareFocusRingPaint(SkPaint&, const Color&, int width) const;
@@ -478,17 +470,6 @@ private:
         }
     }
 
-    // Apply deferred canvas state saves
-    void realizeCanvasSave()
-    {
-        if (!m_pendingCanvasSave || contextDisabled())
-            return;
-
-        ASSERT(m_canvas); // m_pendingCanvasSave should never be true when no canvas.
-        m_canvas->save();
-        m_pendingCanvasSave = false;
-    }
-
     void didDrawTextInRect(const SkRect& textRect);
 
     void fillRectWithRoundedHole(const IntRect&, const RoundedRect& roundedHoleRect, const Color&);
@@ -506,13 +487,6 @@ private:
     unsigned m_paintStateIndex;
     // Raw pointer to the current state.
     GraphicsContextState* m_paintState;
-
-    // Currently pending save flags for Skia Canvas state.
-    // Canvas state includes the canavs, it's matrix and clips. Think of it as _where_
-    // the draw operations will happen.
-    struct CanvasSaveState;
-    Vector<CanvasSaveState> m_canvasStateStack;
-    bool m_pendingCanvasSave;
 
     AnnotationModeFlags m_annotationMode;
 

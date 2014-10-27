@@ -148,7 +148,7 @@ WebInspector.JavaScriptSourceFrame.prototype = {
         infobar.createDetailsRowMessage(WebInspector.UIString("Possible ways to cancel this behavior are:"));
 
         infobar.createDetailsRowMessage(" - ").createTextChild(WebInspector.UIString("Press \"%s\" button in settings", WebInspector.manageBlackboxingButtonLabel()));
-        var unblackboxLink = infobar.createDetailsRowMessage(" - ").createChild("span", "source-frame-infobar-link");
+        var unblackboxLink = infobar.createDetailsRowMessage(" - ").createChild("span", "link");
         unblackboxLink.textContent = WebInspector.UIString("Unblackbox this script");
         unblackboxLink.addEventListener("click", unblackbox, false);
 
@@ -667,7 +667,7 @@ WebInspector.JavaScriptSourceFrame.prototype = {
 
     _createConditionElement: function(lineNumber)
     {
-        var conditionElement = document.createElementWithClass("div", "source-frame-breakpoint-condition");
+        var conditionElement = createElementWithClass("div", "source-frame-breakpoint-condition");
 
         var labelElement = conditionElement.createChild("label", "source-frame-breakpoint-message");
         labelElement.htmlFor = "source-frame-breakpoint-condition";
@@ -774,8 +774,13 @@ WebInspector.JavaScriptSourceFrame.prototype = {
     _updateLinesWithoutMappingHighlight: function()
     {
         var linesCount = this.textEditor.linesCount;
-        for (var i = 0; i < linesCount; ++i)
-            this.textEditor.toggleLineClass(i, "cm-line-without-source-mapping", !WebInspector.debuggerWorkspaceBinding.uiLineHasMapping(this._uiSourceCode, i));
+        for (var i = 0; i < linesCount; ++i) {
+            var lineHasMapping = WebInspector.debuggerWorkspaceBinding.uiLineHasMapping(this._uiSourceCode, i);
+            if (!lineHasMapping)
+                this._hasLineWithoutMapping = true;
+            if (this._hasLineWithoutMapping)
+                this.textEditor.toggleLineClass(i, "cm-line-without-source-mapping", !lineHasMapping);
+        }
     },
 
     /**

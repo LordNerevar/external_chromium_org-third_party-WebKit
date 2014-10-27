@@ -97,14 +97,14 @@ public:
             *loadingContext, scriptURL, DenyCrossOriginRequests, this);
     }
 
-    void didReceiveResponse(unsigned long identifier, const ResourceResponse& response) OVERRIDE
+    void didReceiveResponse(unsigned long identifier, const ResourceResponse& response) override
     {
         m_identifier = identifier;
         m_appCacheID = response.appCacheID();
         m_receiveResponseCallback();
     }
 
-    virtual void notifyFinished() OVERRIDE
+    virtual void notifyFinished() override
     {
         m_finishCallback();
     }
@@ -191,7 +191,7 @@ void WebSharedWorkerImpl::stopWorkerThread()
     m_workerInspectorProxy->workerThreadTerminated();
 }
 
-void WebSharedWorkerImpl::initializeLoader(const WebURL& url)
+void WebSharedWorkerImpl::initializeLoader()
 {
     // Create 'shadow page'. This page is never displayed, it is used to proxy the
     // loading requests from the worker context to the rest of WebKit and Chromium
@@ -208,14 +208,13 @@ void WebSharedWorkerImpl::initializeLoader(const WebURL& url)
     m_webView->setMainFrame(m_mainFrame);
     m_webView->setDevToolsAgentClient(this);
 
-    WebLocalFrameImpl* webFrame = toWebLocalFrameImpl(m_webView->mainFrame());
-
-    // Construct substitute data source for the 'shadow page'. We only need it
-    // to have same origin as the worker so the loading checks work correctly.
-    CString content("");
-    int length = static_cast<int>(content.length());
-    RefPtr<SharedBuffer> buffer(SharedBuffer::create(content.data(), length));
-    webFrame->frame()->loader().load(FrameLoadRequest(0, ResourceRequest(url), SubstituteData(buffer, "text/html", "UTF-8", KURL())));
+    // If we were asked to pause worker context on start and wait for debugger then it is the good time to do that.
+    client()->workerReadyForInspection();
+    if (m_pauseWorkerContextOnStart) {
+        m_isPausedOnStart = true;
+        return;
+    }
+    loadShadowPage();
 }
 
 WebApplicationCacheHost* WebSharedWorkerImpl::createApplicationCacheHost(WebLocalFrame*, WebApplicationCacheHostClient* appcacheHostClient)
@@ -225,15 +224,28 @@ WebApplicationCacheHost* WebSharedWorkerImpl::createApplicationCacheHost(WebLoca
     return 0;
 }
 
+void WebSharedWorkerImpl::loadShadowPage()
+{
+    WebLocalFrameImpl* webFrame = toWebLocalFrameImpl(m_webView->mainFrame());
+
+    // Construct substitute data source for the 'shadow page'. We only need it
+    // to have same origin as the worker so the loading checks work correctly.
+    CString content("");
+    RefPtr<SharedBuffer> buffer(SharedBuffer::create(content.data(), content.length()));
+    webFrame->frame()->loader().load(FrameLoadRequest(0, ResourceRequest(m_url), SubstituteData(buffer, "text/html", "UTF-8", KURL())));
+}
+
 void WebSharedWorkerImpl::didFinishDocumentLoad(WebLocalFrame* frame)
 {
-    // If we were asked to pause worker context on start and wait for debugger then it is the good time to do that.
-    client()->workerReadyForInspection();
-    if (m_pauseWorkerContextOnStart) {
-        m_isPausedOnStart = true;
-        return;
-    }
-    startScriptLoader(frame);
+    ASSERT(!m_loadingDocument);
+    ASSERT(!m_mainScriptLoader);
+    m_mainScriptLoader = Loader::create();
+    m_loadingDocument = toWebLocalFrameImpl(frame)->frame()->document();
+    m_mainScriptLoader->load(
+        m_loadingDocument.get(),
+        m_url,
+        bind(&WebSharedWorkerImpl::didReceiveScriptLoaderResponse, this),
+        bind(&WebSharedWorkerImpl::onScriptLoaderFinished, this));
 }
 
 void WebSharedWorkerImpl::sendMessageToInspectorFrontend(const WebString& message)
@@ -246,25 +258,12 @@ void WebSharedWorkerImpl::resumeStartup()
     bool isPausedOnStart = m_isPausedOnStart;
     m_isPausedOnStart = false;
     if (isPausedOnStart)
-        startScriptLoader(toWebLocalFrameImpl(m_mainFrame));
+        loadShadowPage();
 }
 
 void WebSharedWorkerImpl::saveAgentRuntimeState(const WebString& inspectorState)
 {
     client()->saveDevToolsAgentState(inspectorState);
-}
-
-void WebSharedWorkerImpl::startScriptLoader(WebLocalFrame* frame)
-{
-    ASSERT(!m_loadingDocument);
-    ASSERT(!m_mainScriptLoader);
-    m_mainScriptLoader = Loader::create();
-    m_loadingDocument = toWebLocalFrameImpl(frame)->frame()->document();
-    m_mainScriptLoader->load(
-        m_loadingDocument.get(),
-        m_url,
-        bind(&WebSharedWorkerImpl::didReceiveScriptLoaderResponse, this),
-        bind(&WebSharedWorkerImpl::onScriptLoaderFinished, this));
 }
 
 // WorkerReportingProxy --------------------------------------------------------
@@ -291,10 +290,6 @@ void WebSharedWorkerImpl::postMessageToPageInspectorOnMainThread(const String& m
         return;
     pageInspector->dispatchMessageFromWorker(message);
 
-}
-
-void WebSharedWorkerImpl::updateInspectorStateCookie(const String& cookie)
-{
 }
 
 void WebSharedWorkerImpl::workerGlobalScopeClosed()
@@ -362,7 +357,7 @@ void WebSharedWorkerImpl::startWorkerContext(const WebURL& url, const WebString&
     m_name = name;
     m_contentSecurityPolicy = contentSecurityPolicy;
     m_policyType = policyType;
-    initializeLoader(url);
+    initializeLoader();
 }
 
 void WebSharedWorkerImpl::didReceiveScriptLoaderResponse()
@@ -394,11 +389,14 @@ void WebSharedWorkerImpl::onScriptLoaderFinished()
     if (InspectorInstrumentation::shouldPauseDedicatedWorkerOnStart(document))
         startMode = PauseWorkerGlobalScopeOnStart;
 
+    // FIXME: this document's origin is pristine and without any extra privileges. (crbug.com/254993)
+    SecurityOrigin* starterOrigin = document->securityOrigin();
+
     OwnPtrWillBeRawPtr<WorkerClients> workerClients = WorkerClients::create();
     provideLocalFileSystemToWorker(workerClients.get(), LocalFileSystemClient::create());
     WebSecurityOrigin webSecurityOrigin(m_loadingDocument->securityOrigin());
     providePermissionClientToWorker(workerClients.get(), adoptPtr(client()->createWorkerPermissionClientProxy(webSecurityOrigin)));
-    OwnPtrWillBeRawPtr<WorkerThreadStartupData> startupData = WorkerThreadStartupData::create(m_url, m_loadingDocument->userAgent(m_url), m_mainScriptLoader->script(), startMode, m_contentSecurityPolicy, static_cast<ContentSecurityPolicyHeaderType>(m_policyType), workerClients.release());
+    OwnPtrWillBeRawPtr<WorkerThreadStartupData> startupData = WorkerThreadStartupData::create(m_url, m_loadingDocument->userAgent(m_url), m_mainScriptLoader->script(), startMode, m_contentSecurityPolicy, static_cast<ContentSecurityPolicyHeaderType>(m_policyType), starterOrigin, workerClients.release());
     setWorkerThread(SharedWorkerThread::create(m_name, *this, *this, startupData.release()));
     InspectorInstrumentation::scriptImported(m_loadingDocument.get(), m_mainScriptLoader->identifier(), m_mainScriptLoader->script());
     m_mainScriptLoader.clear();
@@ -424,10 +422,6 @@ void WebSharedWorkerImpl::pauseWorkerContextOnStart()
     m_pauseWorkerContextOnStart = true;
 }
 
-void WebSharedWorkerImpl::resumeWorkerContext()
-{
-}
-
 void WebSharedWorkerImpl::attachDevTools(const WebString& hostId)
 {
     WebDevToolsAgent* devtoolsAgent = m_webView->devToolsAgent();
@@ -440,6 +434,7 @@ void WebSharedWorkerImpl::reattachDevTools(const WebString& hostId, const WebStr
     WebDevToolsAgent* devtoolsAgent = m_webView->devToolsAgent();
     if (devtoolsAgent)
         devtoolsAgent->reattach(hostId, savedState);
+    resumeStartup();
 }
 
 void WebSharedWorkerImpl::detachDevTools()

@@ -40,7 +40,6 @@
 namespace blink {
 
 struct FetchInitiatorInfo;
-class MemoryCache;
 class CachedMetadata;
 class ResourceClient;
 class ResourcePtrBase;
@@ -104,7 +103,7 @@ public:
 
     virtual void setEncoding(const String&) { }
     virtual String encoding() const { return String(); }
-    virtual void appendData(const char*, int);
+    virtual void appendData(const char*, unsigned);
     virtual void error(Resource::Status);
 
     void setNeedsSynchronousCacheHit(bool needsSynchronousCacheHit) { m_needsSynchronousCacheHit = needsSynchronousCacheHit; }
@@ -187,7 +186,7 @@ public:
     SharedBuffer* resourceBuffer() const { return m_data.get(); }
     void setResourceBuffer(PassRefPtr<SharedBuffer>);
 
-    virtual void willSendRequest(ResourceRequest&, const ResourceResponse&);
+    virtual void willFollowRedirect(ResourceRequest&, const ResourceResponse&);
 
     virtual void updateRequest(const ResourceRequest&) { }
     virtual void responseReceived(const ResourceResponse&);

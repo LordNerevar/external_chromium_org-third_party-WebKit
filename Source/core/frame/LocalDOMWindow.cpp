@@ -117,7 +117,7 @@ using std::max;
 
 namespace blink {
 
-class PostMessageTimer FINAL : public SuspendableTimer {
+class PostMessageTimer final : public SuspendableTimer {
 public:
     PostMessageTimer(LocalDOMWindow& window, PassRefPtr<SerializedScriptValue> message, const String& sourceOrigin, PassRefPtrWillBeRawPtr<LocalDOMWindow> source, PassOwnPtr<MessagePortChannelArray> channels, SecurityOrigin* targetOrigin, PassRefPtrWillBeRawPtr<ScriptCallStack> stackTrace, UserGestureToken* userGestureToken)
         : SuspendableTimer(window.document())
@@ -144,7 +144,7 @@ public:
     LocalDOMWindow* source() const { return m_source.get(); }
 
 private:
-    virtual void fired() OVERRIDE
+    virtual void fired() override
     {
         InspectorInstrumentationCookie cookie = InspectorInstrumentation::traceAsyncOperationCompletedCallbackStarting(executionContext(), m_asyncOperationId);
         m_window->postMessageTimerFired(this);
@@ -545,20 +545,20 @@ Page* LocalDOMWindow::page()
 void LocalDOMWindow::willDetachFrameHost()
 {
     m_frame->host()->eventHandlerRegistry().didRemoveAllEventHandlers(*this);
-    m_frame->console().messageStorage()->frameWindowDiscarded(this);
+    m_frame->host()->consoleMessageStorage().frameWindowDiscarded(this);
     InspectorInstrumentation::frameWindowDiscarded(m_frame, this);
 }
 
 void LocalDOMWindow::willDestroyDocumentInFrame()
 {
-    for (WillBeHeapHashSet<RawPtrWillBeWeakMember<DOMWindowProperty> >::const_iterator it = m_properties.begin(); it != m_properties.end(); ++it)
-        (*it)->willDestroyGlobalObjectInFrame();
+    for (const auto& domWindowProperty : m_properties)
+        domWindowProperty->willDestroyGlobalObjectInFrame();
 }
 
 void LocalDOMWindow::willDetachDocumentFromFrame()
 {
-    for (WillBeHeapHashSet<RawPtrWillBeWeakMember<DOMWindowProperty> >::const_iterator it = m_properties.begin(); it != m_properties.end(); ++it)
-        (*it)->willDetachGlobalObjectFromFrame();
+    for (const auto& domWindowProperty : m_properties)
+        domWindowProperty->willDetachGlobalObjectFromFrame();
 }
 
 void LocalDOMWindow::registerProperty(DOMWindowProperty* property)
@@ -600,6 +600,26 @@ void LocalDOMWindow::reset()
 bool LocalDOMWindow::isCurrentlyDisplayedInFrame() const
 {
     return m_frame && m_frame->domWindow() == this && m_frame->host();
+}
+
+void LocalDOMWindow::sendOrientationChangeEvent()
+{
+    ASSERT(RuntimeEnabledFeatures::orientationEventEnabled());
+
+    // Before dispatching the event, build a list of the child frames to
+    // also send the event to, to mitigate side effects from event handlers
+    // potentially interfering with others.
+    WillBeHeapVector<RefPtrWillBeMember<Frame> > childFrames;
+    for (Frame* child = m_frame->tree().firstChild(); child; child = child->tree().nextSibling()) {
+        childFrames.append(child);
+    }
+
+    dispatchEvent(Event::create(EventTypeNames::orientationchange));
+
+    for (size_t i = 0; i < childFrames.size(); ++i) {
+        if (childFrames[i]->domWindow())
+            childFrames[i]->domWindow()->sendOrientationChangeEvent();
+    }
 }
 
 int LocalDOMWindow::orientation() const
@@ -1360,7 +1380,10 @@ void LocalDOMWindow::scrollBy(double x, double y, ScrollBehavior scrollBehavior)
     if (!view)
         return;
 
-    IntSize scaledOffset(static_cast<int>(x * m_frame->pageZoomFactor()), static_cast<int>(y * m_frame->pageZoomFactor()));
+    if (std::isnan(x) || std::isnan(y))
+        return;
+
+    DoubleSize scaledOffset(x * m_frame->pageZoomFactor(), y * m_frame->pageZoomFactor());
     view->scrollBy(scaledOffset, scrollBehavior);
 }
 
@@ -1379,11 +1402,14 @@ void LocalDOMWindow::scrollTo(double x, double y, ScrollBehavior scrollBehavior)
 
     document()->updateLayoutIgnorePendingStylesheets();
 
-    RefPtr<FrameView> view = m_frame->view();
+    RefPtrWillBeRawPtr<FrameView> view = m_frame->view();
     if (!view)
         return;
 
-    IntPoint layoutPos(static_cast<int>(x * m_frame->pageZoomFactor()), static_cast<int>(y * m_frame->pageZoomFactor()));
+    if (std::isnan(x) || std::isnan(y))
+        return;
+
+    DoublePoint layoutPos(x * m_frame->pageZoomFactor(), y * m_frame->pageZoomFactor());
     view->setScrollPosition(layoutPos, scrollBehavior);
 }
 
@@ -1659,10 +1685,7 @@ void LocalDOMWindow::setLocation(const String& urlString, LocalDOMWindow* callin
     }
 
     // We want a new history item if we are processing a user gesture.
-    m_frame->navigationScheduler().scheduleLocationChange(activeDocument,
-        // FIXME: What if activeDocument()->frame() is 0?
-        completedURL, Referrer(activeDocument->outgoingReferrer(), activeDocument->referrerPolicy()),
-        locking != LockHistoryBasedOnGestureState);
+    m_frame->navigationScheduler().scheduleLocationChange(activeDocument, completedURL, locking != LockHistoryBasedOnGestureState);
 }
 
 void LocalDOMWindow::printErrorMessage(const String& message)
@@ -1815,13 +1838,7 @@ PassRefPtrWillBeRawPtr<LocalDOMWindow> LocalDOMWindow::open(const String& urlStr
         if (urlString.isEmpty())
             return targetFrame->domWindow();
 
-        // For whatever reason, Firefox uses the first window rather than the active window to
-        // determine the outgoing referrer. We replicate that behavior here.
-        toLocalFrame(targetFrame)->navigationScheduler().scheduleLocationChange(
-            activeDocument,
-            completedURL,
-            Referrer(firstFrame->document()->outgoingReferrer(), firstFrame->document()->referrerPolicy()),
-            false);
+        toLocalFrame(targetFrame)->navigationScheduler().scheduleLocationChange(activeDocument, completedURL, false);
         return targetFrame->domWindow();
     }
 

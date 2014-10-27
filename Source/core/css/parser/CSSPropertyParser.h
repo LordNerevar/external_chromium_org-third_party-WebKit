@@ -60,7 +60,7 @@ public:
         CSSParserValueList*, const CSSParserContext&, bool inViewport,
         WillBeHeapVector<CSSProperty, 256>&, CSSRuleSourceData::Type);
 
-    // FIXME: Should this be on a separate ColorParser object?
+    // FIXME: This should probably move to CSSParserFastPaths
     template<typename StringType>
     static bool fastParseColor(RGBA32&, const StringType&, bool strict);
 
@@ -128,7 +128,6 @@ private:
     PassRefPtrWillBeRawPtr<CSSValue> parseAnimationProperty();
     PassRefPtrWillBeRawPtr<CSSValue> parseAnimationTimingFunction();
 
-    bool parseWebkitTransformOriginShorthand(bool important);
     bool parseCubicBezierTimingFunctionValue(CSSParserValueList*& args, double& result);
     PassRefPtrWillBeRawPtr<CSSValue> parseAnimationProperty(CSSPropertyID);
     PassRefPtrWillBeRawPtr<CSSValueList> parseAnimationPropertyList(CSSPropertyID);
@@ -203,8 +202,6 @@ private:
     bool parseBorderImageWidth(RefPtrWillBeRawPtr<CSSPrimitiveValue>&);
     bool parseBorderImageOutset(RefPtrWillBeRawPtr<CSSPrimitiveValue>&);
     bool parseBorderRadius(CSSPropertyID, bool important);
-
-    PassRefPtrWillBeRawPtr<CSSValue> parseAspectRatio();
 
     PassRefPtrWillBeRawPtr<CSSValue> parseReflect();
 
@@ -382,9 +379,6 @@ private:
 CSSPropertyID cssPropertyID(const CSSParserString&);
 CSSPropertyID cssPropertyID(const String&);
 CSSValueID cssValueKeywordID(const CSSParserString&);
-
-bool isKeywordPropertyID(CSSPropertyID);
-bool isValidKeywordPropertyAndValue(CSSPropertyID, CSSValueID, const CSSParserContext&);
 
 } // namespace blink
 

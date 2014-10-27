@@ -107,7 +107,7 @@ WebInspector.HeapSnapshotView = function(dataDisplayDelegate, profile)
         splitViewResizer = this._tabbedPane.headerElement();
         this._objectDetailsView = this._tabbedPane;
     } else {
-        var retainmentViewHeader = document.createElementWithClass("div", "heap-snapshot-view-resizer");
+        var retainmentViewHeader = createElementWithClass("div", "heap-snapshot-view-resizer");
         var retainingPathsTitleDiv = retainmentViewHeader.createChild("div", "title");
         var retainingPathsTitle = retainingPathsTitleDiv.createChild("span");
         retainingPathsTitle.textContent = WebInspector.UIString("Retainers");
@@ -361,7 +361,7 @@ WebInspector.HeapSnapshotView.AllocationPerspective = function()
     WebInspector.HeapSnapshotView.Perspective.call(this,  WebInspector.UIString("Allocation"));
     this._allocationSplitView = new WebInspector.SplitView(false, true, "heapSnapshotAllocationSplitViewState", 200, 200);
 
-    var resizer = document.createElementWithClass("div", "heap-snapshot-view-resizer");
+    var resizer = createElementWithClass("div", "heap-snapshot-view-resizer");
     var title = resizer.createChild("div", "title").createChild("span");
     title.textContent = WebInspector.UIString("Live objects");
     this._allocationSplitView.hideDefaultResizer();
@@ -1746,11 +1746,10 @@ WebInspector.SaveSnapshotOutputStreamDelegate.prototype = {
 WebInspector.HeapTrackingOverviewGrid = function(heapProfileHeader)
 {
     WebInspector.VBox.call(this);
-    this.registerRequiredCSS("flameChart.css");
     this.element.id = "heap-recording-view";
     this.element.classList.add("heap-tracking-overview");
 
-    this._overviewContainer = this.element.createChild("div", "overview-container");
+    this._overviewContainer = this.element.createChild("div", "heap-overview-container");
     this._overviewGrid = new WebInspector.OverviewGrid("heap-recording");
     this._overviewGrid.element.classList.add("fill");
 

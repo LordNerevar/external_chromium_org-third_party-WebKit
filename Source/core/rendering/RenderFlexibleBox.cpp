@@ -36,6 +36,7 @@
 #include "core/rendering/RenderLayer.h"
 #include "core/rendering/RenderView.h"
 #include "core/rendering/TextAutosizer.h"
+#include "core/rendering/style/RenderStyle.h"
 #include "platform/LengthFunctions.h"
 #include "wtf/MathExtras.h"
 #include <limits>
@@ -193,14 +194,6 @@ int RenderFlexibleBox::inlineBlockBaseline(LineDirectionMode direction) const
     return synthesizedBaselineFromContentBox(*this, direction) + marginAscent;
 }
 
-static ItemPosition resolveAlignment(const RenderStyle* parentStyle, const RenderStyle* childStyle)
-{
-    ItemPosition align = childStyle->alignSelf();
-    if (align == ItemPositionAuto)
-        align = (parentStyle->alignItems() == ItemPositionAuto) ? ItemPositionStretch : parentStyle->alignItems();
-    return align;
-}
-
 void RenderFlexibleBox::removeChild(RenderObject* child)
 {
     RenderBlock::removeChild(child);
@@ -215,8 +208,8 @@ void RenderFlexibleBox::styleDidChange(StyleDifference diff, const RenderStyle* 
         // Flex items that were previously stretching need to be relayed out so we can compute new available cross axis space.
         // This is only necessary for stretching since other alignment values don't change the size of the box.
         for (RenderBox* child = firstChildBox(); child; child = child->nextSiblingBox()) {
-            ItemPosition previousAlignment = resolveAlignment(oldStyle, child->style());
-            if (previousAlignment == ItemPositionStretch && previousAlignment != resolveAlignment(style(), child->style()))
+            ItemPosition previousAlignment = RenderStyle::resolveAlignment(oldStyle, child->style());
+            if (previousAlignment == ItemPositionStretch && previousAlignment != RenderStyle::resolveAlignment(style(), child->style()))
                 child->setChildNeedsLayout(MarkOnlyThis);
         }
     }
@@ -609,21 +602,20 @@ bool RenderFlexibleBox::childPreferredMainAxisContentExtentRequiresLayout(Render
 
 LayoutUnit RenderFlexibleBox::preferredMainAxisContentExtentForChild(RenderBox& child, bool hasInfiniteLineLength, bool relayoutChildren)
 {
-    clearLogicalOverrideSize(child);
+    child.clearOverrideSize();
 
-    if (child.style()->hasAspectRatio() || child.isImage() || child.isVideo() || child.isCanvas())
+    if (child.isImage() || child.isVideo() || child.isCanvas())
         UseCounter::count(document(), UseCounter::AspectRatioFlexItem);
 
     Length flexBasis = flexBasisForChild(child);
     if (preferredMainAxisExtentDependsOnLayout(flexBasis, hasInfiniteLineLength)) {
         LayoutUnit mainAxisExtent;
         if (hasOrthogonalFlow(child)) {
-            if (child.needsLayout() || relayoutChildren) {
+            if (child.needsLayout() || relayoutChildren || !m_intrinsicSizeAlongMainAxis.contains(&child)) {
                 m_intrinsicSizeAlongMainAxis.remove(&child);
                 child.forceChildLayout();
                 m_intrinsicSizeAlongMainAxis.set(&child, child.logicalHeight());
             }
-            ASSERT(m_intrinsicSizeAlongMainAxis.contains(&child));
             mainAxisExtent = m_intrinsicSizeAlongMainAxis.get(&child);
         } else {
             mainAxisExtent = child.maxPreferredLogicalWidth();
@@ -771,7 +763,7 @@ bool RenderFlexibleBox::updateAutoMarginsInCrossAxis(RenderBox& child, LayoutUni
         // so that flipForRightToLeftColumn will do the right thing.
         shouldAdjustTopOrLeft = false;
     }
-    if (!isColumnFlow() && child.style()->isFlippedBlocksWritingMode()) {
+    if (!isColumnFlow() && child.style()->slowIsFlippedBlocksWritingMode()) {
         // If we are a flipped writing mode, we need to adjust the opposite side. This is only needed
         // for row flows because this only affects the block-direction axis.
         shouldAdjustTopOrLeft = false;
@@ -991,14 +983,6 @@ void RenderFlexibleBox::setLogicalOverrideSize(RenderBox& child, LayoutUnit chil
         child.setOverrideLogicalContentWidth(childPreferredSize - child.borderAndPaddingLogicalWidth());
 }
 
-void RenderFlexibleBox::clearLogicalOverrideSize(RenderBox& child)
-{
-    if (hasOrthogonalFlow(child))
-        child.clearOverrideLogicalContentHeight();
-    else
-        child.clearOverrideLogicalContentWidth();
-}
-
 void RenderFlexibleBox::prepareChildForPositionedLayout(RenderBox& child, LayoutUnit mainAxisOffset, LayoutUnit crossAxisOffset, PositionedLayoutMode layoutMode)
 {
     ASSERT(child.isOutOfFlowPositioned());
@@ -1019,7 +1003,7 @@ void RenderFlexibleBox::prepareChildForPositionedLayout(RenderBox& child, Layout
 
 ItemPosition RenderFlexibleBox::alignmentForChild(RenderBox& child) const
 {
-    ItemPosition align = resolveAlignment(style(), child.style());
+    ItemPosition align = RenderStyle::resolveAlignment(style(), child.style());
 
     if (align == ItemPositionBaseline && hasOrthogonalFlow(child))
         align = ItemPositionFlexStart;
@@ -1359,11 +1343,12 @@ void RenderFlexibleBox::applyStretchAlignmentToChild(RenderBox& child, LayoutUni
             LayoutUnit stretchedLogicalHeight = heightBeforeStretching + availableAlignmentSpaceForChildBeforeStretching(lineCrossAxisExtent, child);
             ASSERT(!child.needsLayout());
             LayoutUnit desiredLogicalHeight = child.constrainLogicalHeightByMinMax(stretchedLogicalHeight, heightBeforeStretching - child.borderAndPaddingLogicalHeight());
-            LayoutUnit desiredLogicalContentHeight = desiredLogicalHeight - child.borderAndPaddingLogicalHeight();
 
             // FIXME: Can avoid laying out here in some cases. See https://webkit.org/b/87905.
-            if (desiredLogicalHeight != child.logicalHeight() || !child.hasOverrideHeight() || desiredLogicalContentHeight != child.overrideLogicalContentHeight()) {
-                child.setOverrideLogicalContentHeight(desiredLogicalContentHeight);
+            bool childNeedsRelayout = desiredLogicalHeight != child.logicalHeight();
+            if (childNeedsRelayout || !child.hasOverrideHeight())
+                child.setOverrideLogicalContentHeight(desiredLogicalHeight - child.borderAndPaddingLogicalHeight());
+            if (childNeedsRelayout) {
                 child.setLogicalHeight(0);
                 child.forceChildLayout();
             }

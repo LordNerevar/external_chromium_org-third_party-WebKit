@@ -26,6 +26,7 @@
 #include "bindings/core/v8/ExceptionState.h"
 #include "core/FetchInitiatorTypeNames.h"
 #include "core/dom/ContextFeatures.h"
+#include "core/dom/DOMArrayBuffer.h"
 #include "core/dom/DOMException.h"
 #include "core/dom/DOMImplementation.h"
 #include "core/dom/DocumentParser.h"
@@ -36,6 +37,8 @@
 #include "core/fetch/FetchUtils.h"
 #include "core/fileapi/Blob.h"
 #include "core/fileapi/File.h"
+#include "core/fileapi/FileReaderLoader.h"
+#include "core/fileapi/FileReaderLoaderClient.h"
 #include "core/frame/Settings.h"
 #include "core/frame/UseCounter.h"
 #include "core/frame/csp/ContentSecurityPolicy.h"
@@ -112,13 +115,13 @@ class ReadableStreamSource : public GarbageCollectedFinalized<ReadableStreamSour
 public:
     ReadableStreamSource(XMLHttpRequest* owner) : m_owner(owner) { }
     virtual ~ReadableStreamSource() { }
-    virtual void pullSource() OVERRIDE { }
-    virtual ScriptPromise cancelSource(ScriptState* scriptState, ScriptValue reason) OVERRIDE
+    virtual void pullSource() override { }
+    virtual ScriptPromise cancelSource(ScriptState* scriptState, ScriptValue reason) override
     {
         m_owner->abort();
         return ScriptPromise::cast(scriptState, v8::Undefined(scriptState->isolate()));
     }
-    virtual void trace(Visitor* visitor) OVERRIDE
+    virtual void trace(Visitor* visitor) override
     {
         visitor->trace(m_owner);
         UnderlyingSource::trace(visitor);
@@ -132,6 +135,51 @@ private:
 };
 
 } // namespace
+
+class XMLHttpRequest::BlobLoader final : public NoBaseWillBeGarbageCollectedFinalized<XMLHttpRequest::BlobLoader>, public FileReaderLoaderClient {
+public:
+    static PassOwnPtrWillBeRawPtr<BlobLoader> create(XMLHttpRequest* xhr, PassRefPtr<BlobDataHandle> handle)
+    {
+        return adoptPtrWillBeNoop(new BlobLoader(xhr, handle));
+    }
+
+    // FileReaderLoaderClient functions.
+    virtual void didStartLoading() override { }
+    virtual void didReceiveDataForClient(const char* data, unsigned length) override
+    {
+        ASSERT(length <= INT_MAX);
+        m_xhr->didReceiveData(data, length);
+    }
+    virtual void didFinishLoading() override
+    {
+        m_xhr->didFinishLoadingFromBlob();
+    }
+    virtual void didFail(FileError::ErrorCode error) override
+    {
+        m_xhr->didFailLoadingFromBlob();
+    }
+
+    void cancel()
+    {
+        m_loader.cancel();
+    }
+
+    void trace(Visitor* visitor)
+    {
+        visitor->trace(m_xhr);
+    }
+
+private:
+    BlobLoader(XMLHttpRequest* xhr, PassRefPtr<BlobDataHandle> handle)
+        : m_xhr(xhr)
+        , m_loader(FileReaderLoader::ReadByClient, this)
+    {
+        m_loader.start(m_xhr->executionContext(), handle);
+    }
+
+    RawPtrWillBeMember<XMLHttpRequest> m_xhr;
+    FileReaderLoader m_loader;
+};
 
 PassRefPtrWillBeRawPtr<XMLHttpRequest> XMLHttpRequest::create(ExecutionContext* context, PassRefPtr<SecurityOrigin> securityOrigin)
 {
@@ -148,7 +196,6 @@ XMLHttpRequest::XMLHttpRequest(ExecutionContext* context, PassRefPtr<SecurityOri
     , m_state(UNSENT)
     , m_lengthDownloadedToFile(0)
     , m_receivedLength(0)
-    , m_lastSendLineNumber(0)
     , m_exceptionCode(0)
     , m_progressEventThrottle(this)
     , m_responseTypeCode(ResponseTypeDefault)
@@ -268,28 +315,18 @@ Blob* XMLHttpRequest::responseBlob()
         return 0;
 
     if (!m_responseBlob) {
-        OwnPtr<BlobData> blobData = BlobData::create();
         if (m_downloadingToFile) {
-            ASSERT(!m_binaryResponseBuilder.get());
+            ASSERT(!m_binaryResponseBuilder);
 
             // When responseType is set to "blob", we redirect the downloaded
             // data to a file-handle directly in the browser process. We get
             // the file-path from the ResourceResponse directly instead of
             // copying the bytes between the browser and the renderer.
-            String filePath = m_response.downloadedFilePath();
-            // If we errored out or got no data, we still return a blob, just
-            // an empty one.
-            if (!filePath.isEmpty() && m_lengthDownloadedToFile) {
-                blobData->appendFile(filePath);
-                // FIXME: finalResponseMIMETypeWithFallback() defaults to
-                // text/xml which may be incorrect. Replace it with
-                // finalResponseMIMEType() after compatibility investigation.
-                blobData->setContentType(finalResponseMIMETypeWithFallback());
-            }
-            m_responseBlob = Blob::create(BlobDataHandle::create(blobData.release(), m_lengthDownloadedToFile));
+            m_responseBlob = Blob::create(createBlobDataHandleFromResponse());
         } else {
+            OwnPtr<BlobData> blobData = BlobData::create();
             size_t size = 0;
-            if (m_binaryResponseBuilder.get() && m_binaryResponseBuilder->size()) {
+            if (m_binaryResponseBuilder && m_binaryResponseBuilder->size()) {
                 size = m_binaryResponseBuilder->size();
                 blobData->appendBytes(m_binaryResponseBuilder->data(), size);
                 blobData->setContentType(finalResponseMIMETypeWithFallback());
@@ -302,16 +339,16 @@ Blob* XMLHttpRequest::responseBlob()
     return m_responseBlob.get();
 }
 
-ArrayBuffer* XMLHttpRequest::responseArrayBuffer()
+DOMArrayBuffer* XMLHttpRequest::responseArrayBuffer()
 {
     ASSERT(m_responseTypeCode == ResponseTypeArrayBuffer);
 
     if (m_error || m_state != DONE)
         return 0;
 
-    if (!m_responseArrayBuffer.get()) {
-        if (m_binaryResponseBuilder.get() && m_binaryResponseBuilder->size() > 0) {
-            m_responseArrayBuffer = m_binaryResponseBuilder->getAsArrayBuffer();
+    if (!m_responseArrayBuffer) {
+        if (m_binaryResponseBuilder && m_binaryResponseBuilder->size()) {
+            m_responseArrayBuffer = DOMArrayBuffer::create(m_binaryResponseBuilder->getAsArrayBuffer());
             if (!m_responseArrayBuffer) {
                 // m_binaryResponseBuilder failed to allocate an ArrayBuffer.
                 // We need to crash the renderer since there's no way defined in
@@ -320,7 +357,7 @@ ArrayBuffer* XMLHttpRequest::responseArrayBuffer()
             }
             m_binaryResponseBuilder.clear();
         } else {
-            m_responseArrayBuffer = ArrayBuffer::create(static_cast<void*>(0), 0);
+            m_responseArrayBuffer = DOMArrayBuffer::create(static_cast<void*>(0), 0);
         }
     }
 
@@ -442,7 +479,7 @@ XMLHttpRequestUpload* XMLHttpRequest::upload()
     return m_upload.get();
 }
 
-void XMLHttpRequest::trackProgress(int length)
+void XMLHttpRequest::trackProgress(long long length)
 {
     m_receivedLength += length;
 
@@ -517,28 +554,6 @@ void XMLHttpRequest::setWithCredentials(bool value, ExceptionState& exceptionSta
     m_includeCredentials = value;
 }
 
-AtomicString XMLHttpRequest::uppercaseKnownHTTPMethod(const AtomicString& method)
-{
-    // Valid methods per step-5 of http://xhr.spec.whatwg.org/#the-open()-method.
-    const char* const methods[] = {
-        "DELETE",
-        "GET",
-        "HEAD",
-        "OPTIONS",
-        "POST",
-        "PUT" };
-
-    for (unsigned i = 0; i < WTF_ARRAY_LENGTH(methods); ++i) {
-        if (equalIgnoringCase(method, methods[i])) {
-            // Don't bother allocating a new string if it's already all uppercase.
-            if (method == methods[i])
-                return method;
-            return methods[i];
-        }
-    }
-    return method;
-}
-
 void XMLHttpRequest::open(const AtomicString& method, const KURL& url, ExceptionState& exceptionState)
 {
     open(method, url, true, exceptionState);
@@ -592,7 +607,7 @@ void XMLHttpRequest::open(const AtomicString& method, const KURL& url, bool asyn
         }
     }
 
-    m_method = uppercaseKnownHTTPMethod(method);
+    m_method = FetchUtils::normalizeMethod(method);
 
     m_url = url;
 
@@ -931,6 +946,11 @@ void XMLHttpRequest::abort()
 
 void XMLHttpRequest::clearVariablesForLoading()
 {
+    if (m_blobLoader) {
+        m_blobLoader->cancel();
+        m_blobLoader = nullptr;
+    }
+
     m_decoder.clear();
 
     if (m_responseDocumentParser) {
@@ -978,7 +998,6 @@ bool XMLHttpRequest::internalAbort()
     // If, window.onload contains open() and send(), m_loader will be set to
     // non 0 value. So, we cannot continue the outer open(). In such case,
     // just abort the outer open() by returning false.
-    RefPtrWillBeRawPtr<XMLHttpRequest> protect(this);
     RefPtr<ThreadableLoader> loader = m_loader.release();
     loader->cancel();
 
@@ -1049,6 +1068,10 @@ void XMLHttpRequest::handleNetworkError()
     long long expectedLength = m_response.expectedContentLength();
     long long receivedLength = m_receivedLength;
 
+    // Prevent the XMLHttpRequest instance from being destoryed during
+    // |internalAbort()|.
+    RefPtrWillBeRawPtr<XMLHttpRequest> protect(this);
+
     if (!internalAbort())
         return;
 
@@ -1062,6 +1085,10 @@ void XMLHttpRequest::handleDidCancel()
     // Response is cleared next, save needed progress event data.
     long long expectedLength = m_response.expectedContentLength();
     long long receivedLength = m_receivedLength;
+
+    // Prevent the XMLHttpRequest instance from being destoryed during
+    // |internalAbort()|.
+    RefPtrWillBeRawPtr<XMLHttpRequest> protect(this);
 
     if (!internalAbort())
         return;
@@ -1269,11 +1296,13 @@ void XMLHttpRequest::didFail(const ResourceError& error)
 
     if (error.isCancellation()) {
         handleDidCancel();
+        // Now the XMLHttpRequest instance may be dead.
         return;
     }
 
     if (error.isTimeout()) {
         handleDidTimeout();
+        // Now the XMLHttpRequest instance may be dead.
         return;
     }
 
@@ -1282,6 +1311,7 @@ void XMLHttpRequest::didFail(const ResourceError& error)
         logConsoleError(executionContext(), "XMLHttpRequest cannot load " + error.failingURL() + ". " + error.localizedDescription());
 
     handleNetworkError();
+    // Now the XMLHttpRequest instance may be dead.
 }
 
 void XMLHttpRequest::didFailRedirectCheck()
@@ -1289,6 +1319,7 @@ void XMLHttpRequest::didFailRedirectCheck()
     WTF_LOG(Network, "XMLHttpRequest %p didFailRedirectCheck()", this);
 
     handleNetworkError();
+    // Now the XMLHttpRequest instance may be dead.
 }
 
 void XMLHttpRequest::didFinishLoading(unsigned long identifier, double)
@@ -1303,6 +1334,19 @@ void XMLHttpRequest::didFinishLoading(unsigned long identifier, double)
 
     m_loaderIdentifier = identifier;
 
+    if (m_downloadingToFile && m_responseTypeCode != ResponseTypeBlob && m_lengthDownloadedToFile) {
+        ASSERT(m_state == LOADING);
+        // In this case, we have sent the request with DownloadToFile true,
+        // but the user changed the response type after that. Hence we need to
+        // read the response data and provide it to this object.
+        m_blobLoader = BlobLoader::create(this, createBlobDataHandleFromResponse());
+    } else {
+        didFinishLoadingInternal();
+    }
+}
+
+void XMLHttpRequest::didFinishLoadingInternal()
+{
     if (m_responseDocumentParser) {
         // |DocumentParser::finish()| tells the parser that we have reached end of the data.
         // When using |HTMLDocumentParser|, which works asynchronously, we do not have the
@@ -1324,6 +1368,38 @@ void XMLHttpRequest::didFinishLoading(unsigned long identifier, double)
 
     clearVariablesForLoading();
     endLoading();
+}
+
+void XMLHttpRequest::didFinishLoadingFromBlob()
+{
+    WTF_LOG(Network, "XMLHttpRequest %p didFinishLoadingFromBlob", this);
+
+    didFinishLoadingInternal();
+}
+
+void XMLHttpRequest::didFailLoadingFromBlob()
+{
+    WTF_LOG(Network, "XMLHttpRequest %p didFailLoadingFromBlob()", this);
+
+    if (m_error)
+        return;
+    handleNetworkError();
+}
+
+PassRefPtr<BlobDataHandle> XMLHttpRequest::createBlobDataHandleFromResponse()
+{
+    ASSERT(m_downloadingToFile);
+    OwnPtr<BlobData> blobData = BlobData::create();
+    String filePath = m_response.downloadedFilePath();
+    // If we errored out or got no data, we return an empty handle.
+    if (!filePath.isEmpty() && m_lengthDownloadedToFile) {
+        blobData->appendFile(filePath);
+        // FIXME: finalResponseMIMETypeWithFallback() defaults to
+        // text/xml which may be incorrect. Replace it with
+        // finalResponseMIMEType() after compatibility investigation.
+        blobData->setContentType(finalResponseMIMETypeWithFallback());
+    }
+    return BlobDataHandle::create(blobData.release(), m_lengthDownloadedToFile);
 }
 
 void XMLHttpRequest::notifyParserStopped()
@@ -1352,7 +1428,7 @@ void XMLHttpRequest::notifyParserStopped()
 
 void XMLHttpRequest::endLoading()
 {
-    InspectorInstrumentation::didFinishXHRLoading(executionContext(), this, this, m_loaderIdentifier, m_responseText, m_method, m_url, m_lastSendURL, m_lastSendLineNumber);
+    InspectorInstrumentation::didFinishXHRLoading(executionContext(), this, this, m_loaderIdentifier, m_responseText, m_method, m_url);
 
     if (m_loader)
         m_loader = nullptr;
@@ -1392,7 +1468,7 @@ void XMLHttpRequest::didReceiveResponse(unsigned long identifier, const Resource
         m_finalResponseCharset = response.textEncodingName();
 }
 
-void XMLHttpRequest::parseDocumentChunk(const char* data, int len)
+void XMLHttpRequest::parseDocumentChunk(const char* data, unsigned len)
 {
     if (!m_responseDocumentParser) {
         ASSERT(!m_responseDocument);
@@ -1436,10 +1512,8 @@ PassOwnPtr<TextResourceDecoder> XMLHttpRequest::createDecoder() const
     return TextResourceDecoder::create("text/plain", "UTF-8");
 }
 
-void XMLHttpRequest::didReceiveData(const char* data, int len)
+void XMLHttpRequest::didReceiveData(const char* data, unsigned len)
 {
-    ASSERT(!m_downloadingToFile);
-
     if (m_error)
         return;
 
@@ -1453,9 +1527,6 @@ void XMLHttpRequest::didReceiveData(const char* data, int len)
 
     if (!len)
         return;
-
-    if (len == -1)
-        len = strlen(data);
 
     if (m_responseTypeCode == ResponseTypeDocument && responseIsHTML()) {
         parseDocumentChunk(data, len);
@@ -1475,12 +1546,17 @@ void XMLHttpRequest::didReceiveData(const char* data, int len)
         m_responseLegacyStream->addData(data, len);
     } else if (m_responseTypeCode == ResponseTypeStream) {
         if (!m_responseStream) {
-            m_responseStream = new ReadableStreamImpl<ReadableStreamChunkTypeTraits<ArrayBuffer> >(executionContext(), new ReadableStreamSource(this));
+            m_responseStream = new ReadableStreamImpl<ReadableStreamChunkTypeTraits<DOMArrayBuffer> >(executionContext(), new ReadableStreamSource(this));
             m_responseStream->didSourceStart();
         }
-        m_responseStream->enqueue(ArrayBuffer::create(data, len));
+        m_responseStream->enqueue(DOMArrayBuffer::create(data, len));
     }
 
+    if (m_blobLoader) {
+        // In this case, the data is provided by m_blobLoader. As progress
+        // events are already fired, we should return here.
+        return;
+    }
     trackProgress(len);
 }
 
@@ -1514,6 +1590,10 @@ void XMLHttpRequest::handleDidTimeout()
     // Response is cleared next, save needed progress event data.
     long long expectedLength = m_response.expectedContentLength();
     long long receivedLength = m_receivedLength;
+
+    // Prevent the XMLHttpRequest instance from being destoryed during
+    // |internalAbort()|.
+    RefPtrWillBeRawPtr<XMLHttpRequest> protect(this);
 
     if (!internalAbort())
         return;
@@ -1573,7 +1653,9 @@ void XMLHttpRequest::trace(Visitor* visitor)
     visitor->trace(m_responseDocumentParser);
     visitor->trace(m_progressEventThrottle);
     visitor->trace(m_upload);
+    visitor->trace(m_blobLoader);
     XMLHttpRequestEventTarget::trace(visitor);
+    DocumentParserClient::trace(visitor);
 }
 
 } // namespace blink

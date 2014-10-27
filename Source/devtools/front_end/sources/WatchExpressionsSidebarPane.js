@@ -39,13 +39,13 @@ WebInspector.WatchExpressionsSidebarPane = function()
     this.section = new WebInspector.WatchExpressionsSection();
     this.bodyElement.appendChild(this.section.element);
 
-    var refreshButton = document.createElement("button");
+    var refreshButton = createElement("button");
     refreshButton.className = "pane-title-button refresh";
     refreshButton.addEventListener("click", this._refreshButtonClicked.bind(this), false);
     refreshButton.title = WebInspector.UIString("Refresh");
     this.titleElement.appendChild(refreshButton);
 
-    var addButton = document.createElement("button");
+    var addButton = createElement("button");
     addButton.className = "pane-title-button add";
     addButton.addEventListener("click", this._addButtonClicked.bind(this), false);
     this.titleElement.appendChild(addButton);
@@ -112,7 +112,7 @@ WebInspector.WatchExpressionsSection = function()
     this._expandedExpressions = {};
     this._expandedProperties = {};
 
-    this.emptyElement = document.createElement("div");
+    this.emptyElement = createElement("div");
     this.emptyElement.className = "info";
     this.emptyElement.textContent = WebInspector.UIString("No Watch Expressions");
 
@@ -124,7 +124,7 @@ WebInspector.WatchExpressionsSection = function()
     this.propertiesElement.classList.add("watch-expressions");
 
     this.element.addEventListener("mousemove", this._mouseMove.bind(this), true);
-    this.element.addEventListener("mouseout", this._mouseOut.bind(this), true);
+    this.element.addEventListener("mouseleave", this._mouseLeave.bind(this), true);
     this.element.addEventListener("dblclick", this._sectionDoubleClick.bind(this), false);
     this.emptyElement.addEventListener("contextmenu", this._emptyElementContextMenu.bind(this), false);
 }
@@ -311,7 +311,7 @@ WebInspector.WatchExpressionsSection.prototype = {
             this._updateHoveredElement(e.pageY);
     },
 
-    _mouseOut: function()
+    _mouseLeave: function()
     {
         if (this._hoveredElement) {
             this._hoveredElement.classList.remove("hovered");
@@ -413,7 +413,7 @@ WebInspector.WatchExpressionTreeElement.prototype = {
         } else
             this.listItemElement.classList.remove("dimmed");
 
-        var deleteButton = document.createElement("input");
+        var deleteButton = createElement("input");
         deleteButton.type = "button";
         deleteButton.title = WebInspector.UIString("Delete watch expression.");
         deleteButton.classList.add("enabled-button");
@@ -435,6 +435,8 @@ WebInspector.WatchExpressionTreeElement.prototype = {
         }
         if (this.treeOutline.section.watchExpressions.length > 1)
             contextMenu.appendItem(WebInspector.UIString(WebInspector.useLowerCaseMenuTitles() ? "Delete all watch expressions" : "Delete All Watch Expressions"), this._deleteAllButtonClicked.bind(this));
+        if (!this.isEditing() && (this.property.value.type === "number" || this.property.value.type === "string"))
+            contextMenu.appendItem(WebInspector.UIString(WebInspector.useLowerCaseMenuTitles() ? "Copy value" : "Copy Value"), this._copyValueButtonClicked.bind(this));
     },
 
     _contextMenu: function(event)
@@ -452,6 +454,11 @@ WebInspector.WatchExpressionTreeElement.prototype = {
     _deleteButtonClicked: function()
     {
         this.treeOutline.section.updateExpression(this, null);
+    },
+
+    _copyValueButtonClicked: function()
+    {
+        InspectorFrontendHost.copyText(this.valueElement.textContent);
     },
 
     /**

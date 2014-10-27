@@ -33,7 +33,7 @@
 WebInspector.NavigatorView = function()
 {
     WebInspector.VBox.call(this);
-    this.registerRequiredCSS("navigatorView.css");
+    this.registerRequiredCSS("sources/navigatorView.css");
 
     this.element.classList.add("navigator-container");
     var scriptsOutlineElement = this.element.createChild("div", "outline-disclosure navigator");
@@ -878,6 +878,7 @@ WebInspector.NavigatorSourceTreeElement.prototype = {
         if (!this._uiSourceCode.canRename())
             return false;
         var isSelected = this === this.treeOutline.selectedTreeElement;
+        var document = this.treeOutline.childrenListElement.ownerDocument;
         var isFocused = this.treeOutline.childrenListElement.isSelfOrAncestor(document.activeElement);
         return isSelected && isFocused && !WebInspector.isBeingEdited(this.treeOutline.element);
     },

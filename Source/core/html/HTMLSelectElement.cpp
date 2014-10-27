@@ -82,6 +82,7 @@ HTMLSelectElement::HTMLSelectElement(Document& document, HTMLFormElement* form)
     , m_activeSelectionState(false)
     , m_shouldRecalcListItems(false)
     , m_suggestedIndex(-1)
+    , m_isAutofilledByPreview(false)
 {
 }
 
@@ -269,6 +270,8 @@ void HTMLSelectElement::setValue(const String &value, bool sendEvents)
 
     int previousSelectedIndex = selectedIndex();
     setSuggestedIndex(-1);
+    if (m_isAutofilledByPreview)
+        setAutofilled(false);
     setSelectedIndex(optionIndex);
 
     if (sendEvents && previousSelectedIndex != selectedIndex()) {
@@ -304,6 +307,7 @@ void HTMLSelectElement::setSuggestedValue(const String& value)
         if (isHTMLOptionElement(items[i])) {
             if (toHTMLOptionElement(items[i])->value() == value) {
                 setSuggestedIndex(optionIndex);
+                m_isAutofilledByPreview = true;
                 return;
             }
             optionIndex++;
@@ -606,7 +610,7 @@ void HTMLSelectElement::selectAll()
     setActiveSelectionAnchorIndex(nextSelectableListIndex(-1));
     setActiveSelectionEndIndex(previousSelectableListIndex(-1));
 
-    updateListBoxSelection(false);
+    updateListBoxSelection(false, false);
     listBoxOnChange();
     setNeedsValidityCheck();
 }
@@ -646,10 +650,10 @@ void HTMLSelectElement::setActiveSelectionEndIndex(int index)
     if (index == m_activeSelectionEndIndex)
         return;
     m_activeSelectionEndIndex = index;
-    setNeedsStyleRecalc(SubtreeStyleChange);
+    setNeedsStyleRecalc(SubtreeStyleChange, StyleChangeReasonForTracing::create(StyleChangeReason::Control));
 }
 
-void HTMLSelectElement::updateListBoxSelection(bool deselectOtherOptions)
+void HTMLSelectElement::updateListBoxSelection(bool deselectOtherOptions, bool scroll)
 {
     ASSERT(renderer() && (renderer()->isListBox() || m_multiple));
     ASSERT(!listItems().size() || m_activeSelectionAnchorIndex >= 0);
@@ -672,7 +676,8 @@ void HTMLSelectElement::updateListBoxSelection(bool deselectOtherOptions)
     }
 
     setNeedsValidityCheck();
-    scrollToSelection();
+    if (scroll)
+        scrollToSelection();
     notifyFormStateChanged();
 }
 
@@ -770,7 +775,7 @@ void HTMLSelectElement::setRecalcListItems()
     // Manual selection anchor is reset when manipulating the select programmatically.
     m_activeSelectionAnchorIndex = -1;
     setOptionsChangedOnRenderer();
-    setNeedsStyleRecalc(SubtreeStyleChange);
+    setNeedsStyleRecalc(SubtreeStyleChange, StyleChangeReasonForTracing::create(StyleChangeReason::ControlValue));
     if (!inDocument()) {
         if (HTMLOptionsCollection* collection = cachedCollection<HTMLOptionsCollection>(SelectOptions))
             collection->invalidateCache();
@@ -886,11 +891,17 @@ void HTMLSelectElement::scrollTo(int listIndex)
 {
     if (listIndex < 0)
         return;
+    if (usesMenuList())
+        return;
     const WillBeHeapVector<RawPtrWillBeMember<HTMLElement> >& items = listItems();
     int listSize = static_cast<int>(items.size());
     if (listIndex >= listSize)
         return;
-    items[listIndex]->scrollIntoViewIfNeeded(false);
+    document().updateLayoutIgnorePendingStylesheets();
+    if (!renderer() || !renderer()->isListBox())
+        return;
+    LayoutRect bounds = items[listIndex]->boundingBox();
+    toRenderListBox(renderer())->scrollToRect(bounds);
 }
 
 void HTMLSelectElement::optionSelectionStateChanged(HTMLOptionElement* option, bool optionIsSelected)
@@ -923,6 +934,9 @@ void HTMLSelectElement::selectOption(int optionIndex, SelectOptionFlags flags)
 
     const WillBeHeapVector<RawPtrWillBeMember<HTMLElement> >& items = listItems();
     int listIndex = optionToListIndex(optionIndex);
+
+    if (selectedIndex() != optionIndex && isAutofilled())
+        setAutofilled(false);
 
     HTMLElement* element = 0;
     if (listIndex >= 0) {
@@ -1168,7 +1182,7 @@ void HTMLSelectElement::resetImpl()
         firstOption->setSelectedState(true);
 
     setOptionsChangedOnRenderer();
-    setNeedsStyleRecalc(SubtreeStyleChange);
+    setNeedsStyleRecalc(SubtreeStyleChange, StyleChangeReasonForTracing::create(StyleChangeReason::ControlValue));
     setNeedsValidityCheck();
 }
 
@@ -1705,7 +1719,8 @@ void HTMLSelectElement::finishParsingChildren()
 {
     HTMLFormControlElementWithState::finishParsingChildren();
     updateListItemSelectedStates();
-    scrollToSelection();
+    if (!usesMenuList())
+        scrollToSelection();
 }
 
 bool HTMLSelectElement::anonymousIndexedSetter(unsigned index, PassRefPtrWillBeRawPtr<HTMLOptionElement> value, ExceptionState& exceptionState)

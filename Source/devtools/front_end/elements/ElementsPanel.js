@@ -37,8 +37,7 @@
 WebInspector.ElementsPanel = function()
 {
     WebInspector.Panel.call(this, "elements");
-    this.registerRequiredCSS("elementsPanel.css");
-    this.setHideOnDetach();
+    this.registerRequiredCSS("elements/elementsPanel.css");
 
     this._splitView = new WebInspector.SplitView(true, true, "elementsPanelSplitViewState", 325, 325);
     this._splitView.addEventListener(WebInspector.SplitView.Events.SidebarSizeChanged, this._updateTreeOutlineVisibleWidth.bind(this));
@@ -49,12 +48,11 @@ WebInspector.ElementsPanel = function()
     this._searchableView.show(this._splitView.mainElement());
     var stackElement = this._searchableView.element;
 
-    this.contentElement = stackElement.createChild("div");
-    this.contentElement.id = "elements-content";
-    this.contentElement.classList.add("outline-disclosure");
-    this.contentElement.classList.add("source-code");
-    if (!WebInspector.settings.domWordWrap.get())
-        this.contentElement.classList.add("nowrap");
+    this._contentElement = stackElement.createChild("div");
+    this._contentElement.id = "elements-content";
+    // FIXME: crbug.com/425984
+    if (WebInspector.settings.domWordWrap.get())
+        this.contentElement.classList.add("elements-wrap");
     WebInspector.settings.domWordWrap.addChangeListener(this._domWordWrapSettingChanged.bind(this));
 
     this._splitView.sidebarElement().addEventListener("contextmenu", this._sidebarContextMenuEventFired.bind(this), false);
@@ -63,7 +61,7 @@ WebInspector.ElementsPanel = function()
     crumbsContainer.id = "elements-crumbs";
     this.crumbsElement = crumbsContainer.createChild("div", "crumbs");
     this.crumbsElement.addEventListener("mousemove", this._mouseMovedInCrumbs.bind(this), false);
-    this.crumbsElement.addEventListener("mouseout", this._mouseMovedOutOfCrumbs.bind(this), false);
+    this.crumbsElement.addEventListener("mouseleave", this._mouseMovedOutOfCrumbs.bind(this), false);
 
     this.sidebarPanes = {};
     this.sidebarPanes.platformFonts = new WebInspector.PlatformFontsSidebarPane();
@@ -72,9 +70,9 @@ WebInspector.ElementsPanel = function()
     this.sidebarPanes.styles.addEventListener(WebInspector.StylesSidebarPane.Events.SelectorEditingStarted, this._onEditingSelectorStarted.bind(this));
     this.sidebarPanes.styles.addEventListener(WebInspector.StylesSidebarPane.Events.SelectorEditingEnded, this._onEditingSelectorEnded.bind(this));
 
-    this._matchedStylesFilterBoxContainer = document.createElement("div");
+    this._matchedStylesFilterBoxContainer = createElement("div");
     this._matchedStylesFilterBoxContainer.className = "sidebar-pane-filter-box";
-    this._computedStylesFilterBoxContainer = document.createElement("div");
+    this._computedStylesFilterBoxContainer = createElement("div");
     this._computedStylesFilterBoxContainer.className = "sidebar-pane-filter-box";
     this.sidebarPanes.styles.setFilterBoxContainers(this._matchedStylesFilterBoxContainer, this._computedStylesFilterBoxContainer);
 
@@ -82,17 +80,18 @@ WebInspector.ElementsPanel = function()
     this.sidebarPanes.properties = new WebInspector.PropertiesSidebarPane();
     this.sidebarPanes.domBreakpoints = WebInspector.domBreakpointsSidebarPane.createProxy(this);
     this.sidebarPanes.eventListeners = new WebInspector.EventListenersSidebarPane();
+    this.sidebarPanes.animations = new WebInspector.AnimationsSidebarPane(this.sidebarPanes.styles);
 
     this.sidebarPanes.styles.addEventListener(WebInspector.SidebarPane.EventTypes.wasShown, this.updateStyles.bind(this, false));
     this.sidebarPanes.metrics.addEventListener(WebInspector.SidebarPane.EventTypes.wasShown, this.updateMetrics.bind(this));
     this.sidebarPanes.platformFonts.addEventListener(WebInspector.SidebarPane.EventTypes.wasShown, this.updatePlatformFonts.bind(this));
     this.sidebarPanes.properties.addEventListener(WebInspector.SidebarPane.EventTypes.wasShown, this.updateProperties.bind(this));
     this.sidebarPanes.eventListeners.addEventListener(WebInspector.SidebarPane.EventTypes.wasShown, this.updateEventListeners.bind(this));
+    this.sidebarPanes.animations.addEventListener(WebInspector.SidebarPane.EventTypes.wasShown, this.updateAnimations.bind(this));
 
     this.sidebarPanes.styles.addEventListener("style edited", this._stylesPaneEdited, this);
     this.sidebarPanes.styles.addEventListener("style property toggled", this._stylesPaneEdited, this);
     this.sidebarPanes.metrics.addEventListener("metrics edited", this._metricsPaneEdited, this);
-    this._extensionSidebarPanes = [];
 
     WebInspector.dockController.addEventListener(WebInspector.DockController.Events.DockSideChanged, this._dockSideChanged.bind(this));
     WebInspector.settings.splitVerticallyWhenDockedToRight.addChangeListener(this._dockSideChanged.bind(this));
@@ -109,6 +108,7 @@ WebInspector.ElementsPanel = function()
     WebInspector.settings.showUAShadowDOM.addChangeListener(this._showUAShadowDOMChanged.bind(this));
     WebInspector.targetManager.addModelListener(WebInspector.DOMModel, WebInspector.DOMModel.Events.DocumentUpdated, this._documentUpdatedEvent, this);
     WebInspector.targetManager.addModelListener(WebInspector.CSSStyleModel, WebInspector.CSSStyleModel.Events.ModelWasEnabled, this._updateSidebars, this);
+    WebInspector.extensionServer.addEventListener(WebInspector.ExtensionServer.Events.SidebarPaneAdded, this._extensionSidebarPaneAdded, this);
 }
 
 WebInspector.ElementsPanel.prototype = {
@@ -130,6 +130,7 @@ WebInspector.ElementsPanel.prototype = {
     targetAdded: function(target)
     {
         var treeOutline = new WebInspector.ElementsTreeOutline(target, true, true, this._setPseudoClassForNode.bind(this));
+        treeOutline.setWordWrap(WebInspector.settings.domWordWrap.get());
         treeOutline.wireToDOMModel();
         treeOutline.addEventListener(WebInspector.ElementsTreeOutline.Events.SelectedNodeChanged, this._selectedNodeChanged, this);
         treeOutline.addEventListener(WebInspector.ElementsTreeOutline.Events.NodePicked, this._onNodePicked, this);
@@ -197,8 +198,8 @@ WebInspector.ElementsPanel.prototype = {
         for (var i = 0; i < this._treeOutlines.length; ++i) {
             var treeOutline = this._treeOutlines[i];
             // Attach heavy component lazily
-            if (treeOutline.element.parentElement !== this.contentElement)
-                this.contentElement.appendChild(treeOutline.element);
+            if (treeOutline.element.parentElement !== this._contentElement)
+                this._contentElement.appendChild(treeOutline.element);
         }
         WebInspector.Panel.prototype.wasShown.call(this);
         this.updateBreadcrumb();
@@ -224,7 +225,7 @@ WebInspector.ElementsPanel.prototype = {
             treeOutline.domModel().hideDOMNodeHighlight();
             treeOutline.setVisible(false);
             // Detach heavy component on hide
-            this.contentElement.removeChild(treeOutline.element);
+            this._contentElement.removeChild(treeOutline.element);
         }
         this._popoverHelper.hidePopover();
         WebInspector.Panel.prototype.willHide.call(this);
@@ -233,16 +234,6 @@ WebInspector.ElementsPanel.prototype = {
     onResize: function()
     {
         this._updateTreeOutlineVisibleWidth();
-    },
-
-    omitDefaultSelection: function()
-    {
-        this._omitDefaultSelection = true;
-    },
-
-    stopOmittingDefaultSelection: function()
-    {
-        delete this._omitDefaultSelection;
     },
 
     /**
@@ -312,6 +303,7 @@ WebInspector.ElementsPanel.prototype = {
         this.updatePlatformFonts();
         this.updateProperties();
         this.updateEventListeners();
+        this.updateAnimations();
     },
 
     _reset: function()
@@ -404,12 +396,13 @@ WebInspector.ElementsPanel.prototype = {
     },
 
     /**
-     * @param {string} query
+     * @param {!WebInspector.SearchableView.SearchConfig} searchConfig
      * @param {boolean} shouldJump
      * @param {boolean=} jumpBackwards
      */
-    performSearch: function(query, shouldJump, jumpBackwards)
+    performSearch: function(searchConfig, shouldJump, jumpBackwards)
     {
+        var query = searchConfig.query;
         // Call searchCanceled since it will reset everything we need before doing a new search.
         this.searchCanceled();
 
@@ -452,10 +445,10 @@ WebInspector.ElementsPanel.prototype = {
 
     _domWordWrapSettingChanged: function(event)
     {
-        if (event.data)
-            this.contentElement.classList.remove("nowrap");
-        else
-            this.contentElement.classList.add("nowrap");
+        // FIXME: crbug.com/425984
+        this._contentElement.classList.toggle("elements-wrap", event.data);
+        for (var i = 0; i < this._treeOutlines.length; ++i)
+            this._treeOutlines[i].setWordWrap(/** @type {boolean} */ (event.data));
 
         var selectedNode = this.selectedDOMNode();
         if (!selectedNode)
@@ -494,7 +487,7 @@ WebInspector.ElementsPanel.prototype = {
                 continue;
 
             var resource = this._treeOutlines[i].target().resourceTreeModel.resourceForURL(anchor.href);
-            if (!resource || resource.type !== WebInspector.resourceTypes.Image)
+            if (!resource || resource.resourceType() !== WebInspector.resourceTypes.Image)
                 return;
             anchor.removeAttribute("title");
             return anchor;
@@ -584,6 +577,22 @@ WebInspector.ElementsPanel.prototype = {
         if (!this._searchResults)
             return;
         this._jumpToSearchResult(this._currentSearchResultIndex - 1);
+    },
+
+    /**
+     * @return {boolean}
+     */
+    supportsCaseSensitiveSearch: function()
+    {
+        return false;
+    },
+
+    /**
+     * @return {boolean}
+     */
+    supportsRegexSearch: function()
+    {
+        return false;
     },
 
     _highlightCurrentSearchResult: function()
@@ -702,7 +711,7 @@ WebInspector.ElementsPanel.prototype = {
 
     _mouseMovedInCrumbs: function(event)
     {
-        var nodeUnderMouse = document.elementFromPoint(event.pageX, event.pageY);
+        var nodeUnderMouse = event.target;
         var crumbElement = nodeUnderMouse.enclosingNodeOrSelfWithClass("crumb");
         var node = /** @type {?WebInspector.DOMNode} */ (crumbElement ? crumbElement.representedObject : null);
         if (node)
@@ -711,10 +720,6 @@ WebInspector.ElementsPanel.prototype = {
 
     _mouseMovedOutOfCrumbs: function(event)
     {
-        var nodeUnderMouse = document.elementFromPoint(event.pageX, event.pageY);
-        if (nodeUnderMouse && nodeUnderMouse.isDescendant(this.crumbsElement))
-            return;
-
         for (var i = 0; i < this._treeOutlines.length; ++i)
             this._treeOutlines[i].domModel().hideDOMNodeHighlight();
     },
@@ -783,7 +788,7 @@ WebInspector.ElementsPanel.prototype = {
             if (current.nodeType() === Node.DOCUMENT_NODE)
                 continue;
 
-            crumb = document.createElement("span");
+            crumb = createElement("span");
             crumb.className = "crumb";
             crumb.representedObject = current;
             crumb.addEventListener("mousedown", selectCrumbFunction, false);
@@ -818,7 +823,7 @@ WebInspector.ElementsPanel.prototype = {
             }
 
             if (!crumb.childNodes.length) {
-                var nameElement = document.createElement("span");
+                var nameElement = createElement("span");
                 nameElement.textContent = crumbTitle;
                 crumb.appendChild(nameElement);
                 crumb.title = crumbTitle;
@@ -865,7 +870,7 @@ WebInspector.ElementsPanel.prototype = {
         }
 
         // Layout 1: Measure total and normal crumb sizes
-        var contentElementWidth = this.contentElement.offsetWidth;
+        var contentElementWidth = this._contentElement.offsetWidth;
         var normalSizes = [];
         for (var i = 0; i < crumbs.childNodes.length; ++i) {
             var crumb = crumbs.childNodes[i];
@@ -1145,6 +1150,15 @@ WebInspector.ElementsPanel.prototype = {
         eventListenersSidebarPane.needsUpdate = false;
     },
 
+    updateAnimations: function()
+    {
+        var animationsSidebarPane = this.sidebarPanes.animations;
+        if (!animationsSidebarPane.isShowing())
+            return;
+
+        animationsSidebarPane.update(this.selectedDOMNode());
+    },
+
     /**
      * @param {!KeyboardEvent} event
      */
@@ -1255,10 +1269,21 @@ WebInspector.ElementsPanel.prototype = {
      */
     revealAndSelectNode: function(node)
     {
+        if (WebInspector.inspectElementModeController && WebInspector.inspectElementModeController.enabled()) {
+            InspectorFrontendHost.bringToFront();
+            WebInspector.inspectElementModeController.disable();
+        }
+
+        this._omitDefaultSelection = true;
         WebInspector.inspectorView.setCurrentPanel(this);
         node = WebInspector.settings.showUAShadowDOM.get() ? node : this._leaveUserAgentShadowDOM(node);
         node.highlightForTwoSeconds();
         this.selectDOMNode(node, true);
+        delete this._omitDefaultSelection;
+
+        if (!this._notFirstInspectElement)
+            InspectorFrontendHost.inspectElementCompleted();
+        this._notFirstInspectElement = true;
     },
 
     /**
@@ -1329,9 +1354,9 @@ WebInspector.ElementsPanel.prototype = {
         computedPane.bodyElement.classList.add("metrics-and-computed");
         this.sidebarPanes.computedStyle.setExpandCallback(expandComputed);
 
-        var matchedStylePanesWrapper = document.createElement("div");
+        var matchedStylePanesWrapper = createElement("div");
         matchedStylePanesWrapper.className = "style-panes-wrapper";
-        var computedStylePanesWrapper = document.createElement("div");
+        var computedStylePanesWrapper = createElement("div");
         computedStylePanesWrapper.className = "style-panes-wrapper";
 
         /**
@@ -1416,23 +1441,36 @@ WebInspector.ElementsPanel.prototype = {
         this.sidebarPaneView.addPane(this.sidebarPanes.eventListeners);
         this.sidebarPaneView.addPane(this.sidebarPanes.domBreakpoints);
         this.sidebarPaneView.addPane(this.sidebarPanes.properties);
+        if (Runtime.experiments.isEnabled("animationInspection"))
+            this.sidebarPaneView.addPane(this.sidebarPanes.animations);
         this._extensionSidebarPanesContainer = this.sidebarPaneView;
 
-        for (var i = 0; i < this._extensionSidebarPanes.length; ++i)
-            this._extensionSidebarPanesContainer.addPane(this._extensionSidebarPanes[i]);
+        var extensionSidebarPanes = WebInspector.extensionServer.sidebarPanes();
+        for (var i = 0; i < extensionSidebarPanes.length; ++i)
+            this._addExtensionSidebarPane(extensionSidebarPanes[i]);
 
         this.sidebarPaneView.show(this._splitView.sidebarElement());
         this.sidebarPanes.styles.expand();
     },
 
     /**
-     * @param {string} id
-     * @param {!WebInspector.SidebarPane} pane
+     * @param {!WebInspector.Event} event
      */
-    addExtensionSidebarPane: function(id, pane)
+    _extensionSidebarPaneAdded: function(event)
     {
-        this._extensionSidebarPanes.push(pane);
-        this._extensionSidebarPanesContainer.addPane(pane);
+        var pane = /** @type {!WebInspector.ExtensionSidebarPane} */ (event.data);
+        this._addExtensionSidebarPane(pane);
+    },
+
+    /**
+     * @param {!WebInspector.ExtensionSidebarPane} pane
+     */
+    _addExtensionSidebarPane: function(pane)
+    {
+        if (pane.panelName() === this.name) {
+            this.setHideOnDetach();
+            this._extensionSidebarPanesContainer.addPane(pane);
+        }
     },
 
     __proto__: WebInspector.Panel.prototype
@@ -1454,7 +1492,7 @@ WebInspector.ElementsPanel.ContextMenuProvider.prototype = {
      */
     appendApplicableItems: function(event, contextMenu, target)
     {
-        /** @type {!WebInspector.ElementsPanel} */ (WebInspector.inspectorView.panel("elements")).appendApplicableItems(event, contextMenu, target);
+        WebInspector.ElementsPanel.instance().appendApplicableItems(event, contextMenu, target);
     }
 }
 
@@ -1469,144 +1507,73 @@ WebInspector.ElementsPanel.DOMNodeRevealer = function()
 WebInspector.ElementsPanel.DOMNodeRevealer.prototype = {
     /**
      * @param {!Object} node
+     * @return {!Promise}
      */
     reveal: function(node)
     {
-        if (WebInspector.inspectElementModeController && WebInspector.inspectElementModeController.enabled()) {
-            InspectorFrontendHost.bringToFront();
-            WebInspector.inspectElementModeController.disable();
-        }
-
-        var panel = /** @type {!WebInspector.ElementsPanel} */ (WebInspector.inspectorView.panel("elements"));
-        if (node instanceof WebInspector.DOMNode)
-            panel.revealAndSelectNode(/** @type {!WebInspector.DOMNode} */ (node));
-        else if (node instanceof WebInspector.DeferredDOMNode)
-            (/** @type {!WebInspector.DeferredDOMNode} */ (node)).resolve(onNodeResolved);
+        return new Promise(revealPromise);
 
         /**
-         * @param {?WebInspector.DOMNode} resolvedNode
+         * @param {function(undefined)} resolve
+         * @param {function(!Error)} reject
          */
-        function onNodeResolved(resolvedNode)
+        function revealPromise(resolve, reject)
         {
-            if (resolvedNode)
-                panel.revealAndSelectNode(resolvedNode);
+            var panel = WebInspector.ElementsPanel.instance();
+            if (node instanceof WebInspector.DOMNode)
+                onNodeResolved(/** @type {!WebInspector.DOMNode} */ (node));
+            else if (node instanceof WebInspector.DeferredDOMNode)
+                (/** @type {!WebInspector.DeferredDOMNode} */ (node)).resolve(onNodeResolved);
+            else if (node instanceof WebInspector.RemoteObject)
+                (/** @type {!WebInspector.RemoteObject} */ (node)).pushNodeToFrontend(onNodeResolved);
+            else
+                reject(new Error("Can't reveal a non-node."));
+
+            /**
+             * @param {?WebInspector.DOMNode} resolvedNode
+             */
+            function onNodeResolved(resolvedNode)
+            {
+                if (resolvedNode) {
+                    panel.revealAndSelectNode(resolvedNode);
+                    resolve(undefined);
+                    return;
+                }
+                reject(new Error("Could not resolve node to reveal."));
+            }
         }
     }
 }
 
-/**
- * @constructor
- * @implements {WebInspector.Revealer}
- */
-WebInspector.ElementsPanel.NodeRemoteObjectRevealer = function()
+WebInspector.ElementsPanel.show = function()
 {
+    WebInspector.inspectorView.setCurrentPanel(WebInspector.ElementsPanel.instance());
 }
 
-WebInspector.ElementsPanel.NodeRemoteObjectRevealer.prototype = {
-    /**
-     * @param {!Object} remoteObject
-     */
-    reveal: function(remoteObject)
-    {
-        revealElement(/** @type {!WebInspector.RemoteObject} */ (remoteObject));
-
-        /**
-         * @param {?WebInspector.RemoteObject} remoteObject
-         */
-        function revealElement(remoteObject)
-        {
-            if (remoteObject)
-                remoteObject.pushNodeToFrontend(selectNode.bind(null, remoteObject));
-        }
-
-        /**
-         * @param {?WebInspector.RemoteObject} remoteObject
-         * @param {?WebInspector.DOMNode} node
-         */
-        function selectNode(remoteObject, node)
-        {
-            if (node) {
-                WebInspector.Revealer.reveal(node);
-                return;
-            }
-            if (!remoteObject || remoteObject.description !== "#text" || !remoteObject.isNode())
-                return;
-            remoteObject.callFunction(parentElement, undefined, revealElement);
-        }
-
-        /**
-         * @suppressReceiverCheck
-         * @this {Element}
-         */
-        function parentElement()
-        {
-            return this.parentElement;
-        }
-    }
+/**
+ * @return {!WebInspector.ElementsPanel}
+ */
+WebInspector.ElementsPanel.instance = function()
+{
+    if (!WebInspector.ElementsPanel._instanceObject)
+        WebInspector.ElementsPanel._instanceObject = new WebInspector.ElementsPanel();
+    return WebInspector.ElementsPanel._instanceObject;
 }
 
 /**
  * @constructor
+ * @implements {WebInspector.PanelFactory}
  */
-WebInspector.ElementsPanel.NodeRemoteObjectInspector = function()
+WebInspector.ElementsPanelFactory = function()
 {
 }
 
-WebInspector.ElementsPanel.NodeRemoteObjectInspector.prototype = {
+WebInspector.ElementsPanelFactory.prototype = {
     /**
-     * @param {!Object} object
+     * @return {!WebInspector.Panel}
      */
-    inspectNodeObject: function(object)
+    createPanel: function()
     {
-        var remoteObject = /** @type {!WebInspector.RemoteObject} */ (object);
-        if (!remoteObject.isNode()) {
-            remoteObject.release();
-            return;
-        }
-        var elementsPanel = /** @type {!WebInspector.ElementsPanel} */ (WebInspector.inspectorView.panel("elements"));
-        revealElement(remoteObject);
-
-        /**
-         * @param {?WebInspector.RemoteObject} remoteObject
-         */
-        function revealElement(remoteObject)
-        {
-            if (!remoteObject)
-                return;
-            remoteObject.pushNodeToFrontend(selectNode.bind(null, remoteObject));
-            elementsPanel.omitDefaultSelection();
-            WebInspector.inspectorView.setCurrentPanel(elementsPanel);
-        }
-
-        /**
-         * @param {!WebInspector.RemoteObject} remoteObject
-         * @param {?WebInspector.DOMNode} node
-         */
-        function selectNode(remoteObject, node)
-        {
-            elementsPanel.stopOmittingDefaultSelection();
-            if (node) {
-                WebInspector.Revealer.reveal(node);
-                if (!WebInspector._notFirstInspectElement && !WebInspector.inspectorView.drawerVisible())
-                    InspectorFrontendHost.inspectElementCompleted();
-                WebInspector._notFirstInspectElement = true;
-                remoteObject.release();
-                return;
-            }
-            if (remoteObject.description !== "#text" || !remoteObject.isNode()) {
-                remoteObject.release();
-                return;
-            }
-            remoteObject.callFunction(parentElement, undefined, revealElement);
-        }
-
-        /**
-         * @suppressReceiverCheck
-         * @this {Element}
-         */
-        function parentElement()
-        {
-            return this.parentElement;
-        }
+        return WebInspector.ElementsPanel.instance();
     }
 }

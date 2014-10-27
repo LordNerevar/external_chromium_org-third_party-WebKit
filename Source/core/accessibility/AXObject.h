@@ -40,20 +40,13 @@
 namespace blink {
 
 class AXObject;
-class AXObjectCache;
+class AXObjectCacheImpl;
 class Element;
-class LocalFrame;
 class FrameView;
-class HTMLAnchorElement;
-class HTMLAreaElement;
 class IntPoint;
-class IntSize;
 class Node;
-class Range;
 class RenderObject;
-class RenderListItem;
 class ScrollableArea;
-class VisibleSelection;
 class Widget;
 
 typedef unsigned AXID;
@@ -65,6 +58,7 @@ enum AccessibilityRole {
     ApplicationRole,
     ArticleRole,
     BannerRole,
+    BlockquoteRole,
     BrowserRole,
     BusyIndicatorRole,
     ButtonRole,
@@ -77,8 +71,11 @@ enum AccessibilityRole {
     ComboBoxRole,
     ComplementaryRole,
     ContentInfoRole,
+    DateRole,
+    DateTimeRole,
     DefinitionRole,
     DescriptionListDetailRole,
+    DescriptionListRole,
     DescriptionListTermRole,
     DetailsRole,
     DialogRole,
@@ -123,15 +120,19 @@ enum AccessibilityRole {
     MenuBarRole,
     MenuButtonRole,
     MenuItemRole,
+    MenuItemCheckBoxRole,
+    MenuItemRadioRole,
     MenuListOptionRole,
     MenuListPopupRole,
     MenuRole,
+    MeterRole,
     NavigationRole,
     NoneRole,
     NoteRole,
     OutlineRole,
     ParagraphRole,
     PopUpButtonRole,
+    PreRole,
     PresentationalRole,
     ProgressIndicatorRole,
     RadioButtonRole,
@@ -165,6 +166,7 @@ enum AccessibilityRole {
     TableRole,
     TextAreaRole,
     TextFieldRole,
+    TimeRole,
     TimerRole,
     ToggleButtonRole,
     ToolbarRole,
@@ -284,7 +286,7 @@ public:
     virtual ~AXObject();
 
     // After constructing an AXObject, it must be given a
-    // unique ID, then added to AXObjectCache, and finally init() must
+    // unique ID, then added to AXObjectCacheImpl, and finally init() must
     // be called last.
     void setAXObjectID(AXID axObjectID) { m_id = axObjectID; }
     virtual void init() { }
@@ -294,8 +296,8 @@ public:
     virtual void detach();
     virtual bool isDetached() const;
 
-    // The AXObjectCache that owns this object, and its unique ID within this cache.
-    AXObjectCache* axObjectCache() const;
+    // The AXObjectCacheImpl that owns this object, and its unique ID within this cache.
+    AXObjectCacheImpl* axObjectCache() const;
     AXID axObjectID() const { return m_id; }
 
     // Determine subclass type.
@@ -363,7 +365,7 @@ public:
     virtual bool isClickable() const;
     virtual bool isCollapsed() const { return false; }
     virtual bool isEnabled() const { return false; }
-    bool isExpanded() const;
+    virtual bool isExpanded() const { return false; }
     virtual bool isFocused() const { return false; }
     virtual bool isHovered() const { return false; }
     virtual bool isIndeterminate() const { return false; }
@@ -422,6 +424,7 @@ public:
     virtual float maxValueForRange() const { return 0.0f; }
     virtual float minValueForRange() const { return 0.0f; }
     virtual String stringValue() const { return String(); }
+    virtual const AtomicString& textInputType() const { return nullAtom; }
 
     // ARIA attributes.
     virtual AXObject* activeDescendant() const { return 0; }
@@ -577,6 +580,14 @@ protected:
     unsigned getLengthForTextRange() const { return text().length(); }
 
     bool m_detached;
+
+private:
+    // The following cached attribute values (the ones starting with m_cached*)
+    // are only valid if m_lastModificationCount matches AXObjectCacheImpl::modificationCount().
+    mutable int m_lastModificationCount;
+    mutable bool m_cachedIsIgnored;
+
+    void updateCachedAttributeValuesIfNeeded() const;
 };
 
 #define DEFINE_AX_OBJECT_TYPE_CASTS(thisType, predicate) \

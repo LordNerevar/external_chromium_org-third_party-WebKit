@@ -7,6 +7,7 @@ LOCAL_MODULE := third_party_WebKit_Source_bindings_core_v8_bindings_core_diction
 LOCAL_MODULE_STEM := bindings_core_dictionary_impl_generated
 LOCAL_MODULE_SUFFIX := .stamp
 LOCAL_MODULE_TARGET_ARCH := $(TARGET_$(GYP_VAR_PREFIX)ARCH)
+LOCAL_SDK_VERSION := 21
 gyp_intermediate_dir := $(call local-intermediates-dir,,$(GYP_VAR_PREFIX))
 gyp_shared_intermediate_dir := $(call intermediates-dir-for,GYP,shared,,,$(GYP_VAR_PREFIX))
 
@@ -22,13 +23,15 @@ $(gyp_shared_intermediate_dir)/blink/core/css/FontFaceDescriptors.cpp: gyp_var_p
 $(gyp_shared_intermediate_dir)/blink/core/css/FontFaceDescriptors.cpp: gyp_intermediate_dir := $(abspath $(gyp_intermediate_dir))
 $(gyp_shared_intermediate_dir)/blink/core/css/FontFaceDescriptors.cpp: gyp_shared_intermediate_dir := $(abspath $(gyp_shared_intermediate_dir))
 $(gyp_shared_intermediate_dir)/blink/core/css/FontFaceDescriptors.cpp: export PATH := $(subst $(ANDROID_BUILD_PATHS),,$(PATH))
-$(gyp_shared_intermediate_dir)/blink/core/css/FontFaceDescriptors.cpp: $(LOCAL_PATH)/third_party/WebKit/Source/core/css/FontFaceDescriptors.idl $(LOCAL_PATH)/third_party/WebKit/Source/core/dom/DOMPointInit.idl $(LOCAL_PATH)/third_party/WebKit/Source/core/dom/MutationObserverInit.idl $(LOCAL_PATH)/third_party/WebKit/Source/core/frame/ScrollOptions.idl $(LOCAL_PATH)/third_party/WebKit/Source/core/html/canvas/HitRegionOptions.idl $(LOCAL_PATH)/third_party/WebKit/Source/core/page/EventSourceInit.idl $(LOCAL_PATH)/third_party/WebKit/Source/core/testing/InternalDictionary.idl $(LOCAL_PATH)/third_party/ply/lex.py $(LOCAL_PATH)/third_party/ply/yacc.py $(LOCAL_PATH)/tools/idl_parser/idl_lexer.py $(LOCAL_PATH)/tools/idl_parser/idl_node.py $(LOCAL_PATH)/tools/idl_parser/idl_parser.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/blink_idl_lexer.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/blink_idl_parser.py $(gyp_shared_intermediate_dir)/blink/bindings/scripts/lextab.py $(gyp_shared_intermediate_dir)/blink/bindings/scripts/parsetab.pickle $(gyp_shared_intermediate_dir)/blink/bindings/scripts/cached_jinja_templates.stamp $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/idl_compiler.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/idl_definitions.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/idl_reader.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/idl_types.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/idl_validator.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/interface_dependency_resolver.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/code_generator_v8.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/v8_attributes.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/v8_callback_interface.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/v8_dictionary.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/v8_globals.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/v8_interface.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/v8_methods.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/v8_types.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/v8_utilities.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/IDLExtendedAttributes.txt $(gyp_shared_intermediate_dir)/blink/bindings/modules/InterfacesInfoModules.pickle $(GYP_TARGET_DEPENDENCIES)
+$(gyp_shared_intermediate_dir)/blink/core/css/FontFaceDescriptors.cpp: $(LOCAL_PATH)/third_party/WebKit/Source/core/css/FontFaceDescriptors.idl $(LOCAL_PATH)/third_party/WebKit/Source/core/dom/DOMPointInit.idl $(LOCAL_PATH)/third_party/WebKit/Source/core/dom/ElementRegistrationOptions.idl $(LOCAL_PATH)/third_party/WebKit/Source/core/dom/MutationObserverInit.idl $(LOCAL_PATH)/third_party/WebKit/Source/core/frame/ScrollOptions.idl $(LOCAL_PATH)/third_party/WebKit/Source/core/html/canvas/HitRegionOptions.idl $(LOCAL_PATH)/third_party/WebKit/Source/core/page/EventSourceInit.idl $(LOCAL_PATH)/third_party/WebKit/Source/core/testing/InternalDictionary.idl $(LOCAL_PATH)/third_party/ply/lex.py $(LOCAL_PATH)/third_party/ply/yacc.py $(LOCAL_PATH)/tools/idl_parser/idl_lexer.py $(LOCAL_PATH)/tools/idl_parser/idl_node.py $(LOCAL_PATH)/tools/idl_parser/idl_parser.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/blink_idl_lexer.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/blink_idl_parser.py $(gyp_shared_intermediate_dir)/blink/bindings/scripts/lextab.py $(gyp_shared_intermediate_dir)/blink/bindings/scripts/parsetab.pickle $(gyp_shared_intermediate_dir)/blink/bindings/scripts/cached_jinja_templates.stamp $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/idl_compiler.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/idl_definitions.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/idl_reader.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/idl_types.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/idl_validator.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/interface_dependency_resolver.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/code_generator_v8.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/v8_attributes.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/v8_callback_interface.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/v8_dictionary.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/v8_globals.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/v8_interface.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/v8_methods.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/v8_types.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/scripts/v8_utilities.py $(LOCAL_PATH)/third_party/WebKit/Source/bindings/IDLExtendedAttributes.txt $(gyp_shared_intermediate_dir)/blink/bindings/modules/InterfacesInfoModules.pickle $(GYP_TARGET_DEPENDENCIES)
 	@echo "Gyp action: Generating core IDL dictionary impl classes ($@)"
 	$(hide)cd $(gyp_local_path)/third_party/WebKit/Source/bindings/core/v8; mkdir -p $(gyp_shared_intermediate_dir)/blink/core/testing $(gyp_shared_intermediate_dir)/blink/core/page $(gyp_shared_intermediate_dir)/blink/core/css $(gyp_shared_intermediate_dir)/blink/core/frame $(gyp_shared_intermediate_dir)/blink/core/dom $(gyp_shared_intermediate_dir)/blink/core/html/canvas; python ../../scripts/idl_compiler.py --cache-dir "$(gyp_shared_intermediate_dir)/blink/bindings/scripts" --output-dir "$(gyp_shared_intermediate_dir)/blink/" --interfaces-info "$(gyp_shared_intermediate_dir)/blink/bindings/modules/InterfacesInfoModules.pickle" --write-file-only-if-changed 0 --generate-dictionary-impl core_dictionary_idl_files_list.tmp
 
 $(gyp_shared_intermediate_dir)/blink/core/css/FontFaceDescriptors.h: $(gyp_shared_intermediate_dir)/blink/core/css/FontFaceDescriptors.cpp ;
 $(gyp_shared_intermediate_dir)/blink/core/dom/DOMPointInit.cpp: $(gyp_shared_intermediate_dir)/blink/core/css/FontFaceDescriptors.cpp ;
 $(gyp_shared_intermediate_dir)/blink/core/dom/DOMPointInit.h: $(gyp_shared_intermediate_dir)/blink/core/css/FontFaceDescriptors.cpp ;
+$(gyp_shared_intermediate_dir)/blink/core/dom/ElementRegistrationOptions.cpp: $(gyp_shared_intermediate_dir)/blink/core/css/FontFaceDescriptors.cpp ;
+$(gyp_shared_intermediate_dir)/blink/core/dom/ElementRegistrationOptions.h: $(gyp_shared_intermediate_dir)/blink/core/css/FontFaceDescriptors.cpp ;
 $(gyp_shared_intermediate_dir)/blink/core/dom/MutationObserverInit.cpp: $(gyp_shared_intermediate_dir)/blink/core/css/FontFaceDescriptors.cpp ;
 $(gyp_shared_intermediate_dir)/blink/core/dom/MutationObserverInit.h: $(gyp_shared_intermediate_dir)/blink/core/css/FontFaceDescriptors.cpp ;
 $(gyp_shared_intermediate_dir)/blink/core/frame/ScrollOptions.cpp: $(gyp_shared_intermediate_dir)/blink/core/css/FontFaceDescriptors.cpp ;
@@ -46,6 +49,8 @@ GYP_GENERATED_OUTPUTS := \
 	$(gyp_shared_intermediate_dir)/blink/core/css/FontFaceDescriptors.h \
 	$(gyp_shared_intermediate_dir)/blink/core/dom/DOMPointInit.cpp \
 	$(gyp_shared_intermediate_dir)/blink/core/dom/DOMPointInit.h \
+	$(gyp_shared_intermediate_dir)/blink/core/dom/ElementRegistrationOptions.cpp \
+	$(gyp_shared_intermediate_dir)/blink/core/dom/ElementRegistrationOptions.h \
 	$(gyp_shared_intermediate_dir)/blink/core/dom/MutationObserverInit.cpp \
 	$(gyp_shared_intermediate_dir)/blink/core/dom/MutationObserverInit.h \
 	$(gyp_shared_intermediate_dir)/blink/core/frame/ScrollOptions.cpp \
@@ -128,12 +133,6 @@ MY_DEFS_Debug := \
 	'-DCLD_VERSION=1' \
 	'-DENABLE_PRINTING=1' \
 	'-DENABLE_MANAGED_USERS=1' \
-	'-DDATA_REDUCTION_FALLBACK_HOST="http://compress.googlezip.net:80/"' \
-	'-DDATA_REDUCTION_DEV_HOST="https://proxy-dev.googlezip.net:443/"' \
-	'-DDATA_REDUCTION_DEV_FALLBACK_HOST="http://proxy-dev.googlezip.net:80/"' \
-	'-DSPDY_PROXY_AUTH_ORIGIN="https://proxy.googlezip.net:443/"' \
-	'-DDATA_REDUCTION_PROXY_PROBE_URL="http://check.googlezip.net/connect"' \
-	'-DDATA_REDUCTION_PROXY_WARMUP_URL="http://www.gstatic.com/generate_204"' \
 	'-DVIDEO_HOLE=1' \
 	'-DENABLE_LOAD_COMPLETION_HACKS=1' \
 	'-DUSE_OPENSSL=1' \
@@ -150,10 +149,7 @@ MY_DEFS_Debug := \
 
 # Include paths placed before CFLAGS/CPPFLAGS
 LOCAL_C_INCLUDES_Debug := \
-	$(gyp_shared_intermediate_dir) \
-	$(PWD)/frameworks/wilhelm/include \
-	$(PWD)/bionic \
-	$(PWD)/external/stlport/stlport
+	$(gyp_shared_intermediate_dir)
 
 
 # Flags passed to only C++ (and not C) files.
@@ -232,12 +228,6 @@ MY_DEFS_Release := \
 	'-DCLD_VERSION=1' \
 	'-DENABLE_PRINTING=1' \
 	'-DENABLE_MANAGED_USERS=1' \
-	'-DDATA_REDUCTION_FALLBACK_HOST="http://compress.googlezip.net:80/"' \
-	'-DDATA_REDUCTION_DEV_HOST="https://proxy-dev.googlezip.net:443/"' \
-	'-DDATA_REDUCTION_DEV_FALLBACK_HOST="http://proxy-dev.googlezip.net:80/"' \
-	'-DSPDY_PROXY_AUTH_ORIGIN="https://proxy.googlezip.net:443/"' \
-	'-DDATA_REDUCTION_PROXY_PROBE_URL="http://check.googlezip.net/connect"' \
-	'-DDATA_REDUCTION_PROXY_WARMUP_URL="http://www.gstatic.com/generate_204"' \
 	'-DVIDEO_HOLE=1' \
 	'-DENABLE_LOAD_COMPLETION_HACKS=1' \
 	'-DUSE_OPENSSL=1' \
@@ -254,10 +244,7 @@ MY_DEFS_Release := \
 
 # Include paths placed before CFLAGS/CPPFLAGS
 LOCAL_C_INCLUDES_Release := \
-	$(gyp_shared_intermediate_dir) \
-	$(PWD)/frameworks/wilhelm/include \
-	$(PWD)/bionic \
-	$(PWD)/external/stlport/stlport
+	$(gyp_shared_intermediate_dir)
 
 
 # Flags passed to only C++ (and not C) files.
@@ -281,6 +268,10 @@ LOCAL_C_INCLUDES := $(GYP_COPIED_SOURCE_ORIGIN_DIRS) $(LOCAL_C_INCLUDES_$(GYP_CO
 LOCAL_CPPFLAGS := $(LOCAL_CPPFLAGS_$(GYP_CONFIGURATION))
 LOCAL_ASFLAGS := $(LOCAL_CFLAGS)
 ### Rules for final target.
+### Set directly by aosp_build_settings.
+LOCAL_CLANG := false
+LOCAL_NDK_STL_VARIANT := stlport_static
+
 # Add target alias to "gyp_all_modules" target.
 .PHONY: gyp_all_modules
 gyp_all_modules: third_party_WebKit_Source_bindings_core_v8_bindings_core_dictionary_impl_generated_gyp

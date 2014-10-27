@@ -43,7 +43,7 @@ WebInspector.AuditFormatters.Registry = {
      */
     text: function(text)
     {
-        return document.createTextNode(text);
+        return createTextNode(text);
     },
 
     /**
@@ -52,7 +52,7 @@ WebInspector.AuditFormatters.Registry = {
      */
     snippet: function(snippetText)
     {
-        var div = document.createElement("div");
+        var div = createElement("div");
         div.textContent = snippetText;
         div.className = "source-code";
         return div;
@@ -63,7 +63,7 @@ WebInspector.AuditFormatters.Registry = {
      */
     concat: function()
     {
-        var parent = document.createElement("span");
+        var parent = createElement("span");
         for (var arg = 0; arg < arguments.length; ++arg)
             parent.appendChild(WebInspector.auditFormatters.apply(arguments[arg]));
         return parent;
@@ -77,13 +77,7 @@ WebInspector.AuditFormatters.Registry = {
      */
     url: function(url, displayText, allowExternalNavigation)
     {
-        var a = document.createElement("a");
-        a.href = sanitizeHref(url);
-        a.title = url;
-        a.textContent = displayText || url;
-        if (allowExternalNavigation)
-            a.target = "_blank";
-        return a;
+        return WebInspector.createAnchor(url, displayText, !allowExternalNavigation);
     },
 
     /**
@@ -94,7 +88,7 @@ WebInspector.AuditFormatters.Registry = {
     resourceLink: function(url, line)
     {
         // FIXME: use WebInspector.Linkifier
-        return WebInspector.linkifyResourceAsNode(url, line, "console-message-url webkit-html-resource-link");
+        return WebInspector.linkifyResourceAsNode(url, line, undefined, "console-message-url webkit-html-resource-link");
     }
 };
 
