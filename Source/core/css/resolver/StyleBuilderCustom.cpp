@@ -43,6 +43,7 @@
 #include "core/StyleBuilderFunctions.h"
 #include "core/StylePropertyShorthand.h"
 #include "core/css/BasicShapeFunctions.h"
+#include "core/css/CSSContentDistributionValue.h"
 #include "core/css/CSSCursorImageValue.h"
 #include "core/css/CSSFontValue.h"
 #include "core/css/CSSGradientValue.h"
@@ -105,7 +106,7 @@ static inline bool isValidVisitedLinkProperty(CSSPropertyID id)
 
 void StyleBuilder::applyProperty(CSSPropertyID id, StyleResolverState& state, CSSValue* value)
 {
-    ASSERT_WITH_MESSAGE(!isExpandedShorthand(id), "Shorthand property id = %d wasn't expanded at parsing time", id);
+    ASSERT_WITH_MESSAGE(!isShorthandProperty(id), "Shorthand property id = %d wasn't expanded at parsing time", id);
 
     bool isInherit = state.parentNode() && value->isInheritedValue();
     bool isInitial = value->isInitialValue() || (!state.parentNode() && value->isInheritedValue());
@@ -186,6 +187,31 @@ void StyleBuilderFunctions::applyValueCSSPropertyJustifyItems(StyleResolverState
     } else {
         state.style()->setJustifyItems(*primitiveValue);
     }
+}
+
+void StyleBuilderFunctions::applyInitialCSSPropertyJustifyContent(StyleResolverState& state)
+{
+    state.style()->setJustifyContent(RenderStyle::initialJustifyContent());
+    state.style()->setJustifyContentOverflowAlignment(RenderStyle::initialJustifyContentOverflowAlignment());
+    state.style()->setJustifyContentDistribution(RenderStyle::initialJustifyContentDistribution());
+}
+
+void StyleBuilderFunctions::applyInheritCSSPropertyJustifyContent(StyleResolverState& state)
+{
+    state.style()->setJustifyContent(state.parentStyle()->justifyContent());
+    state.style()->setJustifyContentOverflowAlignment(state.parentStyle()->justifyContentOverflowAlignment());
+    state.style()->setJustifyContentDistribution(state.parentStyle()->justifyContentDistribution());
+}
+
+void StyleBuilderFunctions::applyValueCSSPropertyJustifyContent(StyleResolverState& state, CSSValue* value)
+{
+    CSSContentDistributionValue* contentValue = toCSSContentDistributionValue(value);
+    if (contentValue->distribution()->getValueID() != CSSValueInvalid)
+        state.style()->setJustifyContentDistribution(*contentValue->distribution());
+    if (contentValue->position()->getValueID() != CSSValueInvalid)
+        state.style()->setJustifyContent(*contentValue->position());
+    if (contentValue->overflow()->getValueID() != CSSValueInvalid)
+        state.style()->setJustifyContentOverflowAlignment(*contentValue->overflow());
 }
 
 void StyleBuilderFunctions::applyInitialCSSPropertyCursor(StyleResolverState& state)
@@ -840,28 +866,6 @@ void StyleBuilderFunctions::applyValueCSSPropertyContent(StyleResolverState& sta
     }
     if (!didSet)
         state.style()->clearContent();
-}
-
-void StyleBuilderFunctions::applyInitialCSSPropertyFont(StyleResolverState&)
-{
-    ASSERT_NOT_REACHED();
-}
-
-void StyleBuilderFunctions::applyInheritCSSPropertyFont(StyleResolverState&)
-{
-    ASSERT_NOT_REACHED();
-}
-
-void StyleBuilderFunctions::applyValueCSSPropertyFont(StyleResolverState& state, CSSValue* value)
-{
-    // Only System Font identifiers should come through this method
-    // all other values should have been handled when the shorthand
-    // was expanded by the parser.
-    // FIXME: System Font identifiers should not hijack this
-    // short-hand CSSProperty like this (crbug.com/353932)
-    state.style()->setLineHeight(RenderStyle::initialLineHeight());
-    state.setLineHeightValue(0);
-    state.fontBuilder().fromSystemFont(toCSSPrimitiveValue(value)->getValueID(), state.style()->effectiveZoom());
 }
 
 void StyleBuilderFunctions::applyValueCSSPropertyWebkitLocale(StyleResolverState& state, CSSValue* value)

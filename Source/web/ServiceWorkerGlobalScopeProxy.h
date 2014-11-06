@@ -42,6 +42,7 @@ namespace blink {
 
 class ConsoleMessage;
 class Document;
+class ServiceWorkerGlobalScope;
 class WebEmbeddedWorkerImpl;
 class WebServiceWorkerContextClient;
 class WebServiceWorkerRequest;
@@ -79,6 +80,7 @@ public:
     virtual void reportException(const String& errorMessage, int lineNumber, int columnNumber, const String& sourceURL) override;
     virtual void reportConsoleMessage(PassRefPtrWillBeRawPtr<ConsoleMessage>) override;
     virtual void postMessageToPageInspector(const String&) override;
+    virtual void didEvaluateWorkerScript(bool success) override;
     virtual void workerGlobalScopeStarted(WorkerGlobalScope*) override;
     virtual void workerGlobalScopeClosed() override;
     virtual void willDestroyWorkerGlobalScope() override;
@@ -92,7 +94,7 @@ private:
 
     WebServiceWorkerContextClient& m_client;
 
-    WorkerGlobalScope* m_workerGlobalScope;
+    ServiceWorkerGlobalScope* m_workerGlobalScope;
 };
 
 } // namespace blink

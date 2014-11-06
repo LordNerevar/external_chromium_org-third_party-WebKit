@@ -282,9 +282,6 @@ WebInspector.ConsoleViewMessage.prototype = {
     _linkifyCallFrame: function(callFrame)
     {
         var target = this._target();
-        if (!this._linkifier)
-            return null;
-
         return this._linkifier.linkifyConsoleCallFrame(target, callFrame, "console-message-url");
     },
 
@@ -386,7 +383,7 @@ WebInspector.ConsoleViewMessage.prototype = {
         for (var i = 0; i < parameters.length; ++i) {
             // Inline strings when formatting.
             if (shouldFormatMessage && parameters[i].type === "string")
-                formattedResult.appendChild(this._linkifier.linkifyStringAsFragment(this._target(), parameters[i].description));
+                formattedResult.appendChild(WebInspector.linkifyStringAsFragment(parameters[i].description));
             else
                 formattedResult.appendChild(this._formatParameter(parameters[i], false, true));
             if (i < parameters.length - 1)
@@ -716,7 +713,7 @@ WebInspector.ConsoleViewMessage.prototype = {
     {
         var span = createElement("span");
         span.className = "console-formatted-string source-code";
-        span.appendChild(this._linkifier.linkifyStringAsFragment(this._target(), output.description || ""));
+        span.appendChild(WebInspector.linkifyStringAsFragment(output.description || ""));
 
         // Make black quotes.
         elem.classList.remove("console-formatted-string");
@@ -918,15 +915,12 @@ WebInspector.ConsoleViewMessage.prototype = {
 
         formatters._ = bypassFormatter;
 
-        /**
-         * @this {WebInspector.ConsoleViewMessage}
-         */
         function append(a, b)
         {
             if (b instanceof Node)
                 a.appendChild(b);
             else if (typeof b !== "undefined") {
-                var toAppend = this._linkifier.linkifyStringAsFragment(this._target(), String(b));
+                var toAppend = WebInspector.linkifyStringAsFragment(String(b));
                 if (currentStyle) {
                     var wrapper = createElement('span');
                     for (var key in currentStyle)
@@ -940,7 +934,7 @@ WebInspector.ConsoleViewMessage.prototype = {
         }
 
         // String.format does treat formattedResult like a Builder, result is an object.
-        return String.format(format, parameters, formatters, formattedResult, append.bind(this));
+        return String.format(format, parameters, formatters, formattedResult, append);
     },
 
     clearHighlight: function()

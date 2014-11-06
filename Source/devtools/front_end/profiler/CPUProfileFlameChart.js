@@ -129,7 +129,7 @@ WebInspector.CPUFlameChartDataProvider.prototype = {
     },
 
     /**
-     * @return {?WebInspector.FlameChart.TimelineData}
+     * @return {!WebInspector.FlameChart.TimelineData}
      */
     _calculateTimelineData: function()
     {
@@ -259,7 +259,7 @@ WebInspector.CPUFlameChartDataProvider.prototype = {
 
     /**
      * @param {number} entryIndex
-     * @return {?string}
+     * @return {string}
      */
     entryTitle: function(entryIndex)
     {
@@ -537,6 +537,14 @@ WebInspector.CPUProfileFlameChart.OverviewPane.prototype = {
     requestWindowTimes: function(windowStartTime, windowEndTime)
     {
         this._selectRange(windowStartTime, windowEndTime);
+    },
+
+    /**
+     * @param {number} startTime
+     * @param {number} endTime
+     */
+    updateBoxSelection: function(startTime, endTime)
+    {
     },
 
     /**

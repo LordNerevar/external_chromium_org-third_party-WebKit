@@ -52,6 +52,7 @@ public:
     BLINK_EXPORT static void enableDecodeToYUV(bool);
 
     BLINK_EXPORT static void enableDisplayList2dCanvas(bool);
+    BLINK_EXPORT static void forceDisplayList2dCanvas(bool);
 
     BLINK_EXPORT static void enableEncryptedMedia(bool);
     BLINK_EXPORT static bool isEncryptedMediaEnabled();
@@ -104,6 +105,8 @@ public:
     BLINK_EXPORT static void enableServiceWorker(bool);
 
     BLINK_EXPORT static void enableSessionStorage(bool);
+
+    BLINK_EXPORT static void enableSlimmingPaint(bool);
 
     BLINK_EXPORT static void enableTouch(bool);
 

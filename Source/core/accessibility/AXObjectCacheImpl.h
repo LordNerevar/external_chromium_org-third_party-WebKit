@@ -73,6 +73,9 @@ public:
     virtual void checkedStateChanged(Node*) override;
     virtual void selectedChildrenChanged(Node*) override;
 
+    // will only return the AXObject if it already exists
+    virtual AXObject* get(Node*);
+
     virtual void remove(RenderObject*) override;
     virtual void remove(Node*) override;
     virtual void remove(Widget*) override;
@@ -108,9 +111,9 @@ public:
     virtual void handleScrollPositionChanged(RenderObject*) override;
 
     // Called when scroll bars are added / removed (as the view resizes).
-    void handleScrollbarUpdate(FrameView*);
-    void handleLayoutComplete(RenderObject*);
-    void handleScrolledToAnchor(const Node* anchorNode);
+    void handleScrollbarUpdate(FrameView*) override;
+    void handleLayoutComplete(RenderObject*) override;
+    void handleScrolledToAnchor(const Node* anchorNode) override;
 
     // Returns the root object for the entire document.
     AXObject* rootObject();
@@ -125,7 +128,6 @@ public:
     // will only return the AXObject if it already exists
     AXObject* get(RenderObject*);
     AXObject* get(Widget*);
-    AXObject* get(Node*);
     AXObject* get(AbstractInlineTextBox*);
 
     void remove(AXID);

@@ -77,6 +77,7 @@ import v8_dictionary
 from v8_globals import includes, interfaces
 import v8_interface
 import v8_types
+import v8_union
 from v8_utilities import capitalize, cpp_name, conditional_string, v8_class_name
 from utilities import KNOWN_COMPONENTS, idl_filename_to_component, is_valid_component_dependency
 
@@ -102,6 +103,16 @@ def render_template(include_paths, header_template, cpp_template,
     return header_text, cpp_text
 
 
+def set_global_type_info(interfaces_info):
+    idl_types.set_ancestors(interfaces_info['ancestors'])
+    IdlType.set_callback_interfaces(interfaces_info['callback_interfaces'])
+    IdlType.set_dictionaries(interfaces_info['dictionaries'])
+    IdlType.set_implemented_as_interfaces(interfaces_info['implemented_as_interfaces'])
+    IdlType.set_garbage_collected_types(interfaces_info['garbage_collected_interfaces'])
+    IdlType.set_will_be_garbage_collected_types(interfaces_info['will_be_garbage_collected_interfaces'])
+    v8_types.set_component_dirs(interfaces_info['component_dirs'])
+
+
 class CodeGeneratorBase(object):
     """Base class for v8 bindings generator and IDL dictionary impl generator"""
 
@@ -110,15 +121,7 @@ class CodeGeneratorBase(object):
         self.interfaces_info = interfaces_info
         self.jinja_env = initialize_jinja_env(cache_dir)
         self.output_dir = output_dir
-
-        # Set global type info
-        idl_types.set_ancestors(interfaces_info['ancestors'])
-        IdlType.set_callback_interfaces(interfaces_info['callback_interfaces'])
-        IdlType.set_dictionaries(interfaces_info['dictionaries'])
-        IdlType.set_implemented_as_interfaces(interfaces_info['implemented_as_interfaces'])
-        IdlType.set_garbage_collected_types(interfaces_info['garbage_collected_interfaces'])
-        IdlType.set_will_be_garbage_collected_types(interfaces_info['will_be_garbage_collected_interfaces'])
-        v8_types.set_component_dirs(interfaces_info['component_dirs'])
+        set_global_type_info(interfaces_info)
 
     def generate_code(self, definitions, definition_name):
         """Returns .h/.cpp code as ((path, content)...)."""
@@ -241,6 +244,44 @@ class CodeGeneratorDictionaryImpl(CodeGeneratorBase):
             include_paths, header_template, cpp_template, template_context)
         header_path, cpp_path = self.output_paths(
             definition_name, interface_info)
+        return (
+            (header_path, header_text),
+            (cpp_path, cpp_text),
+        )
+
+
+class CodeGeneratorUnionType(object):
+    """Generates union type container classes.
+    This generator is different from CodeGeneratorV8 and
+    CodeGeneratorDictionaryImpl. It assumes that all union types are already
+    collected. It doesn't process idl files directly.
+    """
+    def __init__(self, interfaces_info, cache_dir, output_dir, target_component):
+        self.interfaces_info = interfaces_info
+        self.jinja_env = initialize_jinja_env(cache_dir)
+        self.output_dir = output_dir
+        self.target_component = target_component
+        set_global_type_info(interfaces_info)
+
+    def generate_code(self, union_types):
+        if not union_types:
+            return ()
+        header_template = self.jinja_env.get_template('union.h')
+        cpp_template = self.jinja_env.get_template('union.cpp')
+        template_context = v8_union.union_context(
+            sorted(union_types, key=lambda union_type: union_type.name),
+            self.interfaces_info)
+        template_context['code_generator'] = module_pyname
+        capitalized_component = self.target_component.capitalize()
+        template_context['header_filename'] = 'bindings/%s/v8/UnionTypes%s.h' % (
+            self.target_component, capitalized_component)
+        template_context['macro_guard'] = 'UnionType%s_h' % capitalized_component
+        header_text = header_template.render(template_context)
+        cpp_text = cpp_template.render(template_context)
+        header_path = posixpath.join(self.output_dir,
+                                     'UnionTypes%s.h' % capitalized_component)
+        cpp_path = posixpath.join(self.output_dir,
+                                  'UnionTypes%s.cpp' % capitalized_component)
         return (
             (header_path, header_text),
             (cpp_path, cpp_text),

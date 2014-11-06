@@ -72,6 +72,7 @@ class Range;
 class SerializedScriptValue;
 class ShadowRoot;
 class TypeConversions;
+class UnionTypesTest;
 template <typename NodeType> class StaticNodeTypeList;
 typedef StaticNodeTypeList<Node> StaticNodeList;
 
@@ -218,7 +219,6 @@ public:
     String elementLayerTreeAsText(Element*, ExceptionState&) const;
 
     bool scrollsWithRespectTo(Element*, Element*, ExceptionState&);
-    bool isUnclippedDescendant(Element*, ExceptionState&);
 
     String scrollingStateTreeAsText(Document*) const;
     String mainThreadScrollingReasons(Document*, ExceptionState&) const;
@@ -263,6 +263,7 @@ public:
     TypeConversions* typeConversions() const;
     PrivateScriptTest* privateScriptTest() const;
     DictionaryTest* dictionaryTest() const;
+    UnionTypesTest* unionTypesTest() const;
 
     Vector<String> getReferencedFilePaths() const;
 

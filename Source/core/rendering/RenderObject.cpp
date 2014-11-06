@@ -137,6 +137,9 @@ COMPILE_ASSERT(sizeof(RenderObject) == sizeof(SameSizeAsRenderObject), RenderObj
 
 bool RenderObject::s_affectsParentBlock = false;
 
+typedef HashMap<const RenderObject*, LayoutRect> SelectionPaintInvalidationMap;
+static SelectionPaintInvalidationMap* selectionPaintInvalidationMap = 0;
+
 #if !ENABLE(OILPAN)
 void* RenderObject::operator new(size_t sz)
 {
@@ -1241,16 +1244,40 @@ static PassRefPtr<TraceEvent::ConvertableToTraceFormat> jsonObjectForOldAndNewRe
     return value;
 }
 
-void RenderObject::invalidateSelectionIfNeeded(const RenderLayerModelObject& paintInvalidationContainer)
+LayoutRect RenderObject::previousSelectionRectForPaintInvalidation() const
+{
+    ASSERT(shouldInvalidateSelection());
+
+    if (!selectionPaintInvalidationMap)
+        return LayoutRect();
+
+    return selectionPaintInvalidationMap->get(this);
+}
+
+void RenderObject::setPreviousSelectionRectForPaintInvalidation(const LayoutRect& selectionRect)
+{
+    if (!selectionPaintInvalidationMap)
+        selectionPaintInvalidationMap = new SelectionPaintInvalidationMap();
+
+    selectionPaintInvalidationMap->set(this, selectionRect);
+}
+
+void RenderObject::invalidateSelectionIfNeeded(const RenderLayerModelObject& paintInvalidationContainer, PaintInvalidationReason invalidationReason)
 {
     if (!shouldInvalidateSelection())
         return;
 
-    LayoutRect selection = selectionRectForPaintInvalidation(&paintInvalidationContainer);
-    // FIXME: groupedMapping() leaks the squashing abstraction. See RenderBlockSelectionInfo for more details.
+    LayoutRect oldSelectionRect = previousSelectionRectForPaintInvalidation();
+    LayoutRect previousSelectionRectForPaintInvalidation = selectionRectForPaintInvalidation(&paintInvalidationContainer);
+    // FIXME: groupedMapping() leaks the squashing abstraction.
     if (paintInvalidationContainer.layer()->groupedMapping())
-        RenderLayer::mapRectToPaintBackingCoordinates(&paintInvalidationContainer, selection);
-    invalidatePaintUsingContainer(&paintInvalidationContainer, selection, PaintInvalidationSelection);
+        RenderLayer::mapRectToPaintBackingCoordinates(&paintInvalidationContainer, previousSelectionRectForPaintInvalidation);
+    setPreviousSelectionRectForPaintInvalidation(previousSelectionRectForPaintInvalidation);
+
+    if (view()->doingFullPaintInvalidation() || isFullPaintInvalidationReason(invalidationReason))
+        return;
+
+    fullyInvalidatePaint(paintInvalidationContainer, PaintInvalidationSelection, oldSelectionRect, previousSelectionRectForPaintInvalidation);
 }
 
 PaintInvalidationReason RenderObject::invalidatePaintIfNeeded(const PaintInvalidationState& paintInvalidationState, const RenderLayerModelObject& paintInvalidationContainer)
@@ -1268,6 +1295,10 @@ PaintInvalidationReason RenderObject::invalidatePaintIfNeeded(const PaintInvalid
 
     PaintInvalidationReason invalidationReason = paintInvalidationReason(paintInvalidationContainer, oldBounds, oldLocation, newBounds, newLocation);
 
+    // We need to invalidate the selection before checking for whether we are doing a full invalidation.
+    // This is because we need to update the old rect regardless.
+    invalidateSelectionIfNeeded(paintInvalidationContainer, invalidationReason);
+
     // If we are set to do a full paint invalidation that means the RenderView will issue
     // paint invalidations. We can then skip issuing of paint invalidations for the child
     // renderers as they'll be covered by the RenderView.
@@ -1277,8 +1308,6 @@ PaintInvalidationReason RenderObject::invalidatePaintIfNeeded(const PaintInvalid
     TRACE_EVENT2(TRACE_DISABLED_BY_DEFAULT("blink.invalidation"), "RenderObject::invalidatePaintIfNeeded()",
         "object", this->debugName().ascii(),
         "info", jsonObjectForOldAndNewRects(oldBounds, oldLocation, newBounds, newLocation));
-
-    invalidateSelectionIfNeeded(paintInvalidationContainer);
 
     if (invalidationReason == PaintInvalidationNone)
         return invalidationReason;
@@ -1392,6 +1421,13 @@ void RenderObject::mapRectToPaintInvalidationBacking(const RenderLayerModelObjec
 {
     if (paintInvalidationContainer == this)
         return;
+
+    if (paintInvalidationState && paintInvalidationState->canMapToContainer(paintInvalidationContainer)) {
+        rect.move(paintInvalidationState->paintOffset());
+        if (paintInvalidationState->isClipped())
+            rect.intersect(paintInvalidationState->clipRect());
+        return;
+    }
 
     if (RenderObject* o = parent()) {
         if (o->isRenderBlockFlow()) {
@@ -1570,9 +1606,11 @@ StyleDifference RenderObject::adjustStyleDifference(StyleDifference diff) const
             diff.setNeedsPaintInvalidationLayer();
     }
 
-    if (diff.textOrColorChanged() && !diff.needsPaintInvalidation()
-        && hasImmediateNonWhitespaceTextChildOrPropertiesDependentOnColor())
-        diff.setNeedsPaintInvalidationObject();
+    if (diff.textOrColorChanged() && !diff.needsPaintInvalidation()) {
+        if (style()->hasBorder() || style()->hasOutline()
+            || (isText() && !toRenderText(this)->isAllCollapsibleWhitespace()))
+            diff.setNeedsPaintInvalidationObject();
+    }
 
     // The answer to layerTypeRequired() for plugins, iframes, and canvas can change without the actual
     // style changing, since it depends on whether we decide to composite these elements. When the
@@ -1613,19 +1651,6 @@ void RenderObject::setPseudoStyle(PassRefPtr<RenderStyle> pseudoStyle)
     }
 
     setStyle(pseudoStyle);
-}
-
-inline bool RenderObject::hasImmediateNonWhitespaceTextChildOrPropertiesDependentOnColor() const
-{
-    if (style()->hasBorder() || style()->hasOutline())
-        return true;
-    for (const RenderObject* r = slowFirstChild(); r; r = r->nextSibling()) {
-        if (r->isText() && !toRenderText(r)->isAllCollapsibleWhitespace())
-            return true;
-        if (r->style()->hasOutline() || r->style()->hasBorder())
-            return true;
-    }
-    return false;
 }
 
 void RenderObject::markContainingBlocksForOverflowRecalc()
@@ -1672,15 +1697,15 @@ void RenderObject::setStyle(PassRefPtr<RenderStyle> style)
 
     updateShapeImage(oldStyle ? oldStyle->shapeOutside() : 0, m_style->shapeOutside());
 
-    bool doesNotNeedLayout = !m_parent || isText();
+    bool doesNotNeedLayoutOrPaintInvalidation = !m_parent;
 
     styleDidChange(diff, oldStyle.get());
 
     // FIXME: |this| might be destroyed here. This can currently happen for a RenderTextFragment when
     // its first-letter block gets an update in RenderTextFragment::styleDidChange. For RenderTextFragment(s),
-    // we will safely bail out with the doesNotNeedLayout flag. We might want to broaden this condition
-    // in the future as we move renderer changes out of layout and into style changes.
-    if (doesNotNeedLayout)
+    // we will safely bail out with the doesNotNeedLayoutOrPaintInvalidation flag. We might want to broaden
+    // this condition in the future as we move renderer changes out of layout and into style changes.
+    if (doesNotNeedLayoutOrPaintInvalidation)
         return;
 
     // Now that the layer (if any) has been updated, we need to adjust the diff again,
@@ -2348,6 +2373,9 @@ void RenderObject::willBeDestroyed()
 
     setAncestorLineBoxDirty(false);
 
+    if (selectionPaintInvalidationMap)
+        selectionPaintInvalidationMap->remove(this);
+
     clearLayoutRootIfNeeded();
 }
 
@@ -2374,6 +2402,9 @@ void RenderObject::insertedIntoTree()
 
     if (!isFloating() && parent()->childrenInline())
         parent()->dirtyLinesFromChangedChild(this);
+
+    if (RenderFlowThread* flowThread = parent()->flowThreadContainingBlock())
+        flowThread->flowThreadDescendantWasInserted(this);
 }
 
 void RenderObject::willBeRemovedFromTree()
@@ -2423,7 +2454,6 @@ void RenderObject::removeFromRenderFlowThreadRecursive(RenderFlowThread* renderF
         for (RenderObject* child = children->firstChild(); child; child = child->nextSibling())
             child->removeFromRenderFlowThreadRecursive(renderFlowThread);
     }
-
     setFlowThreadState(NotInsideFlowThread);
 }
 
@@ -3054,20 +3084,32 @@ bool RenderObject::isRelayoutBoundaryForInspector() const
     return objectIsRelayoutBoundary(this);
 }
 
+static PaintInvalidationReason documentLifecycleBasedPaintInvalidationReason(const DocumentLifecycle& documentLifecycle)
+{
+    switch (documentLifecycle.state()) {
+    case DocumentLifecycle::InStyleRecalc:
+        return PaintInvalidationStyleChange;
+    case DocumentLifecycle::InPreLayout:
+    case DocumentLifecycle::InPerformLayout:
+    case DocumentLifecycle::AfterPerformLayout:
+        return PaintInvalidationForcedByLayout;
+    case DocumentLifecycle::InCompositingUpdate:
+        return PaintInvalidationCompositingUpdate;
+    default:
+        return PaintInvalidationFull;
+    }
+}
+
 void RenderObject::setShouldDoFullPaintInvalidation(PaintInvalidationReason reason)
 {
     // Only full invalidation reasons are allowed.
     ASSERT(isFullPaintInvalidationReason(reason));
 
-    // RenderText objects don't know how to invalidate paint for themselves, since they don't know how to compute their bounds.
-    // Instead the parent fully invalidate when any text needs full paint invalidation.
-    if (isText()) {
-        parent()->setShouldDoFullPaintInvalidation(reason);
-        return;
-    }
-
-    if (m_bitfields.fullPaintInvalidationReason() == PaintInvalidationNone)
+    if (m_bitfields.fullPaintInvalidationReason() == PaintInvalidationNone) {
+        if (reason == PaintInvalidationFull)
+            reason = documentLifecycleBasedPaintInvalidationReason(document().lifecycle());
         m_bitfields.setFullPaintInvalidationReason(reason);
+    }
 
     ASSERT(document().lifecycle().state() != DocumentLifecycle::InPaintInvalidation);
     frame()->page()->animator().scheduleVisualUpdate(); // In case that this is called not during FrameView::updateLayoutAndStyleForPainting().

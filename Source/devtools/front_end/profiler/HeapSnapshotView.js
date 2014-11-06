@@ -662,22 +662,6 @@ WebInspector.HeapSnapshotView.prototype = {
     },
 
     /**
-     * @return {boolean}
-     */
-    showingFirstSearchResult: function()
-    {
-        return (this._currentSearchResultIndex === 0);
-    },
-
-    /**
-     * @return {boolean}
-     */
-    showingLastSearchResult: function()
-    {
-        return (this._searchResults && this._currentSearchResultIndex === (this._searchResults.length - 1));
-    },
-
-    /**
      * @return {number}
      */
     currentSearchResultIndex: function() {
@@ -1520,6 +1504,12 @@ WebInspector.HeapProfileHeader.prototype = {
      */
     _handleWorkerEvent: function(eventName, data)
     {
+        if (WebInspector.HeapSnapshotProgressEvent.BrokenSnapshot === eventName) {
+            var error = /** @type {string} */ (data);
+            WebInspector.console.error(error);
+            return;
+        }
+
         if (WebInspector.HeapSnapshotProgressEvent.Update !== eventName)
             return;
         var subtitle = /** @type {string} */ (data);
@@ -2110,7 +2100,7 @@ WebInspector.HeapSnapshotStatisticsView = function()
 {
     WebInspector.VBox.call(this);
     this.setMinimumSize(50, 25);
-    this._pieChart = new WebInspector.PieChart(150, WebInspector.HeapSnapshotStatisticsView._valueFormatter);
+    this._pieChart = new WebInspector.PieChart(150, WebInspector.HeapSnapshotStatisticsView._valueFormatter, true);
     this.element.appendChild(this._pieChart.element);
     this._labels = this.element.createChild("div", "heap-snapshot-stats-legend");
 }

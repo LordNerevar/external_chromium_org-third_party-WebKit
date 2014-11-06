@@ -532,22 +532,6 @@ WebInspector.SourceFrame.prototype = {
         this.jumpToSearchResult(currentIndex - 1);
     },
 
-    /**
-     * @return {boolean}
-     */
-    showingFirstSearchResult: function()
-    {
-        return this._searchResults.length &&  this._currentSearchResultIndex === 0;
-    },
-
-    /**
-     * @return {boolean}
-     */
-    showingLastSearchResult: function()
-    {
-        return this._searchResults.length && this._currentSearchResultIndex === (this._searchResults.length - 1);
-    },
-
     get currentSearchResultIndex()
     {
         return this._currentSearchResultIndex;
@@ -1020,17 +1004,6 @@ WebInspector.TextEditorDelegateForSourceFrame.prototype = {
     populateTextAreaContextMenu: function(contextMenu, lineNumber)
     {
         this._sourceFrame.populateTextAreaContextMenu(contextMenu, lineNumber);
-    },
-
-    /**
-     * @param {string} hrefValue
-     * @param {boolean} isExternal
-     * @return {!Element}
-     */
-    createLink: function(hrefValue, isExternal)
-    {
-        var targetLocation = WebInspector.ParsedURL.completeURL(this._sourceFrame._url, hrefValue);
-        return WebInspector.linkifyURLAsNode(targetLocation || hrefValue, hrefValue, undefined, isExternal);
     },
 
     /**

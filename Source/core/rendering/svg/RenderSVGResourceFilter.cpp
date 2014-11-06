@@ -22,22 +22,16 @@
  */
 
 #include "config.h"
-
 #include "core/rendering/svg/RenderSVGResourceFilter.h"
 
 #include "core/dom/ElementTraversal.h"
-#include "core/frame/Settings.h"
-#include "core/rendering/svg/RenderSVGResourceFilterPrimitive.h"
-#include "core/rendering/svg/SVGRenderingContext.h"
 #include "core/svg/SVGFilterPrimitiveStandardAttributes.h"
-#include "platform/graphics/UnacceleratedImageBufferSurface.h"
+#include "platform/graphics/GraphicsContext.h"
 #include "platform/graphics/filters/SkiaImageFilterBuilder.h"
 #include "platform/graphics/filters/SourceAlpha.h"
 #include "platform/graphics/filters/SourceGraphic.h"
 
 namespace blink {
-
-const RenderSVGResourceType RenderSVGResourceFilter::s_resourceType = FilterResourceType;
 
 RenderSVGResourceFilter::RenderSVGResourceFilter(SVGFilterElement* node)
     : RenderSVGResourceContainer(node)
@@ -184,7 +178,7 @@ static void drawDeferredFilter(GraphicsContext* context, FilterData* filterData,
     context->restore();
 }
 
-bool RenderSVGResourceFilter::prepareEffect(RenderObject* object, RenderStyle*, GraphicsContext*& context)
+bool RenderSVGResourceFilter::prepareEffect(RenderObject* object, GraphicsContext*& context)
 {
     ASSERT(object);
     ASSERT(context);

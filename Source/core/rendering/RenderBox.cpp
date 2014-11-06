@@ -267,6 +267,7 @@ void RenderBox::updateFromStyle()
     RenderStyle* styleToUse = style();
     bool isRootObject = isDocumentElement();
     bool isViewObject = isRenderView();
+    bool rootLayerScrolls = document().settings() && document().settings()->rootLayerScrolls();
 
     // The root and the RenderView always paint their backgrounds/borders.
     if (isRootObject || isViewObject)
@@ -275,7 +276,7 @@ void RenderBox::updateFromStyle()
     setFloating(!isOutOfFlowPositioned() && styleToUse->isFloating());
 
     bool boxHasOverflowClip = false;
-    if (!styleToUse->isOverflowVisible() && isRenderBlock() && !isViewObject) {
+    if (!styleToUse->isOverflowVisible() && isRenderBlock() && (rootLayerScrolls || !isViewObject)) {
         // If overflow has been propagated to the viewport, it has no effect here.
         if (node() != document().viewportDefiningElement())
             boxHasOverflowClip = true;
@@ -1283,6 +1284,8 @@ bool RenderBox::paintInvalidationLayerRectsForImage(WrappedImagePtr image, const
     if (drawingBackground && (isDocumentElement() || (isBody() && !document().documentElement()->renderer()->hasBackground()))) {
         layerRenderers.append(document().documentElement()->renderer());
         layerRenderers.append(view());
+        if (view()->frameView())
+            view()->frameView()->setNeedsFullPaintInvalidation();
     } else {
         layerRenderers.append(this);
     }
@@ -2169,7 +2172,7 @@ void RenderBox::computeLogicalHeight(LayoutUnit logicalHeight, LayoutUnit logica
         // grab our cached flexible height.
         // FIXME: Account for block-flow in flexible boxes.
         // https://bugs.webkit.org/show_bug.cgi?id=46418
-        if (hasOverrideHeight() && parent()->isFlexibleBoxIncludingDeprecated())
+        if (hasOverrideHeight() && (parent()->isFlexibleBoxIncludingDeprecated() || parent()->isRenderGrid()))
             h = Length(overrideLogicalContentHeight(), Fixed);
         else if (treatAsReplaced)
             h = Length(computeReplacedLogicalHeight(), Fixed);
@@ -3767,6 +3770,14 @@ PaintInvalidationReason RenderBox::paintInvalidationReason(const RenderLayerMode
     if (isFullPaintInvalidationReason(invalidationReason))
         return invalidationReason;
 
+    // If the transform is not identity or translation, incremental invalidation is not applicable
+    // because the difference between oldBounds and newBounds doesn't cover all area needing invalidation.
+    // FIXME: Should also consider ancestor transforms since paintInvalidationContainer. crbug.com/426111.
+    if (invalidationReason == PaintInvalidationIncremental
+        && paintInvalidationContainer != this
+        && hasLayer() && layer()->transform() && !layer()->transform()->isIdentityOrTranslation())
+        return PaintInvalidationBoundsChange;
+
     if (!style()->hasBackground() && !style()->hasBoxDecorations())
         return invalidationReason;
 
@@ -4411,6 +4422,26 @@ LayoutSize RenderBox::computePreviousBorderBoxSize(const LayoutSize& previousBou
 
     // We didn't save the old border box size because it was the same as the size of oldBounds.
     return previousBoundsSize;
+}
+
+LayoutRect RenderBox::borderBoxAfterUpdatingLogicalWidth(const LayoutUnit& newLogicalTop)
+{
+    // FIXME: None of this is right for perpendicular writing-mode children.
+    LayoutUnit oldLogicalWidth = logicalWidth();
+    LayoutUnit oldMarginLeft = marginLeft();
+    LayoutUnit oldMarginRight = marginRight();
+    LayoutUnit oldLogicalTop = logicalTop();
+
+    setLogicalTop(newLogicalTop);
+    updateLogicalWidth();
+    LayoutRect borderBox = borderBoxRect();
+
+    setLogicalTop(oldLogicalTop);
+    setLogicalWidth(oldLogicalWidth);
+    setMarginLeft(oldMarginLeft);
+    setMarginRight(oldMarginRight);
+
+    return borderBox;
 }
 
 } // namespace blink

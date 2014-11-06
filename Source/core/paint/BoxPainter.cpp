@@ -10,6 +10,7 @@
 #include "core/html/HTMLFrameOwnerElement.h"
 #include "core/paint/BackgroundImageGeometry.h"
 #include "core/paint/BoxDecorationData.h"
+#include "core/paint/DrawingRecorder.h"
 #include "core/rendering/ImageQualityController.h"
 #include "core/rendering/PaintInfo.h"
 #include "core/rendering/RenderBox.h"
@@ -54,7 +55,10 @@ void BoxPainter::paintBoxDecorationBackgroundWithRect(PaintInfo& paintInfo, cons
     BoxDecorationData boxDecorationData(*style, m_renderBox.canRenderBorderImage(), m_renderBox.backgroundHasOpaqueTopLayer(), paintInfo.context);
 
     IntRect snappedPaintRect(pixelSnappedIntRect(paintRect));
-    PaintCommandRecorder recorder(paintInfo.context, &m_renderBox, paintInfo.phase, snappedPaintRect);
+    // The document element is specified to paint its background infinitely.
+    DrawingRecorder recorder(paintInfo.context, &m_renderBox, paintInfo.phase,
+        m_renderBox.isDocumentElement() ? m_renderBox.view()->backgroundRect(&m_renderBox) : snappedPaintRect);
+
 
     // FIXME: Should eventually give the theme control over whether the box shadow should paint, since controls could have
     // custom shadows of their own.
@@ -1923,10 +1927,7 @@ void BoxPainter::paintBoxShadow(const PaintInfo& info, const LayoutRect& paintRe
             }
 
             // Draw only the shadow.
-            OwnPtr<DrawLooperBuilder> drawLooperBuilder = DrawLooperBuilder::create();
-            drawLooperBuilder->addShadow(shadowOffset, shadowBlur, shadowColor,
-                DrawLooperBuilder::ShadowRespectsTransforms, DrawLooperBuilder::ShadowIgnoresAlpha);
-            context->setDrawLooper(drawLooperBuilder.release());
+            context->setShadow(shadowOffset, shadowBlur, shadowColor, DrawLooperBuilder::ShadowRespectsTransforms, DrawLooperBuilder::ShadowIgnoresAlpha, DrawShadowOnly);
 
             if (hasBorderRadius) {
                 RoundedRect influenceRect(pixelSnappedIntRect(LayoutRect(shadowRect)), border.radii());

@@ -991,8 +991,6 @@ void FrameView::layout(bool allowSubtree)
 
     layer->updateLayerPositionsAfterLayout();
 
-    if (m_doFullPaintInvalidation)
-        renderView()->compositor()->fullyInvalidatePaint();
     renderView()->compositor()->didLayout();
 
     m_layoutCount++;
@@ -1048,6 +1046,9 @@ void FrameView::invalidateTreeIfNeeded()
 
     PaintInvalidationState rootPaintInvalidationState(rootForPaintInvalidation);
 
+    if (m_doFullPaintInvalidation)
+        renderView()->compositor()->fullyInvalidatePaint();
+
     rootForPaintInvalidation.invalidateTreeIfNeeded(rootPaintInvalidationState);
 
     // Invalidate the paint of the frameviews scrollbars if needed
@@ -1057,7 +1058,7 @@ void FrameView::invalidateTreeIfNeeded()
         invalidateRect(horizontalBarDamage());
     resetScrollbarDamage();
 
-    m_doFullPaintInvalidation = false;
+
 #ifndef NDEBUG
     renderView()->assertSubtreeClearedPaintInvalidationState();
 #endif
@@ -1714,6 +1715,8 @@ void FrameView::scrollbarExistenceDidChange()
     // http://crbug.com/269692
     bool useOverlayScrollbars = ScrollbarTheme::theme()->usesOverlayScrollbars();
 
+    // FIXME: this call to layout() could be called within FrameView::layout(), but before performLayout(),
+    // causing double-layout. See also crbug.com/429242.
     if (!useOverlayScrollbars && needsLayout())
         layout();
 
@@ -1932,7 +1935,7 @@ bool FrameView::updateWidgets()
     // This is always called from updateWidgetsTimerFired.
     // m_updateWidgetsTimer should only be scheduled if we have widgets to update.
     // Thus I believe we can stop checking isEmpty here, and just ASSERT isEmpty:
-    ASSERT(!m_partUpdateSet.isEmpty());
+    // FIXME: This assert has been temporarily removed due to https://crbug.com/430344
     if (m_nestedLayoutCount > 1 || m_partUpdateSet.isEmpty())
         return true;
 
@@ -2178,6 +2181,11 @@ void FrameView::scrollTo(const DoublePoint& newPosition)
     if (scrollDelta.isZero())
         return;
 
+    if (m_frame->settings() && m_frame->settings()->rootLayerScrolls()) {
+        // Don't scroll the FrameView!
+        ASSERT_NOT_REACHED();
+    }
+
     m_scrollPosition = newPosition;
 
     if (!scrollbarsSuppressed())
@@ -2261,7 +2269,13 @@ IntRect FrameView::scrollableAreaBoundingBox() const
     return ownerRenderer->absoluteContentQuad().enclosingBoundingBox();
 }
 
+
 bool FrameView::isScrollable()
+{
+    return scrollingReasons() == Scrollable;
+}
+
+FrameView::ScrollingReasons FrameView::scrollingReasons()
 {
     // Check for:
     // 1) If there an actual overflow.
@@ -2273,22 +2287,22 @@ bool FrameView::isScrollable()
     IntSize contentsSize = this->contentsSize();
     IntSize visibleContentSize = visibleContentRect().size();
     if ((contentsSize.height() <= visibleContentSize.height() && contentsSize.width() <= visibleContentSize.width()))
-        return false;
+        return NotScrollableNoOverflow;
 
     // Covers #2.
     // FIXME: Do we need to fix this for OOPI?
     HTMLFrameOwnerElement* owner = m_frame->deprecatedLocalOwner();
     if (owner && (!owner->renderer() || !owner->renderer()->visibleToHitTesting()))
-        return false;
+        return NotScrollableNotVisible;
 
     // Cover #3 and #4.
     ScrollbarMode horizontalMode;
     ScrollbarMode verticalMode;
     calculateScrollbarModesForLayoutAndSetViewportRenderer(horizontalMode, verticalMode, RulesFromWebContentOnly);
     if (horizontalMode == ScrollbarAlwaysOff && verticalMode == ScrollbarAlwaysOff)
-        return false;
+        return NotScrollableExplicitlyDisabled;
 
-    return true;
+    return Scrollable;
 }
 
 void FrameView::updateScrollableAreaSet()
@@ -2594,6 +2608,8 @@ void FrameView::invalidateTreeIfNeededRecursive()
 
         toLocalFrame(child)->view()->invalidateTreeIfNeededRecursive();
     }
+
+    m_doFullPaintInvalidation = false;
 }
 
 void FrameView::enableAutoSizeMode(const IntSize& minSize, const IntSize& maxSize)
@@ -2904,6 +2920,9 @@ bool FrameView::wheelEvent(const PlatformWheelEvent& wheelEvent)
     if (!isScrollable())
         allowScrolling = false;
 #endif
+
+    if (m_frame->settings()->rootLayerScrolls())
+        allowScrolling = false;
 
     if (allowScrolling && ScrollableArea::handleWheelEvent(wheelEvent))
         return true;
@@ -3247,6 +3266,9 @@ void FrameView::computeScrollbarExistence(bool& newHasHorizontalScrollbar, bool&
 
     newHasHorizontalScrollbar = hasHorizontalScrollbar;
     newHasVerticalScrollbar = hasVerticalScrollbar;
+
+    if (m_frame->settings() && m_frame->settings()->rootLayerScrolls())
+        return;
 
     ScrollbarMode hScroll = m_horizontalScrollbarMode;
     ScrollbarMode vScroll = m_verticalScrollbarMode;
@@ -3748,7 +3770,7 @@ void FrameView::calculateOverhangAreasForPainting(IntRect& horizontalOverhangRec
         horizontalOverhangRect = frameRect();
         horizontalOverhangRect.setHeight(-physicalScrollY);
         horizontalOverhangRect.setWidth(horizontalOverhangRect.width() - verticalScrollbarWidth);
-    } else if (contentsHeight() && physicalScrollY > contentsHeight() - visibleHeight()) {
+    } else if (physicalScrollY > 0 && contentsHeight() && physicalScrollY > contentsHeight() - visibleHeight()) {
         int height = physicalScrollY - (contentsHeight() - visibleHeight());
         horizontalOverhangRect = frameRect();
         horizontalOverhangRect.setY(frameRect().maxY() - height - horizontalScrollbarHeight);
@@ -3765,7 +3787,7 @@ void FrameView::calculateOverhangAreasForPainting(IntRect& horizontalOverhangRec
             verticalOverhangRect.setY(frameRect().y() + horizontalOverhangRect.height());
         else
             verticalOverhangRect.setY(frameRect().y());
-    } else if (contentsWidth() && physicalScrollX > contentsWidth() - visibleWidth()) {
+    } else if (physicalScrollX > 0 && contentsWidth() && physicalScrollX > contentsWidth() - visibleWidth()) {
         int width = physicalScrollX - (contentsWidth() - visibleWidth());
         verticalOverhangRect.setWidth(width);
         verticalOverhangRect.setHeight(frameRect().height() - horizontalOverhangRect.height() - horizontalScrollbarHeight);

@@ -40,6 +40,7 @@
 #include "core/page/Page.h"
 #include "core/paint/BlockPainter.h"
 #include "core/paint/BoxPainter.h"
+#include "core/paint/DrawingRecorder.h"
 #include "core/rendering/GraphicsContextAnnotator.h"
 #include "core/rendering/HitTestLocation.h"
 #include "core/rendering/HitTestResult.h"
@@ -2020,8 +2021,11 @@ LayoutRect RenderBlock::blockSelectionGap(const RenderBlock* rootBlock, const La
         return LayoutRect();
 
     LayoutRect gapRect = rootBlock->logicalRectToPhysicalRect(rootBlockPhysicalPosition, LayoutRect(logicalLeft, logicalTop, logicalWidth, logicalHeight));
-    if (paintInfo)
-        paintInfo->context->fillRect(alignSelectionRectToDevicePixels(gapRect), selectionBackgroundColor());
+    if (paintInfo) {
+        IntRect selectionGapRect = alignSelectionRectToDevicePixels(gapRect);
+        DrawingRecorder recorder(paintInfo->context, this, paintInfo->phase, selectionGapRect);
+        paintInfo->context->fillRect(selectionGapRect, selectionBackgroundColor());
+    }
     return gapRect;
 }
 
@@ -2036,8 +2040,11 @@ LayoutRect RenderBlock::logicalLeftSelectionGap(const RenderBlock* rootBlock, co
         return LayoutRect();
 
     LayoutRect gapRect = rootBlock->logicalRectToPhysicalRect(rootBlockPhysicalPosition, LayoutRect(rootBlockLogicalLeft, rootBlockLogicalTop, rootBlockLogicalWidth, logicalHeight));
-    if (paintInfo)
-        paintInfo->context->fillRect(alignSelectionRectToDevicePixels(gapRect), selObj->selectionBackgroundColor());
+    if (paintInfo) {
+        IntRect selectionGapRect = alignSelectionRectToDevicePixels(gapRect);
+        DrawingRecorder recorder(paintInfo->context, this, paintInfo->phase, selectionGapRect);
+        paintInfo->context->fillRect(selectionGapRect, selObj->selectionBackgroundColor());
+    }
     return gapRect;
 }
 
@@ -2052,8 +2059,11 @@ LayoutRect RenderBlock::logicalRightSelectionGap(const RenderBlock* rootBlock, c
         return LayoutRect();
 
     LayoutRect gapRect = rootBlock->logicalRectToPhysicalRect(rootBlockPhysicalPosition, LayoutRect(rootBlockLogicalLeft, rootBlockLogicalTop, rootBlockLogicalWidth, logicalHeight));
-    if (paintInfo)
-        paintInfo->context->fillRect(alignSelectionRectToDevicePixels(gapRect), selObj->selectionBackgroundColor());
+    if (paintInfo) {
+        IntRect selectionGapRect = alignSelectionRectToDevicePixels(gapRect);
+        DrawingRecorder recorder(paintInfo->context, this, paintInfo->phase, selectionGapRect);
+        paintInfo->context->fillRect(selectionGapRect, selObj->selectionBackgroundColor());
+    }
     return gapRect;
 }
 
@@ -2219,8 +2229,11 @@ void RenderBlock::removePositionedObjects(RenderBlock* o, ContainingBlockState c
     for (TrackedRendererListHashSet::iterator it = positionedDescendants->begin(); it != end; ++it) {
         r = *it;
         if (!o || r->isDescendantOf(o)) {
-            if (containingBlockState == NewContainingBlock)
+            if (containingBlockState == NewContainingBlock) {
                 r->setChildNeedsLayout(MarkOnlyThis);
+                if (r->needsPreferredWidthsRecalculation())
+                    r->setPreferredLogicalWidthsDirty(MarkOnlyThis);
+            }
 
             // It is parent blocks job to add positioned child to positioned objects list of its containing block
             // Parent layout needs to be invalidated to ensure this happens.
@@ -3634,6 +3647,9 @@ static inline unsigned firstLetterLength(const String& text)
     unsigned length = 0;
     unsigned textLength = text.length();
 
+    if (textLength == 0)
+        return length;
+
     // Account for leading spaces first.
     while (length < textLength && isSpaceForFirstLetter(text[length]))
         length++;
@@ -3643,7 +3659,7 @@ static inline unsigned firstLetterLength(const String& text)
         length++;
 
     // Bail if we didn't find a letter before the end of the text or before a space.
-    if (isSpaceForFirstLetter(text[length]) || (textLength && length == textLength))
+    if (isSpaceForFirstLetter(text[length]) || length == textLength)
         return 0;
 
     // Account the next character for first letter.
@@ -3658,8 +3674,6 @@ static inline unsigned firstLetterLength(const String& text)
 
         length = scanLength + 1;
     }
-
-    // FIXME: If textLength is 0, length may still be 1!
     return length;
 }
 
@@ -3710,6 +3724,13 @@ void RenderBlock::createFirstLetterRenderer(RenderObject* firstLetterBlock, Rend
     currentChild.destroy();
 }
 
+// Once we see any of these renderers we can stop looking for first-letter as
+// they signal the end of the first line of text.
+bool RenderBlock::isInvalidFirstLetterRenderer(RenderObject* obj) const
+{
+    return (obj->isBR() || (obj->isText() && toRenderText(obj)->isWordBreak()));
+}
+
 void RenderBlock::updateFirstLetter()
 {
     if (!document().styleEngine()->usesFirstLetterRules())
@@ -3732,7 +3753,7 @@ void RenderBlock::updateFirstLetter()
             // FIXME: If there is leading punctuation in a different RenderText than
             // the first letter, we'll not apply the correct style to it.
             length = firstLetterLength(toRenderText(currChild)->originalText());
-            if (length)
+            if (length || isInvalidFirstLetterRenderer(currChild))
                 break;
             currChild = currChild->nextSibling();
         } else if (currChild->isListMarker()) {
@@ -3745,6 +3766,8 @@ void RenderBlock::updateFirstLetter()
             currChild = currChild->nextSibling();
         } else if (currChild->isReplaced() || currChild->isRenderButton() || currChild->isMenuList()) {
             break;
+        } else if (currChild->isFlexibleBoxIncludingDeprecated() || currChild->isRenderGrid()) {
+            return;
         } else if (currChild->style()->hasPseudoStyle(FIRST_LETTER) && currChild->canHaveGeneratedChildren())  {
             // We found a lower-level node with first-letter, which supersedes the higher-level style
             firstLetterBlock = currChild;
@@ -3754,7 +3777,7 @@ void RenderBlock::updateFirstLetter()
         }
     }
 
-    if (!currChild || !isRenderBlockFlowOrRenderButton(firstLetterBlock))
+    if (!currChild)
         return;
 
     // If the child already has style, then it has already been created, so we just want
@@ -3766,7 +3789,7 @@ void RenderBlock::updateFirstLetter()
 
     // FIXME: This black-list of disallowed RenderText subclasses is fragile.
     // Should counter be on this list? What about RenderTextFragment?
-    if (!currChild->isText() || currChild->isBR() || toRenderText(currChild)->isWordBreak())
+    if (!currChild->isText() || isInvalidFirstLetterRenderer(currChild))
         return;
 
     createFirstLetterRenderer(firstLetterBlock, toRenderText(*currChild), length);

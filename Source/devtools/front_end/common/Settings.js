@@ -38,7 +38,7 @@ WebInspector.Settings = function()
 
     this.colorFormat = this.createSetting("colorFormat", "original");
     this.consoleHistory = this.createSetting("consoleHistory", []);
-    this.domWordWrap = this.createSetting("domWordWrap", false);
+    this.domWordWrap = this.createSetting("domWordWrap", true);
     this.eventListenersFilter = this.createSetting("eventListenersFilter", "all");
     this.lastViewedScriptFile = this.createSetting("lastViewedScriptFile", "application");
     this.monitoringXHREnabled = this.createSetting("monitoringXHREnabled", false);
@@ -90,6 +90,7 @@ WebInspector.Settings = function()
     this.showMediaQueryInspector = this.createSetting("showMediaQueryInspector", false);
     this.disableOverridesWarning = this.createSetting("disableOverridesWarning", false);
     this.testPath = this.createSetting("testPath", "");
+    this.frameViewerHideChromeWindow = this.createSetting("frameViewerHideChromeWindow", false);
 
     // Rendering options
     this.showPaintRects = this.createSetting("showPaintRects", false);

@@ -5,92 +5,26 @@
 #include "config.h"
 #include "core/paint/ViewDisplayList.h"
 
-#include "core/rendering/RenderLayer.h"
-#include "core/rendering/RenderObject.h"
-#include "core/rendering/RenderView.h"
 #include "platform/NotImplemented.h"
 #include "platform/RuntimeEnabledFeatures.h"
-#include "platform/graphics/GraphicsContext.h"
+
+#ifndef NDEBUG
+#include "core/rendering/RenderObject.h"
+#include "wtf/text/WTFString.h"
+#endif
 
 namespace blink {
 
-void AtomicPaintChunk::replay(GraphicsContext* context)
-{
-    context->drawDisplayList(displayList.get());
-}
-
-void ClipDisplayItem::replay(GraphicsContext* context)
-{
-    context->save();
-    context->clip(clipRect);
-    for (RoundedRect roundedRect : roundedRectClips)
-        context->clipRoundedRect(roundedRect);
-}
-
-void EndClipDisplayItem::replay(GraphicsContext* context)
-{
-    context->restore();
-}
-
-PaintCommandRecorder::PaintCommandRecorder(GraphicsContext* context, RenderObject* renderer, PaintPhase phase, const FloatRect& clip)
-    : m_context(context)
-    , m_renderer(renderer)
-    , m_phase(phase)
-{
-    if (RuntimeEnabledFeatures::slimmingPaintEnabled())
-        m_context->beginRecording(clip);
-}
-
-PaintCommandRecorder::~PaintCommandRecorder()
-{
-    if (!RuntimeEnabledFeatures::slimmingPaintEnabled())
-        return;
-
-    OwnPtr<AtomicPaintChunk> paintChunk = adoptPtr(new AtomicPaintChunk(m_context->endRecording(), m_renderer, m_phase));
-    ASSERT(m_renderer->view());
-    m_renderer->view()->viewDisplayList().add(paintChunk.release());
-}
-
-ClipRecorder::ClipRecorder(RenderLayer* renderLayer, GraphicsContext* graphicsContext, ClipDisplayItem::ClipType clipType, const ClipRect& clipRect)
-    : m_graphicsContext(graphicsContext)
-    , m_renderLayer(renderLayer)
-{
-    IntRect snappedClipRect = pixelSnappedIntRect(clipRect.rect());
-    if (!RuntimeEnabledFeatures::slimmingPaintEnabled()) {
-        graphicsContext->save();
-        graphicsContext->clip(snappedClipRect);
-    } else {
-        m_clipDisplayItem = adoptPtr(new ClipDisplayItem);
-        m_clipDisplayItem->layer = renderLayer;
-        m_clipDisplayItem->clipType = clipType;
-        m_clipDisplayItem->clipRect = snappedClipRect;
-    }
-}
-
-void ClipRecorder::addRoundedRectClip(const RoundedRect& roundedRect)
-{
-    if (RuntimeEnabledFeatures::slimmingPaintEnabled())
-        m_clipDisplayItem->roundedRectClips.append(roundedRect);
-    else
-        m_graphicsContext->clipRoundedRect(roundedRect);
-}
-
-ClipRecorder::~ClipRecorder()
-{
-    if (RuntimeEnabledFeatures::slimmingPaintEnabled()) {
-        OwnPtr<EndClipDisplayItem> endClip = adoptPtr(new EndClipDisplayItem);
-        m_renderLayer->renderer()->view()->viewDisplayList().add(endClip.release());
-    } else {
-        m_graphicsContext->restore();
-    }
-}
+// DisplayItem types must be kept in sync with PaintPhase.
+COMPILE_ASSERT((unsigned)DisplayItem::DrawingPaintPhaseBlockBackground == (unsigned)PaintPhaseBlockBackground, DisplayItem_Type_should_stay_in_sync);
+COMPILE_ASSERT((unsigned)DisplayItem::DrawingPaintPhaseClippingMask == (unsigned)PaintPhaseClippingMask, DisplayItem_Type_should_stay_in_sync);
 
 const PaintList& ViewDisplayList::paintList()
 {
     ASSERT(RuntimeEnabledFeatures::slimmingPaintEnabled());
 
     updatePaintList();
-    return m_newPaints;
+    return m_paintList;
 }
 
 void ViewDisplayList::add(WTF::PassOwnPtr<DisplayItem> displayItem)
@@ -105,20 +39,149 @@ void ViewDisplayList::invalidate(const RenderObject* renderer)
     m_invalidated.add(renderer);
 }
 
-bool ViewDisplayList::isRepaint(PaintList::iterator begin, const DisplayItem& displayItem)
+PaintList::iterator ViewDisplayList::findDisplayItem(PaintList::iterator begin, const DisplayItem& displayItem)
 {
-    notImplemented();
-    return false;
+    PaintList::iterator end = m_paintList.end();
+    if (displayItem.renderer() && !m_paintListRenderers.contains(displayItem.renderer()))
+        return end;
+
+    for (PaintList::iterator it = begin; it != end; ++it) {
+        DisplayItem& existing = **it;
+        if (existing.idsEqual(displayItem))
+            return it;
+    }
+
+    // FIXME: Properly handle clips.
+    ASSERT(!displayItem.renderer());
+    return end;
 }
 
-// Update the existing paintList by removing invalidated entries, updating repainted existing ones, and
-// appending new items.
+bool ViewDisplayList::wasInvalidated(const DisplayItem& displayItem) const
+{
+    // FIXME: Use a bit on RenderObject instead of tracking m_invalidated.
+    return displayItem.renderer() && m_invalidated.contains(displayItem.renderer());
+}
+
+static void appendDisplayItem(PaintList& list, HashSet<const RenderObject*>& renderers, WTF::PassOwnPtr<DisplayItem> displayItem)
+{
+    if (const RenderObject* renderer = displayItem->renderer())
+        renderers.add(renderer);
+    list.append(displayItem);
+}
+
+// Update the existing paintList by removing invalidated entries, updating
+// repainted ones, and appending new items.
 //
-// The algorithm should be O(|existing paint list| + |newly painted list|). By using the ordering
-// implied by the existing paint list, extra treewalks are avoided.
+// The algorithm is O(|existing paint list| + |newly painted list|): by using
+// the ordering implied by the existing paint list, extra treewalks are avoided.
 void ViewDisplayList::updatePaintList()
 {
-    notImplemented();
+    PaintList updatedList;
+    HashSet<const RenderObject*> updatedRenderers;
+
+    if (int maxCapacity = m_newPaints.size() + std::max(0, (int)m_paintList.size() - (int)m_invalidated.size()))
+        updatedList.reserveCapacity(maxCapacity);
+
+    PaintList::iterator paintListIt = m_paintList.begin();
+    PaintList::iterator paintListEnd = m_paintList.end();
+
+    for (OwnPtr<DisplayItem>& newDisplayItem : m_newPaints) {
+        if (!wasInvalidated(*newDisplayItem)) {
+            PaintList::iterator repaintIt = findDisplayItem(paintListIt, *newDisplayItem);
+            if (repaintIt != paintListEnd) {
+                // Copy all of the existing items over until we hit the repaint.
+                for (; paintListIt != repaintIt; ++paintListIt) {
+                    if (!wasInvalidated(**paintListIt))
+                        appendDisplayItem(updatedList, updatedRenderers, paintListIt->release());
+                }
+                paintListIt++;
+            }
+        }
+        // Copy over the new item.
+        appendDisplayItem(updatedList, updatedRenderers, newDisplayItem.release());
+    }
+
+    // Copy over any remaining items that were not invalidated.
+    for (; paintListIt != paintListEnd; ++paintListIt) {
+        if (!wasInvalidated(**paintListIt))
+            appendDisplayItem(updatedList, updatedRenderers, paintListIt->release());
+    }
+
+    m_invalidated.clear();
+    m_newPaints.clear();
+    m_paintList.clear();
+    m_paintList.swap(updatedList);
+    m_paintListRenderers.clear();
+    m_paintListRenderers.swap(updatedRenderers);
 }
+
+#ifndef NDEBUG
+WTF::String DisplayItem::typeAsDebugString(DisplayItem::Type type)
+{
+    switch (type) {
+    case DisplayItem::DrawingPaintPhaseBlockBackground: return "DrawingPaintPhaseBlockBackground";
+    case DisplayItem::DrawingPaintPhaseChildBlockBackground: return "DrawingPaintPhaseChildBlockBackground";
+    case DisplayItem::DrawingPaintPhaseChildBlockBackgrounds: return "DrawingPaintPhaseChildBlockBackgrounds";
+    case DisplayItem::DrawingPaintPhaseFloat: return "DrawingPaintPhaseFloat";
+    case DisplayItem::DrawingPaintPhaseForeground: return "DrawingPaintPhaseForeground";
+    case DisplayItem::DrawingPaintPhaseOutline: return "DrawingPaintPhaseOutline";
+    case DisplayItem::DrawingPaintPhaseChildOutlines: return "DrawingPaintPhaseChildOutlines";
+    case DisplayItem::DrawingPaintPhaseSelfOutline: return "DrawingPaintPhaseSelfOutline";
+    case DisplayItem::DrawingPaintPhaseSelection: return "DrawingPaintPhaseSelection";
+    case DisplayItem::DrawingPaintPhaseCollapsedTableBorders: return "DrawingPaintPhaseCollapsedTableBorders";
+    case DisplayItem::DrawingPaintPhaseTextClip: return "DrawingPaintPhaseTextClip";
+    case DisplayItem::DrawingPaintPhaseMask: return "DrawingPaintPhaseMask";
+    case DisplayItem::DrawingPaintPhaseClippingMask: return "DrawingPaintPhaseClippingMask";
+    case DisplayItem::ClipLayerOverflowControls: return "ClipLayerOverflowControls";
+    case DisplayItem::ClipLayerBackground: return "ClipLayerBackground";
+    case DisplayItem::ClipLayerParent: return "ClipLayerParent";
+    case DisplayItem::ClipLayerFilter: return "ClipLayerFilter";
+    case DisplayItem::ClipLayerForeground: return "ClipLayerForeground";
+    case DisplayItem::ClipLayerFragmentFloat: return "ClipLayerFragmentFloat";
+    case DisplayItem::ClipLayerFragmentForeground: return "ClipLayerFragmentForeground";
+    case DisplayItem::ClipLayerFragmentChildOutline: return "ClipLayerFragmentChildOutline";
+    case DisplayItem::ClipLayerFragmentOutline: return "ClipLayerFragmentOutline";
+    case DisplayItem::ClipLayerFragmentMask: return "ClipLayerFragmentMask";
+    case DisplayItem::ClipLayerFragmentClippingMask: return "ClipLayerFragmentClippingMask";
+    case DisplayItem::ClipLayerFragmentParent: return "ClipLayerFragmentParent";
+    case DisplayItem::ClipLayerFragmentSelection: return "ClipLayerFragmentSelection";
+    case DisplayItem::ClipLayerFragmentChildBlockBackgrounds: return "ClipLayerFragmentChildBlockBackgrounds";
+    case DisplayItem::EndClip: return "EndClip";
+    }
+    ASSERT_NOT_REACHED();
+    return "Unknown";
+}
+
+WTF::String DisplayItem::rendererDebugString(const RenderObject* renderer)
+{
+    if (renderer && renderer->node())
+        return String::format("nodeName: \"%s\", renderer: \"%p\"", renderer->node()->nodeName().utf8().data(), renderer);
+    return String::format("renderer: \"%p\"", renderer);
+}
+
+WTF::String DisplayItem::asDebugString() const
+{
+    return String::format("{%s, type: \"%s\"}", rendererDebugString(renderer()).utf8().data(), typeAsDebugString(type()).utf8().data());
+}
+
+static WTF::String paintListAsDebugString(const PaintList& list)
+{
+    StringBuilder stringBuilder;
+    bool isFirst = true;
+    for (auto& displayItem : list) {
+        if (!isFirst)
+            stringBuilder.append(", ");
+        isFirst = false;
+        stringBuilder.append(displayItem->asDebugString());
+    }
+    return stringBuilder.toString();
+}
+
+void ViewDisplayList::showDebugData() const
+{
+    fprintf(stderr, "paint list: [%s]\n", paintListAsDebugString(m_paintList).utf8().data());
+    fprintf(stderr, "new paints: [%s]\n", paintListAsDebugString(m_newPaints).utf8().data());
+}
+#endif
 
 } // namespace blink

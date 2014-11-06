@@ -144,7 +144,7 @@ static void messageHandlerInMainThread(v8::Handle<v8::Message> message, v8::Hand
     // FIXME: Can we even get here during initialization now that we bail out when GetEntered returns an empty handle?
     LocalFrame* frame = enteredWindow->document()->frame();
     if (frame && frame->script().existingWindowProxy(scriptState->world())) {
-        V8ErrorHandler::storeExceptionOnErrorEventWrapper(event.get(), data, scriptState->context()->Global(), isolate);
+        V8ErrorHandler::storeExceptionOnErrorEventWrapper(isolate, event.get(), data, scriptState->context()->Global());
     }
 
     if (scriptState->world().isPrivateScriptIsolatedWorld()) {
@@ -398,14 +398,14 @@ static void reportFatalErrorInWorker(const char* location, const char* message)
 
 static void messageHandlerInWorker(v8::Handle<v8::Message> message, v8::Handle<v8::Value> data)
 {
-    static bool isReportingException = false;
+    v8::Isolate* isolate = v8::Isolate::GetCurrent();
+    V8PerIsolateData* perIsolateData = V8PerIsolateData::from(isolate);
     // Exceptions that occur in error handler should be ignored since in that case
     // WorkerGlobalScope::reportException will send the exception to the worker object.
-    if (isReportingException)
+    if (perIsolateData->isReportingException())
         return;
-    isReportingException = true;
+    perIsolateData->setReportingException(true);
 
-    v8::Isolate* isolate = v8::Isolate::GetCurrent();
     ScriptState* scriptState = ScriptState::current(isolate);
     // During the frame teardown, there may not be a valid context.
     if (ExecutionContext* context = scriptState->executionContext()) {
@@ -419,12 +419,12 @@ static void messageHandlerInWorker(v8::Handle<v8::Message> message, v8::Handle<v
         // If execution termination has been triggered as part of constructing
         // the error event from the v8::Message, quietly leave.
         if (!v8::V8::IsExecutionTerminating(isolate)) {
-            V8ErrorHandler::storeExceptionOnErrorEventWrapper(event.get(), data, scriptState->context()->Global(), isolate);
+            V8ErrorHandler::storeExceptionOnErrorEventWrapper(isolate, event.get(), data, scriptState->context()->Global());
             context->reportException(event.release(), scriptId, nullptr, corsStatus);
         }
     }
 
-    isReportingException = false;
+    perIsolateData->setReportingException(false);
 }
 
 static const int kWorkerMaxStackSize = 500 * 1024;

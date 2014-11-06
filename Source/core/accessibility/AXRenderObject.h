@@ -126,10 +126,10 @@ protected:
     virtual bool supportsARIAOwns() const override;
 
     // ARIA live-region features.
-    virtual const AtomicString& ariaLiveRegionStatus() const override;
-    virtual const AtomicString& ariaLiveRegionRelevant() const override;
-    virtual bool ariaLiveRegionAtomic() const override;
-    virtual bool ariaLiveRegionBusy() const override;
+    virtual const AtomicString& liveRegionStatus() const override;
+    virtual const AtomicString& liveRegionRelevant() const override;
+    virtual bool liveRegionAtomic() const override;
+    virtual bool liveRegionBusy() const override;
 
     // Accessibility Text.
     virtual String textUnderElement() const override;
@@ -146,8 +146,8 @@ protected:
     virtual AXObject* elementAccessibilityHitTest(const IntPoint&) const override;
 
     // High-level accessibility tree access. Other modules should only use these functions.
-    virtual AXObject* parentObject() const override;
-    virtual AXObject* parentObjectIfExists() const override;
+    virtual AXObject* computeParent() const override;
+    virtual AXObject* computeParentIfExists() const override;
 
     // Low-level accessibility tree exploration, only for use within the accessibility module.
     virtual AXObject* firstChild() const override;
@@ -155,7 +155,7 @@ protected:
     virtual void addChildren() override;
     virtual bool canHaveChildren() const override;
     virtual void updateChildrenIfNecessary() override;
-    virtual bool needsToUpdateChildren() const { return m_childrenDirty; }
+    virtual bool needsToUpdateChildren() const override { return m_childrenDirty; }
     virtual void setNeedsToUpdateChildren() override { m_childrenDirty = true; }
     virtual void clearChildren() override;
     virtual AXObject* observableObject() const override;

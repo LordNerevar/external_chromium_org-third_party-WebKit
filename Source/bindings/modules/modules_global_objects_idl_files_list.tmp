@@ -19,6 +19,7 @@
 ../../modules/encryptedmedia/MediaEncryptedEvent.idl
 ../../modules/encryptedmedia/MediaKeyMessageEvent.idl
 ../../modules/encryptedmedia/MediaKeySession.idl
+../../modules/encryptedmedia/MediaKeySystemAccess.idl
 ../../modules/encryptedmedia/MediaKeys.idl
 ../../modules/filesystem/DOMFileSystem.idl
 ../../modules/filesystem/DOMFileSystemSync.idl
@@ -100,6 +101,7 @@
 ../../modules/notifications/NotificationPermissionCallback.idl
 ../../modules/performance/WorkerPerformance.idl
 ../../modules/presentation/Presentation.idl
+../../modules/presentation/PresentationSession.idl
 ../../modules/push_messaging/PushEvent.idl
 ../../modules/push_messaging/PushManager.idl
 ../../modules/push_messaging/PushRegistration.idl

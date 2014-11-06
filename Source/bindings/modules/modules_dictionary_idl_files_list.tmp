@@ -1,5 +1,6 @@
 ../../modules/encoding/TextDecodeOptions.idl
 ../../modules/encoding/TextDecoderOptions.idl
+../../modules/encryptedmedia/MediaKeySystemOptions.idl
 ../../modules/filesystem/FileSystemFlags.idl
 ../../modules/indexeddb/IDBIndexParameters.idl
 ../../modules/notifications/NotificationOptions.idl

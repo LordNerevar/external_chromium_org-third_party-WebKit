@@ -129,7 +129,7 @@
                         'WebTestingSupport.cpp',
                     ],
                     'conditions': [
-                        ['OS=="win" or OS=="mac"', {
+                        ['use_openssl==0 and (OS=="win" or OS=="mac")', {
                             'dependencies': [
                                 '<(DEPTH)/third_party/nss/nss.gyp:*',
                             ],
@@ -215,6 +215,7 @@
                     'type': 'static_library',
                     'dependencies': [
                         '../config.gyp:config',
+                        '../core/core.gyp:webcore_generated',
                         '../core/core.gyp:webcore_testing',
                         '../modules/modules.gyp:modules_testing',
                         '../wtf/wtf.gyp:wtf',

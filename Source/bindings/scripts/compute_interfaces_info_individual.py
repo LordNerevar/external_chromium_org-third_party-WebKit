@@ -64,7 +64,8 @@ def parse_options():
     parser = optparse.OptionParser(usage=usage)
     parser.add_option('--cache-directory', help='cache directory')
     parser.add_option('--idl-files-list', help='file listing IDL files')
-    parser.add_option('--interfaces-info-file', help='output pickle file')
+    parser.add_option('--interfaces-info-file', help='interface info pickle file')
+    parser.add_option('--component-info-file', help='component wide info pickle file')
     parser.add_option('--write-file-only-if-changed', type='int', help='if true, do not write an output file if it would be identical to the existing one, which avoids unnecessary rebuilds in ninja')
 
     options, args = parser.parse_args()
@@ -128,6 +129,33 @@ def get_put_forward_interfaces_from_definition(definition):
                       if 'PutForwards' in attribute.extended_attributes))
 
 
+def collect_union_types_from_definitions(definitions):
+    """Traverse definitions and collect all union types."""
+
+    def union_types_from(things):
+        return (thing.idl_type for thing in things
+                if thing.idl_type.is_union_type)
+
+    this_union_types = set()
+    for interface in definitions.interfaces.itervalues():
+        this_union_types.update(union_types_from(interface.attributes))
+        for operation in interface.operations:
+            this_union_types.update(union_types_from(operation.arguments))
+            if operation.idl_type.is_union_type:
+                this_union_types.add(operation.idl_type)
+        for constructor in interface.constructors:
+            this_union_types.update(union_types_from(constructor.arguments))
+        for constructor in interface.custom_constructors:
+            this_union_types.update(union_types_from(constructor.arguments))
+    for callback_function in definitions.callback_functions.itervalues():
+        this_union_types.update(union_types_from(callback_function.arguments))
+        if callback_function.idl_type.is_union_type:
+            this_union_types.add(callback_function.idl_type)
+    for dictionary in definitions.dictionaries.itervalues():
+        this_union_types.update(union_types_from(dictionary.members))
+    return this_union_types
+
+
 class InterfaceInfoCollector(object):
     """A class that collects interface information from idl files."""
     def __init__(self, cache_directory=None):
@@ -137,6 +165,7 @@ class InterfaceInfoCollector(object):
             'full_paths': [],
             'include_paths': [],
         })
+        self.union_types = set()
 
     def add_paths_to_partials_dict(self, partial_interface_name, full_path,
                                    this_include_path=None):
@@ -173,6 +202,9 @@ class InterfaceInfoCollector(object):
         else:
             raise Exception('IDL file must contain one interface or dictionary')
 
+        this_union_types = collect_union_types_from_definitions(definitions)
+        self.union_types.update(this_union_types)
+
         extended_attributes = definition.extended_attributes
         implemented_as = extended_attributes.get('ImplementedAs')
         full_path = os.path.realpath(idl_filename)
@@ -193,6 +225,7 @@ class InterfaceInfoCollector(object):
         interface_info.update({
             'extended_attributes': extended_attributes,
             'full_path': full_path,
+            'has_union_types': bool(this_union_types),
             'implemented_as': implemented_as,
             'implemented_by_interfaces': left_interfaces,
             'implements_interfaces': right_interfaces,
@@ -210,7 +243,14 @@ class InterfaceInfoCollector(object):
         return {
             'interfaces_info': self.interfaces_info,
             # Can't pickle defaultdict, convert to dict
+            # FIXME: this should be included in get_component_info.
             'partial_interface_files': dict(self.partial_interface_files),
+        }
+
+    def get_component_info_as_dict(self):
+        """Returns component wide information as a dict."""
+        return {
+            'union_types': self.union_types,
         }
 
 
@@ -237,7 +277,9 @@ def main():
     write_pickle_file(options.interfaces_info_file,
                       info_collector.get_info_as_dict(),
                       options.write_file_only_if_changed)
-
+    write_pickle_file(options.component_info_file,
+                      info_collector.get_component_info_as_dict(),
+                      options.write_file_only_if_changed)
 
 if __name__ == '__main__':
     sys.exit(main())

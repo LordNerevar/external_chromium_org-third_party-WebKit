@@ -746,19 +746,19 @@ WebInspector.setToolbarColors = function(document, backgroundColor, color)
     var prefix = WebInspector.isMac() ? "body:not(.undocked)" : "";
     WebInspector._themeStyleElement.textContent =
         String.sprintf(
-            "%s .toolbar-colors {\
-                 background-image: none !important;\
-                 background-color: %s !important;\
-                 color: %s !important;\
-             }", prefix, backgroundColor, color) +
+            "%s .toolbar-colors {" +
+            "    background-image: none !important;" +
+            "    background-color: %s !important;" +
+            "    color: %s !important;" +
+            "}", prefix, backgroundColor, color) +
         String.sprintf(
-             "%s .toolbar-colors button.status-bar-item .glyph, %s .toolbar-colors button.status-bar-item .long-click-glyph {\
-                 background-color: %s;\
-             }", prefix, prefix, color) +
+             "%s .toolbar-colors button.status-bar-item .glyph, %s .toolbar-colors button.status-bar-item .long-click-glyph {" +
+             "   background-color: %s;" +
+             "}", prefix, prefix, color) +
         String.sprintf(
-             "%s .toolbar-colors button.status-bar-item .glyph.shadow, %s .toolbar-colors button.status-bar-item .long-click-glyph.shadow {\
-                 background-color: %s;\
-             }", prefix, prefix, shadowColor);
+             "%s .toolbar-colors button.status-bar-item .glyph.shadow, %s .toolbar-colors button.status-bar-item .long-click-glyph.shadow {" +
+             "   background-color: %s;" +
+             "}", prefix, prefix, shadowColor);
 }
 
 WebInspector.resetToolbarColors = function()
@@ -997,10 +997,10 @@ WebInspector.InvokeOnceHandlers.prototype = {
     {
         var handlers = this._handlers;
         this._handlers = null;
-        var keys = handlers.keys();
+        var keys = handlers.keysArray();
         for (var i = 0; i < keys.length; ++i) {
             var object = keys[i];
-            var methods = handlers.get(object).values();
+            var methods = handlers.get(object).valuesArray();
             for (var j = 0; j < methods.length; ++j)
                 methods[j].call(object);
         }
@@ -1175,10 +1175,10 @@ WebInspector.LongClickController.prototype = {
 /**
  * @param {string} url
  * @param {string=} linkText
- * @param {boolean=} isInternal
+ * @param {string=} classes
  * @return {!Element}
  */
-WebInspector.createAnchor = function(url, linkText, isInternal)
+WebInspector.createExternalAnchor = function(url, linkText, classes)
 {
     var anchor = createElementWithClass("a", "link");
     var href = sanitizeHref(url);
@@ -1189,10 +1189,21 @@ WebInspector.createAnchor = function(url, linkText, isInternal)
 
     if (!linkText)
         linkText = url;
-    anchor.textContent = linkText;
 
-    if (!isInternal)
-        anchor.setAttribute("target", "_blank");
+    anchor.className = classes;
+    anchor.textContent = linkText;
+    anchor.setAttribute("target", "_blank");
+
+    /**
+     * @param {!Event} event
+     */
+    function clickHandler(event)
+    {
+        event.consume(true);
+        InspectorFrontendHost.openInNewTab(anchor.href);
+    }
+
+    anchor.addEventListener("click", clickHandler, false);
 
     return anchor;
 }
@@ -1204,7 +1215,7 @@ WebInspector.createAnchor = function(url, linkText, isInternal)
  */
 WebInspector.createDocumentationAnchor = function(article, title)
 {
-    return WebInspector.createAnchor("https://developer.chrome.com/devtools/docs/" + article, title);
+    return WebInspector.createExternalAnchor("https://developer.chrome.com/devtools/docs/" + article, title);
 }
 
 /**

@@ -45,8 +45,8 @@ WebInspector.NetworkLogView = function(filterBar, coulmnsVisibilitySetting)
     this._filterBar = filterBar;
     this._coulmnsVisibilitySetting = coulmnsVisibilitySetting;
     this._allowRequestSelection = false;
-    /** @type {!StringMap.<!WebInspector.NetworkDataGridNode>} */
-    this._nodesByRequestId = new StringMap();
+    /** @type {!Map.<string, !WebInspector.NetworkDataGridNode>} */
+    this._nodesByRequestId = new Map();
     /** @type {!Object.<string, boolean>} */
     this._staleRequestIds = {};
     /** @type {number} */
@@ -224,7 +224,7 @@ WebInspector.NetworkLogView.prototype = {
 
         this._popoverHelper = new WebInspector.PopoverHelper(this.element, this._getPopoverAnchor.bind(this), this._showPopover.bind(this), this._onHidePopover.bind(this));
         // Enable faster hint.
-        this._popoverHelper.setTimeout(100);
+        this._popoverHelper.setTimeout(250, 250);
 
         this.switchViewMode(true);
     },
@@ -586,7 +586,7 @@ WebInspector.NetworkLogView.prototype = {
         var selectedTransferSize = 0;
         var baseTime = -1;
         var maxTime = -1;
-        var nodes = this._nodesByRequestId.values();
+        var nodes = this._nodesByRequestId.valuesArray();
         for (var i = 0; i < nodes.length; ++i) {
             var request = nodes[i].request();
             var requestTransferSize = request.transferSize;
@@ -693,7 +693,7 @@ WebInspector.NetworkLogView.prototype = {
 
     _invalidateAllItems: function()
     {
-        var requestIds = this._nodesByRequestId.keys();
+        var requestIds = this._nodesByRequestId.keysArray();
         for (var i = 0; i < requestIds.length; ++i)
             this._staleRequestIds[requestIds[i]] = true;
     },
@@ -828,7 +828,7 @@ WebInspector.NetworkLogView.prototype = {
         if (boundariesChanged) {
             // The boundaries changed, so all item graphs are stale.
             this._updateDividersIfNeeded();
-            var nodes = this._nodesByRequestId.values();
+            var nodes = this._nodesByRequestId.valuesArray();
             for (var i = 0; i < nodes.length; ++i)
                 nodes[i].refreshGraph();
         }
@@ -864,7 +864,7 @@ WebInspector.NetworkLogView.prototype = {
         if (this._calculator)
             this._calculator.reset();
 
-        var nodes = this._nodesByRequestId.values();
+        var nodes = this._nodesByRequestId.valuesArray();
         for (var i = 0; i < nodes.length; ++i)
             nodes[i].dispose();
 
@@ -1222,24 +1222,16 @@ WebInspector.NetworkLogView.prototype = {
 
         if (request && request.resourceType() === WebInspector.resourceTypes.XHR) {
             contextMenu.appendSeparator();
-            contextMenu.appendItem(WebInspector.UIString("Replay XHR"), this._replayXHR.bind(this, request.requestId));
+            contextMenu.appendItem(WebInspector.UIString("Replay XHR"), request.replayXHR.bind(request));
             contextMenu.appendSeparator();
         }
 
         contextMenu.show();
     },
 
-    /**
-     * @param {string} requestId
-     */
-    _replayXHR: function(requestId)
-    {
-        NetworkAgent.replayXHR(requestId);
-    },
-
     _harRequests: function()
     {
-        var requests = this._nodesByRequestId.values().map(function(node) { return node.request(); });
+        var requests = this._nodesByRequestId.valuesArray().map(function(node) { return node.request(); });
         var httpRequests = requests.filter(WebInspector.NetworkLogView.HTTPRequestsFilter);
         httpRequests = httpRequests.filter(WebInspector.NetworkLogView.FinishedRequestsFilter);
         return httpRequests.filter(WebInspector.NetworkLogView.NonDevToolsRequestsFilter);

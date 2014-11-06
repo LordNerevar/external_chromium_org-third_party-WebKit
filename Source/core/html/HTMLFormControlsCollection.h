@@ -32,6 +32,7 @@
 namespace blink {
 
 class HTMLImageElement;
+class RadioNodeListOrElement;
 
 // This class is just a big hack to find form elements even in malformed HTML elements.
 // The famous <table><tr><form><td> problem.
@@ -46,7 +47,7 @@ public:
     HTMLElement* item(unsigned offset) const { return toHTMLElement(HTMLCollection::item(offset)); }
 
     virtual HTMLElement* namedItem(const AtomicString& name) const override;
-    void namedGetter(const AtomicString& name, RefPtrWillBeRawPtr<RadioNodeList>&, RefPtrWillBeRawPtr<Element>&);
+    void namedGetter(const AtomicString& name, RadioNodeListOrElement&);
 
     virtual void trace(Visitor*) override;
 
@@ -57,7 +58,7 @@ private:
     virtual void supportedPropertyNames(Vector<String>& names) override;
 
     const FormAssociatedElement::List& formControlElements() const;
-    const WillBeHeapVector<RawPtrWillBeMember<HTMLImageElement> >& formImageElements() const;
+    const WillBeHeapVector<RawPtrWillBeMember<HTMLImageElement>>& formImageElements() const;
     virtual HTMLElement* virtualItemAfter(Element*) const override;
     virtual void invalidateCache(Document* oldDocument = 0) const override;
 

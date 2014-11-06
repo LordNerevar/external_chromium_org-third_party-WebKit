@@ -42,8 +42,6 @@ WebInspector.TimelineFlameChartDataProvider = function(model, frameModel)
     this._frameModel = frameModel;
     this._font = "12px " + WebInspector.fontFamily();
     this._linkifier = new WebInspector.Linkifier();
-    if (Runtime.experiments.isEnabled("timelineJSCPUProfile"))
-        this._enableJSSamplingSettingSetting = WebInspector.settings.createSetting("timelineEnableJSSampling", false);
     this._filters = [];
     this.addFilter(WebInspector.TracingTimelineUIUtils.hiddenEventsFilter());
     this.addFilter(new WebInspector.TracingTimelineModel.ExclusiveEventNameFilter([WebInspector.TracingTimelineModel.RecordType.Program]));
@@ -198,7 +196,8 @@ WebInspector.TimelineFlameChartDataProvider.prototype = {
     _appendThreadTimelineData: function(threadTitle, syncEvents, asyncEvents)
     {
         var levelCount = this._appendAsyncEvents(threadTitle, asyncEvents);
-        if (this._enableJSSamplingSettingSetting && this._enableJSSamplingSettingSetting.get()) {
+        // If JS sampling was on covert trace events with call stack into JSFrame events.
+        if (this._model.containsJSSamples()) {
             var jsFrameEvents = this._generateJSFrameEvents(syncEvents);
             syncEvents = jsFrameEvents.mergeOrdered(syncEvents, WebInspector.TracingModel.Event.orderedCompareStartTime);
         }
@@ -491,16 +490,21 @@ WebInspector.TimelineFlameChartDataProvider.prototype = {
 
             context.translate(0.5, 0.5);
 
-            context.beginPath();
-            context.moveTo(barX, barY);
-            context.lineTo(barX, context.canvas.height);
-            context.strokeStyle = "rgba(100, 100, 100, 0.4)";
-            context.setLineDash([5]);
-            context.stroke();
-            context.setLineDash([]);
+            // Only paint starting with certain zoom.
+            var scale = barWidth / (frame.endTime - frame.startTime);
+            if (scale > 4) {
+                context.beginPath();
+                context.lineWidth = 3;
+                context.moveTo(barX, barY);
+                context.lineTo(barX, context.canvas.height);
+                context.strokeStyle = "rgba(100, 100, 100, 0.4)";
+                context.setLineDash([3]);
+                context.stroke();
+                context.setLineDash([]);
+                context.lineWidth = 1;
+            }
 
-
-            var padding = 4 * window.devicePixelRatio;
+            var padding = 4;
             barX += padding;
             barWidth -= 2 * padding;
             barY += padding;
@@ -768,6 +772,15 @@ WebInspector.TimelineFlameChart.prototype = {
     },
 
     /**
+     * @param {number} startTime
+     * @param {number} endTime
+     */
+    updateBoxSelection: function(startTime, endTime)
+    {
+        this._delegate.select(WebInspector.TimelineSelection.fromRange(startTime, endTime));
+    },
+
+    /**
      * @param {?RegExp} textFilter
      */
     refreshRecords: function(textFilter)
@@ -852,6 +865,15 @@ WebInspector.TimelineFlameChart.prototype = {
      */
     highlightSearchResult: function(record, regex, selectRecord)
     {
+        if (!record) {
+            this._delegate.select(null);
+            return;
+        }
+        var traceEvent = record.traceEvent();
+        var entryIndex = this._dataProvider._entryEvents.indexOf(traceEvent);
+        var timelineSelection = this._dataProvider.createSelection(entryIndex);
+        if (timelineSelection)
+            this._delegate.select(timelineSelection);
     },
 
     /**

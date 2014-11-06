@@ -107,6 +107,13 @@ void RecordingImageBufferSurface::fallBackToRasterCanvas()
     }
 }
 
+PassRefPtr<SkImage> RecordingImageBufferSurface::newImageSnapshot() const
+{
+    if (!m_fallbackSurface)
+        const_cast<RecordingImageBufferSurface*>(this)->fallBackToRasterCanvas();
+    return m_fallbackSurface->newImageSnapshot();
+}
+
 SkCanvas* RecordingImageBufferSurface::canvas() const
 {
     if (m_fallbackSurface)
@@ -216,6 +223,13 @@ void RecordingImageBufferSurface::setCurrentState(SkCanvas* dstCanvas, StateStac
     dstCanvas->resetMatrix();
     dstCanvas->clipRect(SkRect::MakeFromIRect(stateStack->peek().m_clip));
     dstCanvas->setMatrix(stateStack->peek().m_ctm);
+}
+
+void RecordingImageBufferSurface::willDrawVideo()
+{
+    // Video draws need to be synchronous
+    if (!m_fallbackSurface)
+        fallBackToRasterCanvas();
 }
 
 // Fallback passthroughs

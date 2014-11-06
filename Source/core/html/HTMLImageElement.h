@@ -58,8 +58,6 @@ public:
 
     const AtomicString& altText() const;
 
-    CompositeOperator compositeOperator() const { return m_compositeOperator; }
-
     ImageResource* cachedImage() const { return imageLoader().image(); }
     void setImageResource(ImageResource* i) { imageLoader().setImage(i); };
 
@@ -90,7 +88,7 @@ public:
     void formRemovedFromTree(const Node& formRoot);
 
     // CanvasImageSourceImplementations
-    virtual PassRefPtr<Image> getSourceImageForCanvas(SourceImageMode, SourceImageStatus*) const;
+    virtual PassRefPtr<Image> getSourceImageForCanvas(SourceImageMode, SourceImageStatus*) const override;
     virtual bool wouldTaintOrigin(SecurityOrigin*) const override;
     virtual FloatSize sourceSize() const override;
     virtual FloatSize defaultDestinationSize() const override;
@@ -142,7 +140,6 @@ private:
 #else
     WeakPtr<HTMLFormElement> m_form;
 #endif
-    CompositeOperator m_compositeOperator;
     AtomicString m_bestFitImageURL;
     float m_imageDevicePixelRatio;
     unsigned m_formWasSetByParser : 1;

@@ -183,6 +183,17 @@ CSSParserToken CSSTokenizer::semiColon(UChar cc)
     return CSSParserToken(SemicolonToken);
 }
 
+CSSParserToken CSSTokenizer::hash(UChar cc)
+{
+    UChar nextChar = m_input.nextInputChar();
+    if (isNameChar(nextChar) || twoCharsAreValidEscape(nextChar, m_input.peek(1))) {
+        HashTokenType type = nextCharsAreIdentifier() ? HashTokenId : HashTokenUnrestricted;
+        return CSSParserToken(type, consumeName());
+    }
+
+    return CSSParserToken(DelimiterToken, cc);
+}
+
 CSSParserToken CSSTokenizer::reverseSolidus(UChar cc)
 {
     if (twoCharsAreValidEscape(cc, m_input.nextInputChar())) {
@@ -196,6 +207,17 @@ CSSParserToken CSSTokenizer::asciiDigit(UChar cc)
 {
     reconsume(cc);
     return consumeNumericToken();
+}
+
+CSSParserToken CSSTokenizer::letterU(UChar cc)
+{
+    if (m_input.nextInputChar() == '+'
+        && (isASCIIHexDigit(m_input.peek(1)) || m_input.peek(1) == '?')) {
+        consume();
+        return consumeUnicodeRange();
+    }
+    reconsume(cc);
+    return consumeIdentLikeToken();
 }
 
 CSSParserToken CSSTokenizer::nameStart(UChar cc)
@@ -349,11 +371,19 @@ CSSParserToken CSSTokenizer::consumeNumericToken()
     return token;
 }
 
-// http://www.w3.org/TR/css3-syntax/#consume-an-ident-like-token
+// http://dev.w3.org/csswg/css-syntax/#consume-ident-like-token
 CSSParserToken CSSTokenizer::consumeIdentLikeToken()
 {
     String name = consumeName();
     if (consumeIfNext('(')) {
+        if (name == "url") {
+            // The spec is slightly different so as to avoid dropping whitespace
+            // tokens, but they wouldn't be used and this is easier.
+            consumeUntilNonWhitespace();
+            UChar next = m_input.nextInputChar();
+            if (next != '"' && next != '\'')
+                return consumeUrlToken();
+        }
         return blockStart(LeftParenthesisToken, FunctionToken, name);
     }
     return CSSParserToken(IdentToken, name);
@@ -385,6 +415,98 @@ CSSParserToken CSSTokenizer::consumeStringTokenUntil(UChar endingCodePoint)
         } else {
             output.append(cc);
         }
+    }
+}
+
+CSSParserToken CSSTokenizer::consumeUnicodeRange()
+{
+    ASSERT(isASCIIHexDigit(m_input.nextInputChar()) || m_input.nextInputChar() == '?');
+    int lengthRemaining = 6;
+    UChar32 start = 0;
+
+    while (lengthRemaining && isASCIIHexDigit(m_input.nextInputChar())) {
+        start = start * 16 + toASCIIHexValue(consume());
+        --lengthRemaining;
+    }
+
+    if (lengthRemaining && consumeIfNext('?')) {
+        UChar32 end = start;
+        do {
+            start *= 16;
+            end = end * 16 + 0xF;
+            --lengthRemaining;
+        } while (lengthRemaining && consumeIfNext('?'));
+        return CSSParserToken(UnicodeRangeToken, start, end);
+    }
+
+    if (m_input.nextInputChar() == '-' && isASCIIHexDigit(m_input.peek(1))) {
+        consume();
+        lengthRemaining = 6;
+        UChar32 end = 0;
+        do {
+            end = end * 16 + toASCIIHexValue(consume());
+            --lengthRemaining;
+        } while (lengthRemaining && isASCIIHexDigit(m_input.nextInputChar()));
+        return CSSParserToken(UnicodeRangeToken, start, end);
+    }
+
+    return CSSParserToken(UnicodeRangeToken, start, start);
+}
+
+// http://dev.w3.org/csswg/css-syntax/#non-printable-code-point
+static bool isNonPrintableCodePoint(UChar cc)
+{
+    return (cc >= '\0' && cc <= '\x8') || cc == '\xb' || (cc >= '\xe' && cc <= '\x1f') || cc == '\x7f';
+}
+
+// http://dev.w3.org/csswg/css-syntax/#consume-url-token
+CSSParserToken CSSTokenizer::consumeUrlToken()
+{
+    consumeUntilNonWhitespace();
+    StringBuilder result;
+    while (true) {
+        UChar cc = consume();
+        if (cc == ')' || cc == kEndOfFileMarker) {
+            // The "reconsume" here deviates from the spec, but is required to avoid consuming past the EOF
+            if (cc == kEndOfFileMarker)
+                reconsume(cc);
+            return CSSParserToken(UrlToken, result.toString());
+        }
+
+        if (isHTMLSpace(cc)) {
+            consumeUntilNonWhitespace();
+            if (consumeIfNext(')') || m_input.nextInputChar() == kEndOfFileMarker)
+                return CSSParserToken(UrlToken, result.toString());
+            break;
+        }
+
+        if (cc == '"' || cc == '\'' || cc == '(' || isNonPrintableCodePoint(cc))
+            break;
+
+        if (cc == '\\') {
+            if (twoCharsAreValidEscape(cc, m_input.nextInputChar())) {
+                result.append(consumeEscape());
+                continue;
+            }
+            break;
+        }
+
+        result.append(cc);
+    }
+
+    consumeBadUrlRemnants();
+    return CSSParserToken(BadUrlToken);
+}
+
+// http://dev.w3.org/csswg/css-syntax/#consume-the-remnants-of-a-bad-url
+void CSSTokenizer::consumeBadUrlRemnants()
+{
+    while (true) {
+        UChar cc = consume();
+        if (cc == ')' || cc == kEndOfFileMarker)
+            return;
+        if (twoCharsAreValidEscape(cc, m_input.nextInputChar()))
+            consumeEscape();
     }
 }
 
@@ -508,18 +630,15 @@ bool CSSTokenizer::nextCharsAreNumber()
     return areNumber;
 }
 
-// http://www.w3.org/TR/css3-syntax/#would-start-an-identifier
+// http://dev.w3.org/csswg/css-syntax/#would-start-an-identifier
 bool CSSTokenizer::nextCharsAreIdentifier(UChar first)
 {
     UChar second = m_input.nextInputChar();
     if (isNameStart(first) || twoCharsAreValidEscape(first, second))
         return true;
 
-    if (first == '-') {
-        if (isNameStart(m_input.nextInputChar()))
-            return true;
-        return nextTwoCharsAreValidEscape();
-    }
+    if (first == '-')
+        return isNameStart(second) || second == '-' || nextTwoCharsAreValidEscape();
 
     return false;
 }

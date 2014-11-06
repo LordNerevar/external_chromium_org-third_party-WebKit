@@ -160,6 +160,8 @@ public:
     virtual void derefResourceLoaderHost() override;
 #endif
 
+    int64_t serviceWorkerID() const;
+
     enum ResourceLoadStartType {
         ResourceLoadingFromNetwork,
         ResourceLoadingFromCache
@@ -167,8 +169,10 @@ public:
     void maybeNotifyInsecureContent(const Resource*) const;
     void requestLoadStarted(Resource*, const FetchRequest&, ResourceLoadStartType);
     static const ResourceLoaderOptions& defaultResourceOptions();
-private:
 
+    String getCacheIdentifier() const;
+
+private:
     explicit ResourceFetcher(DocumentLoader*);
 
     bool shouldLoadNewResource(Resource::Type) const;

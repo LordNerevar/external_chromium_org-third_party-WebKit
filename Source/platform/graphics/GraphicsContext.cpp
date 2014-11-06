@@ -51,6 +51,7 @@
 #include "third_party/skia/include/core/SkSurface.h"
 #include "third_party/skia/include/effects/SkBlurMaskFilter.h"
 #include "third_party/skia/include/effects/SkCornerPathEffect.h"
+#include "third_party/skia/include/effects/SkDropShadowImageFilter.h"
 #include "third_party/skia/include/effects/SkLumaColorFilter.h"
 #include "third_party/skia/include/effects/SkMatrixImageFilter.h"
 #include "third_party/skia/include/effects/SkPictureImageFilter.h"
@@ -311,7 +312,7 @@ void GraphicsContext::setShadow(const FloatSize& offset, float blur, const Color
         return;
 
     OwnPtr<DrawLooperBuilder> drawLooperBuilder = DrawLooperBuilder::create();
-    if (!color.alpha() || (!offset.width() && !offset.height() && !blur)) {
+    if (!color.alpha()) {
         if (shadowMode == DrawShadowOnly) {
             // shadow only, but there is no shadow: use an empty draw looper to disable rendering of the source primitive
             setDrawLooper(drawLooperBuilder.release());
@@ -326,6 +327,18 @@ void GraphicsContext::setShadow(const FloatSize& offset, float blur, const Color
         drawLooperBuilder->addUnmodifiedContent();
     }
     setDrawLooper(drawLooperBuilder.release());
+
+    if (shadowTransformMode == DrawLooperBuilder::ShadowIgnoresTransforms
+        && shadowAlphaMode == DrawLooperBuilder::ShadowRespectsAlpha) {
+        // This image filter will be used in place of the drawLooper created above but only for drawing non-opaque bitmaps;
+        // see preparePaintForDrawRectToRect().
+        SkColor skColor = color.rgb();
+        // These constants are from RadiusToSigma() from DrawLooperBuilder.cpp.
+        const SkScalar sigma = 0.288675f * blur + 0.5f;
+        SkDropShadowImageFilter::ShadowMode dropShadowMode = shadowMode == DrawShadowAndForeground ? SkDropShadowImageFilter::kDrawShadowAndForeground_ShadowMode : SkDropShadowImageFilter::kDrawShadowOnly_ShadowMode;
+        RefPtr<SkImageFilter> filter = adoptRef(SkDropShadowImageFilter::Create(offset.width(), offset.height(), sigma, sigma, skColor, dropShadowMode));
+        setDropShadowImageFilter(filter);
+    }
 }
 
 void GraphicsContext::setDrawLooper(PassOwnPtr<DrawLooperBuilder> drawLooperBuilder)
@@ -344,9 +357,25 @@ void GraphicsContext::clearDrawLooper()
     mutableState()->clearDrawLooper();
 }
 
+void GraphicsContext::setDropShadowImageFilter(PassRefPtr<SkImageFilter> imageFilter)
+{
+    if (contextDisabled())
+        return;
+
+    mutableState()->setDropShadowImageFilter(imageFilter);
+}
+
+void GraphicsContext::clearDropShadowImageFilter()
+{
+    if (contextDisabled())
+        return;
+
+    mutableState()->clearDropShadowImageFilter();
+}
+
 bool GraphicsContext::hasShadow() const
 {
-    return !!immutableState()->drawLooper();
+    return !!immutableState()->drawLooper() || !!immutableState()->dropShadowImageFilter();
 }
 
 bool GraphicsContext::getTransformedClipBounds(FloatRect* bounds) const
@@ -571,9 +600,9 @@ void GraphicsContext::drawDisplayList(DisplayList* displayList)
     if (location.x() || location.y()) {
         SkMatrix m;
         m.setTranslate(location.x(), location.y());
-        m_canvas->drawPicture(displayList->picture(), &m, 0);
+        m_canvas->drawPicture(displayList->picture().get(), &m, 0);
     } else {
-        m_canvas->drawPicture(displayList->picture());
+        m_canvas->drawPicture(displayList->picture().get());
     }
 
     if (regionTrackingEnabled()) {
@@ -586,6 +615,78 @@ void GraphicsContext::drawDisplayList(DisplayList* displayList)
 
     if (performClip || performTransform)
         restore();
+}
+
+void GraphicsContext::drawPicture(SkPicture* picture, const FloatPoint& location)
+{
+    ASSERT(picture);
+    ASSERT(m_canvas);
+
+    if (contextDisabled())
+        return;
+
+    if (location.x() || location.y()) {
+        SkMatrix m;
+        m.setTranslate(location.x(), location.y());
+        m_canvas->drawPicture(picture, &m, 0);
+    } else {
+        m_canvas->drawPicture(picture);
+    }
+
+    if (regionTrackingEnabled()) {
+        // Since we don't track regions within pictures, conservatively
+        // mark the bounds as non-opaque.
+        SkPaint paint;
+        paint.setXfermodeMode(SkXfermode::kClear_Mode);
+        FloatRect bound = picture->cullRect();
+        bound.moveBy(location);
+        m_trackedRegion.didDrawBounded(this, bound, paint);
+    }
+}
+
+static inline bool pictureScaleIsApproximatelyOne(float x)
+{
+    return fabsf(x - 1.0f) < cPictureScaleEpsilon;
+}
+
+void GraphicsContext::drawPicture(SkPicture* picture, const FloatRect& dest, const FloatRect& src, CompositeOperator op, WebBlendMode blendMode)
+{
+    ASSERT(m_canvas);
+    if (contextDisabled() || !picture)
+        return;
+
+    SkMatrix ctm = m_canvas->getTotalMatrix();
+    SkRect deviceDest;
+    ctm.mapRect(&deviceDest, dest);
+    float scaleX = deviceDest.width() / src.width();
+    float scaleY = deviceDest.height() / src.height();
+
+    SkPaint picturePaint;
+    picturePaint.setXfermodeMode(WebCoreCompositeToSkiaComposite(op, blendMode));
+    SkRect sourceBounds = WebCoreFloatRectToSKRect(src);
+    if (pictureScaleIsApproximatelyOne(scaleX * m_deviceScaleFactor) && pictureScaleIsApproximatelyOne(scaleY * m_deviceScaleFactor)) {
+        // Fast path for canvases that are rasterized at screen resolution
+        SkRect skBounds = WebCoreFloatRectToSKRect(dest);
+        m_canvas->saveLayer(&skBounds, &picturePaint);
+        SkMatrix pictureTransform;
+        pictureTransform.setRectToRect(sourceBounds, skBounds, SkMatrix::kFill_ScaleToFit);
+        m_canvas->concat(pictureTransform);
+        m_canvas->drawPicture(picture);
+        m_canvas->restore();
+    } else {
+        RefPtr<SkPictureImageFilter> pictureFilter = adoptRef(SkPictureImageFilter::Create(picture, sourceBounds));
+        SkMatrix layerScale;
+        layerScale.setScale(scaleX, scaleY);
+        RefPtr<SkMatrixImageFilter> matrixFilter = adoptRef(SkMatrixImageFilter::Create(layerScale, SkPaint::kLow_FilterLevel, pictureFilter.get()));
+        picturePaint.setImageFilter(matrixFilter.get());
+        SkRect layerBounds = SkRect::MakeWH(std::max(deviceDest.width(), sourceBounds.width()), std::max(deviceDest.height(), sourceBounds.height()));
+        m_canvas->save();
+        m_canvas->resetMatrix();
+        m_canvas->translate(deviceDest.x(), deviceDest.y());
+        m_canvas->saveLayer(&layerBounds, &picturePaint);
+        m_canvas->restore();
+        m_canvas->restore();
+    }
 }
 
 void GraphicsContext::fillPolygon(size_t numPoints, const FloatPoint* points, const Color& color,
@@ -1132,51 +1233,6 @@ void GraphicsContext::drawImageBuffer(ImageBuffer* image, const FloatRect& dest,
         return;
 
     image->draw(this, dest, src, op, blendMode);
-}
-
-static inline bool pictureScaleIsApproximatelyOne(float x)
-{
-    return fabsf(x - 1.0f) < cPictureScaleEpsilon;
-}
-
-void GraphicsContext::drawPicture(PassRefPtr<SkPicture> picture, const FloatRect& dest, const FloatRect& src, CompositeOperator op, WebBlendMode blendMode)
-{
-    ASSERT(m_canvas);
-    if (contextDisabled() || !picture)
-        return;
-
-    SkMatrix ctm = m_canvas->getTotalMatrix();
-    SkRect deviceDest;
-    ctm.mapRect(&deviceDest, dest);
-    float scaleX = deviceDest.width() / src.width();
-    float scaleY = deviceDest.height() / src.height();
-
-    SkPaint picturePaint;
-    picturePaint.setXfermodeMode(WebCoreCompositeToSkiaComposite(op, blendMode));
-    SkRect sourceBounds = WebCoreFloatRectToSKRect(src);
-    if (pictureScaleIsApproximatelyOne(scaleX * m_deviceScaleFactor) && pictureScaleIsApproximatelyOne(scaleY * m_deviceScaleFactor)) {
-        // Fast path for canvases that are rasterized at screen resolution
-        SkRect skBounds = WebCoreFloatRectToSKRect(dest);
-        m_canvas->saveLayer(&skBounds, &picturePaint);
-        SkMatrix pictureTransform;
-        pictureTransform.setRectToRect(sourceBounds, skBounds, SkMatrix::kFill_ScaleToFit);
-        m_canvas->concat(pictureTransform);
-        m_canvas->drawPicture(picture.get());
-        m_canvas->restore();
-    } else {
-        RefPtr<SkPictureImageFilter> pictureFilter = adoptRef(SkPictureImageFilter::Create(picture.get(), sourceBounds));
-        SkMatrix layerScale;
-        layerScale.setScale(scaleX, scaleY);
-        RefPtr<SkMatrixImageFilter> matrixFilter = adoptRef(SkMatrixImageFilter::Create(layerScale, SkPaint::kLow_FilterLevel, pictureFilter.get()));
-        picturePaint.setImageFilter(matrixFilter.get());
-        SkRect layerBounds = SkRect::MakeWH(std::max(deviceDest.width(), sourceBounds.width()), std::max(deviceDest.height(), sourceBounds.height()));
-        m_canvas->save();
-        m_canvas->resetMatrix();
-        m_canvas->translate(deviceDest.x(), deviceDest.y());
-        m_canvas->saveLayer(&layerBounds, &picturePaint);
-        m_canvas->restore();
-        m_canvas->restore();
-    }
 }
 
 void GraphicsContext::writePixels(const SkImageInfo& info, const void* pixels, size_t rowBytes, int x, int y)
@@ -1966,13 +2022,18 @@ void GraphicsContext::preparePaintForDrawRectToRect(
     const SkRect& destRect,
     CompositeOperator compositeOp,
     WebBlendMode blendMode,
+    bool isBitmapWithAlpha,
     bool isLazyDecoded,
     bool isDataComplete) const
 {
     paint->setXfermodeMode(WebCoreCompositeToSkiaComposite(compositeOp, blendMode));
     paint->setColorFilter(this->colorFilter());
     paint->setAlpha(this->getNormalizedAlpha());
-    paint->setLooper(this->drawLooper());
+    if (this->dropShadowImageFilter() && isBitmapWithAlpha) {
+        paint->setImageFilter(this->dropShadowImageFilter());
+    } else {
+        paint->setLooper(this->drawLooper());
+    }
     paint->setAntiAlias(shouldDrawAntiAliased(this, destRect));
 
     InterpolationQuality resampling;

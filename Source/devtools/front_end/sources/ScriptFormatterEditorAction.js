@@ -147,13 +147,13 @@ WebInspector.ScriptFormatterEditorAction = function()
 
     /** @type {!Map.<!WebInspector.Script, !WebInspector.UISourceCode>} */
     this._uiSourceCodes = new Map();
-    /** @type {!StringMap.<string>} */
-    this._formattedPaths = new StringMap();
+    /** @type {!Map.<string, string>} */
+    this._formattedPaths = new Map();
     /** @type {!Map.<!WebInspector.UISourceCode, !WebInspector.FormatterScriptMapping.FormatData>} */
     this._formatData = new Map();
 
-    /** @type {!StringSet} */
-    this._pathsToFormatOnLoad = new StringSet();
+    /** @type {!Set.<string>} */
+    this._pathsToFormatOnLoad = new Set();
 
     /** @type {!Map.<!WebInspector.Target, !WebInspector.FormatterScriptMapping>} */
     this._scriptMappingByTarget = new Map();
@@ -190,7 +190,7 @@ WebInspector.ScriptFormatterEditorAction.prototype = {
         this._updateButton(uiSourceCode);
 
         var path = uiSourceCode.project().id() + ":" + uiSourceCode.path();
-        if (this._isFormatableScript(uiSourceCode) && uiSourceCode.url && this._pathsToFormatOnLoad.contains(path) && !this._formattedPaths.get(path))
+        if (this._isFormatableScript(uiSourceCode) && uiSourceCode.url && this._pathsToFormatOnLoad.has(path) && !this._formattedPaths.get(path))
             this._formatUISourceCodeScript(uiSourceCode);
     },
 
@@ -310,7 +310,7 @@ WebInspector.ScriptFormatterEditorAction.prototype = {
      */
     _cleanForTarget: function(target)
     {
-        var uiSourceCodes = this._formatData.keys();
+        var uiSourceCodes = this._formatData.keysArray();
         for (var i = 0; i < uiSourceCodes.length; ++i) {
             WebInspector.debuggerWorkspaceBinding.setSourceMapping(target, uiSourceCodes[i], null);
             var formatData = this._formatData.get(uiSourceCodes[i]);

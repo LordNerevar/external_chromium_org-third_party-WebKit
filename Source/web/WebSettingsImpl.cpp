@@ -241,6 +241,11 @@ void WebSettingsImpl::setReportScreenSizeInPhysicalPixelsQuirk(bool reportScreen
     m_settings->setReportScreenSizeInPhysicalPixelsQuirk(reportScreenSizeInPhysicalPixelsQuirk);
 }
 
+void WebSettingsImpl::setRootLayerScrolls(bool rootLayerScrolls)
+{
+    m_settings->setRootLayerScrolls(rootLayerScrolls);
+}
+
 void WebSettingsImpl::setClobberUserAgentInitialScaleQuirk(bool clobberUserAgentInitialScaleQuirk)
 {
     m_clobberUserAgentInitialScaleQuirk = clobberUserAgentInitialScaleQuirk;
@@ -730,6 +735,11 @@ void WebSettingsImpl::setV8CacheOptions(V8CacheOptions options)
 void WebSettingsImpl::setV8ScriptStreamingEnabled(bool enabled)
 {
     m_settings->setV8ScriptStreamingEnabled(enabled);
+}
+
+void WebSettingsImpl::setV8ScriptStreamingMode(V8ScriptStreamingMode mode)
+{
+    m_settings->setV8ScriptStreamingMode(static_cast<blink::ScriptStreamingMode>(mode));
 }
 
 } // namespace blink

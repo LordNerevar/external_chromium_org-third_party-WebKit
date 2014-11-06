@@ -121,6 +121,7 @@ LOCAL_SRC_FILES := \
 	third_party/WebKit/Source/core/css/CSSCanvasValue.cpp \
 	third_party/WebKit/Source/core/css/CSSCharsetRule.cpp \
 	third_party/WebKit/Source/core/css/CSSComputedStyleDeclaration.cpp \
+	third_party/WebKit/Source/core/css/CSSContentDistributionValue.cpp \
 	third_party/WebKit/Source/core/css/CSSCrossfadeValue.cpp \
 	third_party/WebKit/Source/core/css/CSSCursorImageValue.cpp \
 	third_party/WebKit/Source/core/css/CSSDefaultStyleSheets.cpp \
@@ -522,7 +523,9 @@ LOCAL_SRC_FILES := \
 	third_party/WebKit/Source/core/paint/BoxDecorationData.cpp \
 	third_party/WebKit/Source/core/paint/BoxPainter.cpp \
 	third_party/WebKit/Source/core/paint/BackgroundImageGeometry.cpp \
+	third_party/WebKit/Source/core/paint/ClipRecorder.cpp \
 	third_party/WebKit/Source/core/paint/DetailsMarkerPainter.cpp \
+	third_party/WebKit/Source/core/paint/DrawingRecorder.cpp \
 	third_party/WebKit/Source/core/paint/EllipsisBoxPainter.cpp \
 	third_party/WebKit/Source/core/paint/FileUploadControlPainter.cpp \
 	third_party/WebKit/Source/core/paint/FramePainter.cpp \
@@ -547,9 +550,9 @@ LOCAL_SRC_FILES := \
 	third_party/WebKit/Source/core/paint/SVGImagePainter.cpp \
 	third_party/WebKit/Source/core/paint/SVGInlineFlowBoxPainter.cpp \
 	third_party/WebKit/Source/core/paint/SVGInlineTextBoxPainter.cpp \
-	third_party/WebKit/Source/core/paint/SVGMarkerPainter.cpp \
 	third_party/WebKit/Source/core/paint/SVGRootInlineBoxPainter.cpp \
 	third_party/WebKit/Source/core/paint/SVGRootPainter.cpp \
+	third_party/WebKit/Source/core/paint/SVGShapePainter.cpp \
 	third_party/WebKit/Source/core/paint/SVGTextPainter.cpp \
 	third_party/WebKit/Source/core/paint/TablePainter.cpp \
 	third_party/WebKit/Source/core/paint/TableRowPainter.cpp \
@@ -596,9 +599,6 @@ LOCAL_SRC_FILES := \
 	third_party/WebKit/Source/core/xml/DOMParser.cpp \
 	third_party/WebKit/Source/core/xml/DocumentXPathEvaluator.cpp \
 	third_party/WebKit/Source/core/xml/NativeXPathNSResolver.cpp \
-	third_party/WebKit/Source/core/xml/XMLHttpRequest.cpp \
-	third_party/WebKit/Source/core/xml/XMLHttpRequestProgressEventThrottle.cpp \
-	third_party/WebKit/Source/core/xml/XMLHttpRequestUpload.cpp \
 	third_party/WebKit/Source/core/xml/XMLSerializer.cpp \
 	third_party/WebKit/Source/core/xml/XPathEvaluator.cpp \
 	third_party/WebKit/Source/core/xml/XPathExpression.cpp \
@@ -623,7 +623,10 @@ LOCAL_SRC_FILES := \
 	third_party/WebKit/Source/core/xml/parser/SharedBufferReader.cpp \
 	third_party/WebKit/Source/core/xml/parser/XMLDocumentParser.cpp \
 	third_party/WebKit/Source/core/xml/parser/XMLDocumentParserScope.cpp \
-	third_party/WebKit/Source/core/xml/parser/XMLErrors.cpp
+	third_party/WebKit/Source/core/xml/parser/XMLErrors.cpp \
+	third_party/WebKit/Source/core/xmlhttprequest/XMLHttpRequest.cpp \
+	third_party/WebKit/Source/core/xmlhttprequest/XMLHttpRequestProgressEventThrottle.cpp \
+	third_party/WebKit/Source/core/xmlhttprequest/XMLHttpRequestUpload.cpp
 
 
 # Flags passed to both C and C++ files.
@@ -674,17 +677,20 @@ MY_DEFS_Debug := \
 	'-DUSE_PROPRIETARY_CODECS' \
 	'-DENABLE_BROWSER_CDMS' \
 	'-DENABLE_CONFIGURATION_POLICY' \
+	'-DENABLE_NOTIFICATIONS' \
 	'-DDISCARDABLE_MEMORY_ALWAYS_SUPPORTED_NATIVELY' \
 	'-DSYSTEM_NATIVELY_SIGNALS_MEMORY_PRESSURE' \
-	'-DENABLE_EGLIMAGE=1' \
+	'-DDONT_EMBED_BUILD_METADATA' \
 	'-DCLD_VERSION=1' \
 	'-DENABLE_PRINTING=1' \
+	'-DENABLE_BASIC_PRINTING=1' \
 	'-DENABLE_MANAGED_USERS=1' \
 	'-DVIDEO_HOLE=1' \
 	'-DENABLE_LOAD_COMPLETION_HACKS=1' \
 	'-DBLINK_IMPLEMENTATION=1' \
 	'-DINSIDE_BLINK' \
 	'-DENABLE_OPENTYPE_VERTICAL=1' \
+	'-DENABLE_LAYOUT_UNIT_IN_INLINE_BOXES=0' \
 	'-DWTF_USE_CONCATENATED_IMPULSE_RESPONSES=1' \
 	'-DWTF_USE_WEBAUDIO_OPENMAX_DL_FFT=1' \
 	'-DENABLE_WEB_AUDIO=1' \
@@ -700,7 +706,7 @@ MY_DEFS_Debug := \
 	'-DSK_WILL_NEVER_DRAW_PERSPECTIVE_TEXT' \
 	'-DSK_FM_NEW_MATCH_FAMILY_STYLE_CHARACTER=1' \
 	'-DSK_SUPPORT_LEGACY_TEXTRENDERMODE' \
-	'-DSK_LEGACY_NO_DISTANCE_FIELD_PATHS' \
+	'-DSK_IGNORE_GPU_LAYER_HOISTING' \
 	'-DSK_BUILD_FOR_ANDROID' \
 	'-DSK_USE_POSIX_THREADS' \
 	'-DCHROME_PNG_WRITE_SUPPORT' \
@@ -708,6 +714,7 @@ MY_DEFS_Debug := \
 	'-DCHROME_PNG_READ_PACK_SUPPORT' \
 	'-DLIBXML_STATIC' \
 	'-DLIBXSLT_STATIC' \
+	'-DUSE_LIBPCI=1' \
 	'-DUSE_OPENSSL=1' \
 	'-DUSE_OPENSSL_CERTS=1' \
 	'-D__STDC_CONSTANT_MACROS' \
@@ -824,17 +831,20 @@ MY_DEFS_Release := \
 	'-DUSE_PROPRIETARY_CODECS' \
 	'-DENABLE_BROWSER_CDMS' \
 	'-DENABLE_CONFIGURATION_POLICY' \
+	'-DENABLE_NOTIFICATIONS' \
 	'-DDISCARDABLE_MEMORY_ALWAYS_SUPPORTED_NATIVELY' \
 	'-DSYSTEM_NATIVELY_SIGNALS_MEMORY_PRESSURE' \
-	'-DENABLE_EGLIMAGE=1' \
+	'-DDONT_EMBED_BUILD_METADATA' \
 	'-DCLD_VERSION=1' \
 	'-DENABLE_PRINTING=1' \
+	'-DENABLE_BASIC_PRINTING=1' \
 	'-DENABLE_MANAGED_USERS=1' \
 	'-DVIDEO_HOLE=1' \
 	'-DENABLE_LOAD_COMPLETION_HACKS=1' \
 	'-DBLINK_IMPLEMENTATION=1' \
 	'-DINSIDE_BLINK' \
 	'-DENABLE_OPENTYPE_VERTICAL=1' \
+	'-DENABLE_LAYOUT_UNIT_IN_INLINE_BOXES=0' \
 	'-DWTF_USE_CONCATENATED_IMPULSE_RESPONSES=1' \
 	'-DWTF_USE_WEBAUDIO_OPENMAX_DL_FFT=1' \
 	'-DENABLE_WEB_AUDIO=1' \
@@ -850,7 +860,7 @@ MY_DEFS_Release := \
 	'-DSK_WILL_NEVER_DRAW_PERSPECTIVE_TEXT' \
 	'-DSK_FM_NEW_MATCH_FAMILY_STYLE_CHARACTER=1' \
 	'-DSK_SUPPORT_LEGACY_TEXTRENDERMODE' \
-	'-DSK_LEGACY_NO_DISTANCE_FIELD_PATHS' \
+	'-DSK_IGNORE_GPU_LAYER_HOISTING' \
 	'-DSK_BUILD_FOR_ANDROID' \
 	'-DSK_USE_POSIX_THREADS' \
 	'-DCHROME_PNG_WRITE_SUPPORT' \
@@ -858,6 +868,7 @@ MY_DEFS_Release := \
 	'-DCHROME_PNG_READ_PACK_SUPPORT' \
 	'-DLIBXML_STATIC' \
 	'-DLIBXSLT_STATIC' \
+	'-DUSE_LIBPCI=1' \
 	'-DUSE_OPENSSL=1' \
 	'-DUSE_OPENSSL_CERTS=1' \
 	'-D__STDC_CONSTANT_MACROS' \

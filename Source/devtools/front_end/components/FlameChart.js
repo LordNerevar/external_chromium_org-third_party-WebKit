@@ -38,7 +38,13 @@ WebInspector.FlameChartDelegate.prototype = {
      * @param {number} startTime
      * @param {number} endTime
      */
-    requestWindowTimes: function(startTime, endTime) { }
+    requestWindowTimes: function(startTime, endTime) { },
+
+    /**
+     * @param {number} startTime
+     * @param {number} endTime
+     */
+    updateBoxSelection: function(startTime, endTime) { }
 }
 
 /**
@@ -94,10 +100,13 @@ WebInspector.FlameChart = function(dataProvider, flameChartDelegate, isTopDown)
     this._highlightedMarkerIndex = -1;
     this._highlightedEntryIndex = -1;
     this._selectedEntryIndex = -1;
+    this._rawTimelineDataLength = 0;
     this._textWidth = {};
 }
 
 WebInspector.FlameChart.DividersBarHeight = 20;
+
+WebInspector.FlameChart.MinimalTimeWindowMs = 0.01;
 
 /**
  * @interface
@@ -566,6 +575,12 @@ WebInspector.FlameChart.prototype = {
 
         var timeSpan = selectionWidth * this._pixelToTime;
         this._selectedTimeSpanLabel.textContent =  Number.preciseMillisToString(timeSpan, 2);
+        var start = this._cursorTime(this._selectionStartX);
+        var end = this._cursorTime(x);
+        if (end > start)
+            this._flameChartDelegate.updateBoxSelection(start, end);
+        else
+            this._flameChartDelegate.updateBoxSelection(end, start);
     },
 
     /**
@@ -574,6 +589,9 @@ WebInspector.FlameChart.prototype = {
     _onMouseMove: function(event)
     {
         this._lastMouseOffsetX = event.offsetX;
+
+        if (!this._enabled())
+            return;
 
         if (this._isDragging)
             return;
@@ -628,6 +646,8 @@ WebInspector.FlameChart.prototype = {
      */
     _onMouseWheel: function(e)
     {
+        if (!this._enabled())
+            return;
         // Pan vertically when shift down only.
         var panVertically = e.shiftKey && (e.wheelDeltaY || Math.abs(e.wheelDeltaX) === 120);
         var panHorizontally = Math.abs(e.wheelDeltaX) > Math.abs(e.wheelDeltaY) && !e.shiftKey;
@@ -714,6 +734,8 @@ WebInspector.FlameChart.prototype = {
     {
         bounds.left = Number.constrain(bounds.left, this._minimumBoundary, this._totalTime + this._minimumBoundary);
         bounds.right = Number.constrain(bounds.right, this._minimumBoundary, this._totalTime + this._minimumBoundary);
+        if (bounds.right - bounds.left < WebInspector.FlameChart.MinimalTimeWindowMs)
+            return;
         this._flameChartDelegate.requestWindowTimes(bounds.left, bounds.right);
     },
 
@@ -1243,6 +1265,11 @@ WebInspector.FlameChart.prototype = {
         this._selectedEntryIndex = -1;
         this._textWidth = {};
         this.update();
+    },
+
+    _enabled: function()
+    {
+        return this._rawTimelineDataLength !== 0;
     },
 
     __proto__: WebInspector.HBox.prototype

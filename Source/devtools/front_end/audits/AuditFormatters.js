@@ -72,12 +72,11 @@ WebInspector.AuditFormatters.Registry = {
     /**
      * @param {string} url
      * @param {string=} displayText
-     * @param {boolean=} allowExternalNavigation
      * @return {!Element}
      */
-    url: function(url, displayText, allowExternalNavigation)
+    url: function(url, displayText)
     {
-        return WebInspector.createAnchor(url, displayText, !allowExternalNavigation);
+        return WebInspector.createExternalAnchor(url, displayText);
     },
 
     /**
@@ -88,7 +87,7 @@ WebInspector.AuditFormatters.Registry = {
     resourceLink: function(url, line)
     {
         // FIXME: use WebInspector.Linkifier
-        return WebInspector.linkifyResourceAsNode(url, line, undefined, "console-message-url webkit-html-resource-link");
+        return WebInspector.linkifyResourceAsNode(url, line, "console-message-url webkit-html-resource-link");
     }
 };
 

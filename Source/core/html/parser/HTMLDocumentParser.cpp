@@ -95,7 +95,7 @@ public:
         if (HTMLParserThread::shared())
             return &HTMLParserThread::shared()->platformThread();
 
-        return 0;
+        return nullptr;
     }
 
 private:
@@ -196,6 +196,12 @@ void HTMLDocumentParser::detach()
     m_preloadScanner.clear();
     m_insertionPreloadScanner.clear();
     m_parserScheduler.clear(); // Deleting the scheduler will clear any timers.
+    // Oilpan: It is important to clear m_token to deallocate backing memory of
+    // HTMLToken::m_data and let the allocator reuse the memory for
+    // HTMLToken::m_data of a next HTMLDocumentParser. We need to clear
+    // m_tokenizer first because m_tokenizer has a raw pointer to m_token.
+    m_tokenizer.clear();
+    m_token.clear();
 }
 
 void HTMLDocumentParser::stopParsing()
@@ -429,9 +435,9 @@ void HTMLDocumentParser::processParsedChunkFromBackgroundParser(PassOwnPtr<Parse
 
     HTMLParserThread::shared()->postTask(bind(&BackgroundHTMLParser::startedChunkWithCheckpoint, m_backgroundParser, chunk->inputCheckpoint));
 
-    for (XSSInfoStream::const_iterator it = chunk->xssInfos.begin(); it != chunk->xssInfos.end(); ++it) {
-        m_textPosition = (*it)->m_textPosition;
-        m_xssAuditorDelegate.didBlockScript(**it);
+    for (const auto& xssInfo : chunk->xssInfos) {
+        m_textPosition = xssInfo->m_textPosition;
+        m_xssAuditorDelegate.didBlockScript(*xssInfo);
         if (isStopped())
             break;
     }
@@ -537,7 +543,7 @@ Document* HTMLDocumentParser::contextForParsingSession()
     // The parsing session should interact with the document only when parsing
     // non-fragments. Otherwise, we might delay the load event mistakenly.
     if (isParsingFragment())
-        return 0;
+        return nullptr;
     return document();
 }
 
@@ -590,8 +596,8 @@ void HTMLDocumentParser::pumpTokenizer()
                 m_xssAuditorDelegate.didBlockScript(*xssInfo);
         }
 
-        constructTreeFromHTMLToken(token());
-        ASSERT(token().isUninitialized());
+        constructTreeFromHTMLToken();
+        ASSERT(isStopped() || token().isUninitialized());
     }
 
 #if !ENABLE(OILPAN)
@@ -622,28 +628,32 @@ void HTMLDocumentParser::pumpTokenizer()
     InspectorInstrumentation::didWriteHTML(cookie, m_input.current().currentLine().zeroBasedInt());
 }
 
-void HTMLDocumentParser::constructTreeFromHTMLToken(HTMLToken& rawToken)
+void HTMLDocumentParser::constructTreeFromHTMLToken()
 {
-    AtomicHTMLToken token(rawToken);
+    AtomicHTMLToken atomicToken(token());
 
-    // We clear the rawToken in case constructTreeFromAtomicToken
+    // We clear the m_token in case constructTreeFromAtomicToken
     // synchronously re-enters the parser. We don't clear the token immedately
     // for Character tokens because the AtomicHTMLToken avoids copying the
     // characters by keeping a pointer to the underlying buffer in the
     // HTMLToken. Fortunately, Character tokens can't cause us to re-enter
     // the parser.
     //
-    // FIXME: Stop clearing the rawToken once we start running the parser off
+    // FIXME: Stop clearing the m_token once we start running the parser off
     // the main thread or once we stop allowing synchronous JavaScript
     // execution from parseAttribute.
-    if (rawToken.type() != HTMLToken::Character)
-        rawToken.clear();
+    if (token().type() != HTMLToken::Character)
+        token().clear();
 
-    m_treeBuilder->constructTree(&token);
+    m_treeBuilder->constructTree(&atomicToken);
 
-    if (!rawToken.isUninitialized()) {
-        ASSERT(rawToken.type() == HTMLToken::Character);
-        rawToken.clear();
+    // FIXME: constructTree may synchronously cause Document to be detached.
+    if (!m_token)
+        return;
+
+    if (!token().isUninitialized()) {
+        ASSERT(token().type() == HTMLToken::Character);
+        token().clear();
     }
 }
 
@@ -706,7 +716,7 @@ void HTMLDocumentParser::startBackgroundParser()
     ASSERT(!m_haveBackgroundParser);
     m_haveBackgroundParser = true;
 
-    RefPtr<WeakReference<BackgroundHTMLParser> > reference = WeakReference<BackgroundHTMLParser>::createUnbound();
+    RefPtr<WeakReference<BackgroundHTMLParser>> reference = WeakReference<BackgroundHTMLParser>::createUnbound();
     m_backgroundParser = WeakPtr<BackgroundHTMLParser>(reference);
 
     // TODO(oysteine): Disabled due to crbug.com/398076 until a full fix can be implemented.
@@ -1012,7 +1022,7 @@ void HTMLDocumentParser::appendBytes(const char* data, size_t length)
         if (!m_haveBackgroundParser)
             startBackgroundParser();
 
-        OwnPtr<Vector<char> > buffer = adoptPtr(new Vector<char>(length));
+        OwnPtr<Vector<char>> buffer = adoptPtr(new Vector<char>(length));
         memcpy(buffer->data(), data, length);
         TRACE_EVENT1("net", "HTMLDocumentParser::appendBytes", "size", (unsigned)length);
 

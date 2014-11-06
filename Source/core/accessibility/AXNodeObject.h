@@ -113,7 +113,7 @@ protected:
     virtual bool isChecked() const override final;
     virtual bool isClickable() const override final;
     virtual bool isEnabled() const override;
-    virtual bool isExpanded() const override final;
+    virtual AccessibilityExpanded isExpanded() const override;
     virtual bool isIndeterminate() const override final;
     virtual bool isPressed() const override final;
     virtual bool isReadOnly() const override;
@@ -158,8 +158,8 @@ protected:
     virtual LayoutRect elementRect() const override;
 
     // High-level accessibility tree access.
-    virtual AXObject* parentObject() const override;
-    virtual AXObject* parentObjectIfExists() const override;
+    virtual AXObject* computeParent() const override;
+    virtual AXObject* computeParentIfExists() const override;
 
     // Low-level accessibility tree exploration.
     virtual AXObject* firstChild() const override;

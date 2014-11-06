@@ -32,4 +32,4 @@ html/canvas/WebGLContextEvent.idl
 html/track/TrackEvent.idl
 storage/StorageEvent.idl
 svg/SVGZoomEvent.idl
-xml/XMLHttpRequestProgressEvent.idl
+xmlhttprequest/XMLHttpRequestProgressEvent.idl

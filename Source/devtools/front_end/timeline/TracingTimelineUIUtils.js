@@ -365,6 +365,8 @@ WebInspector.TracingTimelineUIUtils.buildDetailsNodeForTraceEvent = function(eve
     case recordType.JSFrame:
         details = linkifyLocation(eventData["scriptId"], eventData["url"], eventData["lineNumber"], eventData["columnNumber"]);
         detailsText = WebInspector.CPUProfileDataModel.beautifyFunctionName(eventData["functionName"]);
+        if (details && detailsText)
+            details.textContent = detailsText;
         break;
     case recordType.FireAnimationFrame:
         detailsText = eventData["id"];
@@ -435,12 +437,8 @@ WebInspector.TracingTimelineUIUtils.buildDetailsNodeForTraceEvent = function(eve
         break;
     }
 
-    if (detailsText) {
-        if (details)
-            details.textContent = detailsText;
-        else
-            details = createTextNode(detailsText);
-    }
+    if (!details && detailsText)
+        details = createTextNode(detailsText);
     return details;
 
     /**
@@ -573,7 +571,6 @@ WebInspector.TracingTimelineUIUtils._buildTraceEventDetailsSynchronously = funct
     var pieChart = hasChildren ?
         WebInspector.TimelineUIUtils.generatePieChart(stats, selfCategory, selfTime) :
         WebInspector.TimelineUIUtils.generatePieChart(stats);
-    fragment.appendChild(pieChart);
 
     var recordTypes = WebInspector.TracingTimelineModel.RecordType;
 
@@ -581,8 +578,10 @@ WebInspector.TracingTimelineUIUtils._buildTraceEventDetailsSynchronously = funct
     var relatedNodeLabel;
 
     var contentHelper = new WebInspector.TimelineDetailsContentHelper(event.thread.target(), linkifier, true);
+    contentHelper.appendTextRow(WebInspector.UIString("Type"), WebInspector.TracingTimelineUIUtils.eventTitle(event, model));
     contentHelper.appendTextRow(WebInspector.UIString("Self Time"), Number.millisToString(event.selfTime, true));
     contentHelper.appendTextRow(WebInspector.UIString("Start Time"), Number.millisToString((event.startTime - model.minimumRecordTime())));
+    contentHelper.appendElementRow(WebInspector.UIString("Aggregated Time"), pieChart);
     var eventData = event.args["data"];
     var initiator = event.initiator;
 
@@ -705,6 +704,7 @@ WebInspector.TracingTimelineUIUtils._buildTraceEventDetailsSynchronously = funct
         WebInspector.TracingTimelineUIUtils._generateCauses(event, contentHelper);
 
     fragment.appendChild(contentHelper.element);
+
     return fragment;
 }
 
@@ -728,23 +728,23 @@ WebInspector.TracingTimelineUIUtils._generateCauses = function(event, contentHel
         callSiteStackLabel = WebInspector.UIString("Animation frame requested");
         break;
     case recordTypes.RecalculateStyles:
-        stackLabel = WebInspector.UIString("Stack when style recalculation was forced");
+        stackLabel = WebInspector.UIString("Recalculation was forced");
         break;
     case recordTypes.Layout:
         callSiteStackLabel = WebInspector.UIString("First layout invalidation");
-        stackLabel = WebInspector.UIString("Stack when layout was forced");
+        stackLabel = WebInspector.UIString("Layout forced");
         break;
     }
 
     // Direct cause.
     if (event.stackTrace)
-        contentHelper.appendStackTrace(stackLabel || WebInspector.UIString("Stack when this event occurred"), event.stackTrace);
+        contentHelper.appendStackTrace(stackLabel || WebInspector.UIString("Stack trace"), event.stackTrace);
 
     // Indirect causes.
     if (event.invalidationTrackingEvents) { // Full invalidation tracking (experimental).
         WebInspector.TracingTimelineUIUtils._generateInvalidations(event, contentHelper);
     } else if (initiator && initiator.stackTrace) { // Partial invalidation tracking.
-        contentHelper.appendStackTrace(callSiteStackLabel || WebInspector.UIString("Stack when first invalidated"), initiator.stackTrace);
+        contentHelper.appendStackTrace(callSiteStackLabel || WebInspector.UIString("First invalidated"), initiator.stackTrace);
     }
 }
 

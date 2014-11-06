@@ -97,20 +97,20 @@ public:
 
     PassRefPtrWillBeRawPtr<CustomElementSyncMicrotaskQueue> microtaskQueue() const;
 
-    virtual void trace(Visitor*);
+    virtual void trace(Visitor*) override;
 
 private:
     HTMLImportLoader(HTMLImportsController*);
 
     // RawResourceClient
-    virtual void responseReceived(Resource*, const ResourceResponse&) override;
+    virtual void responseReceived(Resource*, const ResourceResponse&, PassOwnPtr<WebDataConsumerHandle>) override;
     virtual void dataReceived(Resource*, const char* data, unsigned length) override;
     virtual void notifyFinished(Resource*) override;
 
     // DocumentParserClient
 
     // Called after document parse is complete after DOMContentLoaded was dispatched.
-    virtual void notifyParserStopped();
+    virtual void notifyParserStopped() override;
 
     State startWritingAndParsing(const ResourceResponse&);
     State finishWriting();
@@ -125,7 +125,7 @@ private:
 #endif
 
     RawPtrWillBeMember<HTMLImportsController> m_controller;
-    WillBeHeapVector<RawPtrWillBeMember<HTMLImportChild> > m_imports;
+    WillBeHeapVector<RawPtrWillBeMember<HTMLImportChild>> m_imports;
     State m_state;
     RefPtrWillBeMember<Document> m_document;
     RefPtrWillBeMember<DocumentWriter> m_writer;

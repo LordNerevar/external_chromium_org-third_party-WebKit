@@ -133,19 +133,22 @@ FloatRect PinchViewport::visibleRectInDocument() const
     return pinchRect;
 }
 
-void PinchViewport::scrollIntoView(const FloatRect& rect)
+void PinchViewport::scrollIntoView(const LayoutRect& rect)
 {
     if (!mainFrame() || !mainFrame()->view())
         return;
 
     FrameView* view = mainFrame()->view();
 
-    float centeringOffsetX = (visibleRect().width() - rect.width()) / 2;
-    float centeringOffsetY = (visibleRect().height() - rect.height()) / 2;
+    // Snap the visible rect to layout units to match the input rect.
+    FloatRect visible = LayoutRect(visibleRect());
+
+    float centeringOffsetX = (visible.width() - rect.width()) / 2;
+    float centeringOffsetY = (visible.height() - rect.height()) / 2;
 
     DoublePoint targetOffset(
-        rect.x() - centeringOffsetX - visibleRect().x(),
-        rect.y() - centeringOffsetY - visibleRect().y());
+        rect.x() - centeringOffsetX - visible.x(),
+        rect.y() - centeringOffsetY - visible.y());
 
     view->setScrollPosition(targetOffset);
 
@@ -308,6 +311,11 @@ void PinchViewport::setupScrollbar(WebScrollbar::Orientation orientation)
         webScrollbarLayer = coordinator->createSolidColorScrollbarLayer(webcoreOrientation, thumbThickness, scrollbarMargin, false);
 
         webScrollbarLayer->setClipLayer(m_innerViewportContainerLayer->platformLayer());
+
+        // The compositor will control the scrollbar's visibility. Set to invisible by defualt
+        // so scrollbars don't show up in layout tests.
+        webScrollbarLayer->layer()->setOpacity(0);
+
         scrollbarGraphicsLayer->setContentsToPlatformLayer(webScrollbarLayer->layer());
         scrollbarGraphicsLayer->setDrawsContent(false);
     }
@@ -507,6 +515,8 @@ String PinchViewport::debugName(const GraphicsLayer* graphicsLayer)
         name =  "Overlay Scrollbar Horizontal Layer";
     } else if (graphicsLayer == m_overlayScrollbarVertical.get()) {
         name =  "Overlay Scrollbar Vertical Layer";
+    } else if (graphicsLayer == m_rootTransformLayer) {
+        name =  "Root Transform Layer";
     } else {
         ASSERT_NOT_REACHED();
     }

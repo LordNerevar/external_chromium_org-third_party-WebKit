@@ -78,14 +78,14 @@ void setArityTypeError(ExceptionState& exceptionState, const char* valid, unsign
     exceptionState.throwTypeError(ExceptionMessages::invalidArity(valid, provided));
 }
 
-v8::Local<v8::Value> createMinimumArityTypeErrorForMethod(const char* method, const char* type, unsigned expected, unsigned provided, v8::Isolate* isolate)
+v8::Local<v8::Value> createMinimumArityTypeErrorForMethod(v8::Isolate* isolate, const char* method, const char* type, unsigned expected, unsigned provided)
 {
-    return V8ThrowException::createTypeError(ExceptionMessages::failedToExecute(method, type, ExceptionMessages::notEnoughArguments(expected, provided)), isolate);
+    return V8ThrowException::createTypeError(isolate, ExceptionMessages::failedToExecute(method, type, ExceptionMessages::notEnoughArguments(expected, provided)));
 }
 
-v8::Local<v8::Value> createMinimumArityTypeErrorForConstructor(const char* type, unsigned expected, unsigned provided, v8::Isolate* isolate)
+v8::Local<v8::Value> createMinimumArityTypeErrorForConstructor(v8::Isolate* isolate, const char* type, unsigned expected, unsigned provided)
 {
-    return V8ThrowException::createTypeError(ExceptionMessages::failedToConstruct(type, ExceptionMessages::notEnoughArguments(expected, provided)), isolate);
+    return V8ThrowException::createTypeError(isolate, ExceptionMessages::failedToConstruct(type, ExceptionMessages::notEnoughArguments(expected, provided)));
 }
 
 void setMinimumArityTypeError(ExceptionState& exceptionState, unsigned expected, unsigned provided)
@@ -685,7 +685,7 @@ String toUSVString(v8::Handle<v8::Value> value, ExceptionState& exceptionState)
     return replaceUnmatchedSurrogates(x);
 }
 
-PassRefPtrWillBeRawPtr<XPathNSResolver> toXPathNSResolver(v8::Handle<v8::Value> value, v8::Isolate* isolate)
+PassRefPtrWillBeRawPtr<XPathNSResolver> toXPathNSResolver(v8::Isolate* isolate, v8::Handle<v8::Value> value)
 {
     RefPtrWillBeRawPtr<XPathNSResolver> resolver = nullptr;
     if (V8XPathNSResolver::hasInstance(value, isolate))

@@ -42,14 +42,14 @@
 }
 
 #sources-panel-sources-view .tabbed-pane-header {
-    background-color: rgb(236, 236, 236);
+    background-color: #eee;
 }
 
 #sources-panel-sources-view .sources-status-bar {
     display: flex;
     position: relative;
     flex: 0 0 20px;
-    background-color: rgb(236, 236, 236);
+    background-color: #eee;
     border-top: 1px solid rgb(196,196,196);
 }
 
@@ -165,7 +165,7 @@ button.status-bar-item.scripts-navigator-show-hide-button {
 .source-frame-infobar-details-row {
     display: flex;
     flex: none;
-    margin: 3px 10px;
+    margin: 0px 10px;
 }
 
 .source-frame-infobar-row-message {

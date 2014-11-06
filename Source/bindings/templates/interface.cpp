@@ -149,7 +149,6 @@ static void indexedPropertyDeleterCallback(uint32_t index, const v8::PropertyCal
 
 
 {##############################################################################}
-{% from 'methods.cpp' import union_type_method_call_and_set_return_value %}
 {% block named_property_getter %}
 {% if named_property_getter and not named_property_getter.is_custom %}
 {% set getter = named_property_getter %}
@@ -168,10 +167,12 @@ static void namedPropertyGetter(v8::Local<v8::String> name, const v8::PropertyCa
     v8::String::Utf8Value namedProperty(name);
     ExceptionState exceptionState(ExceptionState::GetterContext, *namedProperty, "{{interface_name}}", info.Holder(), info.GetIsolate());
     {% endif %}
-    {% if getter.union_arguments %}
-    {{union_type_method_call_and_set_return_value(getter) | indent}}
+    {% if getter.use_output_parameter_for_result %}
+    {{getter.cpp_type}} result;
+    {{getter.cpp_value}};
     {% else %}
     {{getter.cpp_type}} result = {{getter.cpp_value}};
+    {% endif %}
     {% if getter.is_raises_exception %}
     if (exceptionState.throwIfNeeded())
         return;
@@ -179,7 +180,6 @@ static void namedPropertyGetter(v8::Local<v8::String> name, const v8::PropertyCa
     if ({{getter.is_null_expression}})
         return;
     {{getter.v8_set_return_value}};
-    {% endif %}
 }
 
 {% endif %}
@@ -553,7 +553,7 @@ static void constructor(const v8::FunctionCallbackInfo<v8::Value>& info)
     if (DOMWrapperWorld::current(info.GetIsolate()).isIsolatedWorld()) {
         {% for attribute in any_type_attributes %}
         if (!{{attribute.name}}.IsEmpty())
-            event->setSerialized{{attribute.name | blink_capitalize}}(SerializedScriptValue::createAndSwallowExceptions({{attribute.name}}, info.GetIsolate()));
+            event->setSerialized{{attribute.name | blink_capitalize}}(SerializedScriptValue::createAndSwallowExceptions(info.GetIsolate(), {{attribute.name}}));
         {% endfor %}
     }
 
@@ -570,7 +570,7 @@ static void constructor(const v8::FunctionCallbackInfo<v8::Value>& info)
 {##############################################################################}
 {% block visit_dom_wrapper %}
 {% if reachable_node_function or set_wrapper_reference_to_list %}
-void {{v8_class}}::visitDOMWrapper(ScriptWrappableBase* scriptWrappableBase, const v8::Persistent<v8::Object>& wrapper, v8::Isolate* isolate)
+void {{v8_class}}::visitDOMWrapper(v8::Isolate* isolate, ScriptWrappableBase* scriptWrappableBase, const v8::Persistent<v8::Object>& wrapper)
 {
     {{cpp_class}}* impl = scriptWrappableBase->toImpl<{{cpp_class}}>();
     {% if set_wrapper_reference_to_list %}
@@ -580,7 +580,7 @@ void {{v8_class}}::visitDOMWrapper(ScriptWrappableBase* scriptWrappableBase, con
     {{set_wrapper_reference_to.cpp_type}} {{set_wrapper_reference_to.name}} = impl->{{set_wrapper_reference_to.name}}();
     if ({{set_wrapper_reference_to.name}}) {
         if (!DOMDataStore::containsWrapper<{{set_wrapper_reference_to.v8_type}}>({{set_wrapper_reference_to.name}}, isolate))
-            wrap({{set_wrapper_reference_to.name}}, creationContext, isolate);
+            {{set_wrapper_reference_to.name}}->wrap(creationContext, isolate);
         DOMDataStore::setWrapperReference<{{set_wrapper_reference_to.v8_type}}>(wrapper, {{set_wrapper_reference_to.name}}, isolate);
     }
     {% endfor %}
@@ -593,7 +593,7 @@ void {{v8_class}}::visitDOMWrapper(ScriptWrappableBase* scriptWrappableBase, con
         return;
     }
     {% endif %}
-    setObjectGroup(scriptWrappableBase, wrapper, isolate);
+    setObjectGroup(isolate, scriptWrappableBase, wrapper);
 }
 
 {% endif %}
@@ -968,7 +968,7 @@ v8::Handle<v8::Object> {{v8_class}}::createWrapper({{pass_cpp_type}} impl, v8::H
         return wrapper;
 
     installConditionallyEnabledProperties(wrapper, isolate);
-    V8DOMWrapper::associateObjectWithWrapper<{{v8_class}}>(impl, &wrapperTypeInfo, wrapper, isolate);
+    V8DOMWrapper::associateObjectWithWrapper<{{v8_class}}>(isolate, impl, &wrapperTypeInfo, wrapper);
     return wrapper;
 }
 

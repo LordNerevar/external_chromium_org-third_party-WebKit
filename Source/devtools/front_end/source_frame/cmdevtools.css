@@ -30,7 +30,7 @@
 
 .CodeMirror .CodeMirror-gutters {
   border-right: 1px solid rgb(187, 187, 187);
-  background-color: rgb(240, 240, 240);
+  background-color: #eee;
 }
 
 .CodeMirror .CodeMirror-linenumber {
@@ -42,7 +42,7 @@
 }
 
 .cm-highlight {
-  -webkit-animation: "fadeout" 2s 0s;
+  -webkit-animation: fadeout 2s 0s;
 }
 @-webkit-keyframes fadeout {
     from {background-color: rgb(255, 255, 120); }
@@ -50,7 +50,7 @@
 }
 
 .cm-highlight.cm-execution-line {
-  -webkit-animation: "fadeout-execution-line" 1s 0s;
+  -webkit-animation: fadeout-execution-line 1s 0s;
 }
 @-webkit-keyframes fadeout-execution-line {
     from {background-color: rgb(121, 141, 254); }
@@ -69,7 +69,7 @@
 }
 
 .cm-line-without-source-mapping {
-  background-color: rgb(243, 243, 243);
+  background-color: #eee;
 }
 
 .cm-breakpoint.cm-breakpoint-conditional .CodeMirror-linenumber {

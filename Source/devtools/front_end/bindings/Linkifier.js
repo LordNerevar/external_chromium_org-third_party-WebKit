@@ -145,15 +145,15 @@ WebInspector.Linkifier.prototype = {
      * @param {?WebInspector.Target} target
      * @param {?string} scriptId
      * @param {string} sourceURL
-     * @param {number=} lineNumber
+     * @param {number} lineNumber
      * @param {number=} columnNumber
      * @param {string=} classes
      * @return {!Element}
      */
     linkifyScriptLocation: function(target, scriptId, sourceURL, lineNumber, columnNumber, classes)
     {
-        var rawLocation = target && !target.isDetached() ? target.debuggerModel.createRawLocationByScriptId(scriptId, sourceURL, lineNumber || 0, columnNumber || 0) : null;
-        var fallbackAnchor = WebInspector.linkifyResourceAsNode(sourceURL, lineNumber, columnNumber, classes);
+        var rawLocation = target && !target.isDetached() ? target.debuggerModel.createRawLocationByScriptId(scriptId, sourceURL, lineNumber, columnNumber || 0) : null;
+        var fallbackAnchor = WebInspector.linkifyResourceAsNode(sourceURL, lineNumber, classes);
         if (!rawLocation)
             return fallbackAnchor;
 
@@ -222,7 +222,7 @@ WebInspector.Linkifier.prototype = {
             return this.linkifyCSSLocation(location);
 
         // The "linkedStylesheet" case.
-        return WebInspector.linkifyResourceAsNode(media.sourceURL, undefined, undefined, "subtitle", media.sourceURL);
+        return WebInspector.linkifyResourceAsNode(media.sourceURL, undefined, "subtitle", media.sourceURL);
     },
 
     /**
@@ -241,8 +241,8 @@ WebInspector.Linkifier.prototype = {
         {
             if (!anchor.__uiLocation)
                 return;
-            event.stopImmediatePropagation();
-            event.preventDefault();
+
+            event.consume(true);
             if (WebInspector.Linkifier.handleLink(anchor.__uiLocation.uiSourceCode.url, anchor.__uiLocation.lineNumber))
                 return;
             WebInspector.Revealer.reveal(anchor.__uiLocation);
@@ -253,7 +253,7 @@ WebInspector.Linkifier.prototype = {
 
     reset: function()
     {
-        var keys = this._liveLocationsByTarget.keys();
+        var keys = this._liveLocationsByTarget.keysArray();
         for (var i = 0; i < keys.length; ++i) {
             var target = keys[i];
             this.targetRemoved(target);
@@ -269,29 +269,6 @@ WebInspector.Linkifier.prototype = {
     {
         anchor.__uiLocation = uiLocation;
         this._formatter.formatLiveAnchor(anchor, uiLocation);
-    },
-
-    /**
-     * @param {?WebInspector.Target} target
-     * @param {string} string
-     * @return {!DocumentFragment}
-     */
-    linkifyStringAsFragment: function(target, string)
-    {
-        /**
-         * @param {string} title
-         * @param {string} url
-         * @param {number=} lineNumber
-         * @param {number=} columnNumber
-         * @return {!Node}
-         * @this {WebInspector.Linkifier}
-         */
-        function linkify(title, url, lineNumber, columnNumber)
-        {
-            return this.linkifyScriptLocation(target, null, url, lineNumber, columnNumber);
-        }
-
-        return WebInspector.linkifyStringAsFragmentWithCustomLinkifier(string, linkify.bind(this));
     }
 }
 

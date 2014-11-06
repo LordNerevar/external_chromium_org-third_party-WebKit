@@ -123,6 +123,10 @@ scrollAnimatorEnabled initial=true
 # main thread scrolling are supported.
 threadedScrollingEnabled initial=true, invalidate=Style
 
+# Handles frame-level scrolls via the root RenderLayer instead of the FrameView.
+# crbug.com/417782 tracks enabling this by default.
+rootLayerScrolls initial=false
+
 # Used in layout tests for gesture tap highlights. Makes the highlights square
 # (rather than rounded) to make it possible to reftest the results.
 mockGestureTapHighlightsEnabled initial=false
@@ -281,6 +285,7 @@ fullscreenSupported initial=true
 v8CacheOptions type=V8CacheOptions, initial=V8CacheOptionsOff
 
 v8ScriptStreamingEnabled initial=false
+v8ScriptStreamingMode type=ScriptStreamingMode, initial=ScriptStreamingModeAll
 
 # These values are bit fields for the properties of available pointing devices
 # and may take on multiple values (e.g. laptop with touchpad and touchscreen

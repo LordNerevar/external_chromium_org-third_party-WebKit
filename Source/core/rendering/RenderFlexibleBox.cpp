@@ -208,8 +208,8 @@ void RenderFlexibleBox::styleDidChange(StyleDifference diff, const RenderStyle* 
         // Flex items that were previously stretching need to be relayed out so we can compute new available cross axis space.
         // This is only necessary for stretching since other alignment values don't change the size of the box.
         for (RenderBox* child = firstChildBox(); child; child = child->nextSiblingBox()) {
-            ItemPosition previousAlignment = RenderStyle::resolveAlignment(oldStyle, child->style());
-            if (previousAlignment == ItemPositionStretch && previousAlignment != RenderStyle::resolveAlignment(style(), child->style()))
+            ItemPosition previousAlignment = RenderStyle::resolveAlignment(oldStyle, child->style(), ItemPositionStretch);
+            if (previousAlignment == ItemPositionStretch && previousAlignment != RenderStyle::resolveAlignment(style(), child->style(), ItemPositionStretch))
                 child->setChildNeedsLayout(MarkOnlyThis);
         }
     }
@@ -949,13 +949,13 @@ bool RenderFlexibleBox::resolveFlexibleLengths(FlexSign flexSign, const OrderedF
     return !totalViolation;
 }
 
-static LayoutUnit initialJustifyContentOffset(LayoutUnit availableFreeSpace, EJustifyContent justifyContent, unsigned numberOfChildren)
+static LayoutUnit initialJustifyContentOffset(LayoutUnit availableFreeSpace, ContentPosition justifyContent, ContentDistributionType justifyContentDistribution, unsigned numberOfChildren)
 {
-    if (justifyContent == JustifyFlexEnd)
+    if (justifyContent == ContentPositionFlexEnd)
         return availableFreeSpace;
-    if (justifyContent == JustifyCenter)
+    if (justifyContent == ContentPositionCenter)
         return availableFreeSpace / 2;
-    if (justifyContent == JustifySpaceAround) {
+    if (justifyContentDistribution == ContentDistributionSpaceAround) {
         if (availableFreeSpace > 0 && numberOfChildren)
             return availableFreeSpace / (2 * numberOfChildren);
         else
@@ -964,12 +964,12 @@ static LayoutUnit initialJustifyContentOffset(LayoutUnit availableFreeSpace, EJu
     return 0;
 }
 
-static LayoutUnit justifyContentSpaceBetweenChildren(LayoutUnit availableFreeSpace, EJustifyContent justifyContent, unsigned numberOfChildren)
+static LayoutUnit justifyContentSpaceBetweenChildren(LayoutUnit availableFreeSpace, ContentDistributionType justifyContentDistribution, unsigned numberOfChildren)
 {
     if (availableFreeSpace > 0 && numberOfChildren > 1) {
-        if (justifyContent == JustifySpaceBetween)
+        if (justifyContentDistribution == ContentDistributionSpaceBetween)
             return availableFreeSpace / (numberOfChildren - 1);
-        if (justifyContent == JustifySpaceAround)
+        if (justifyContentDistribution == ContentDistributionSpaceAround)
             return availableFreeSpace / numberOfChildren;
     }
     return 0;
@@ -1003,7 +1003,7 @@ void RenderFlexibleBox::prepareChildForPositionedLayout(RenderBox& child, Layout
 
 ItemPosition RenderFlexibleBox::alignmentForChild(RenderBox& child) const
 {
-    ItemPosition align = RenderStyle::resolveAlignment(style(), child.style());
+    ItemPosition align = RenderStyle::resolveAlignment(style(), child.style(), ItemPositionStretch);
 
     if (align == ItemPositionBaseline && hasOrthogonalFlow(child))
         align = ItemPositionFlexStart;
@@ -1062,7 +1062,7 @@ void RenderFlexibleBox::layoutAndPlaceChildren(LayoutUnit& crossAxisOffset, cons
     size_t numberOfChildrenForJustifyContent = numberOfInFlowPositionedChildren(children);
     LayoutUnit autoMarginOffset = autoMarginOffsetInMainAxis(children, availableFreeSpace);
     LayoutUnit mainAxisOffset = flowAwareBorderStart() + flowAwarePaddingStart();
-    mainAxisOffset += initialJustifyContentOffset(availableFreeSpace, style()->justifyContent(), numberOfChildrenForJustifyContent);
+    mainAxisOffset += initialJustifyContentOffset(availableFreeSpace, style()->justifyContent(), style()->justifyContentDistribution(), numberOfChildrenForJustifyContent);
     if (style()->flexDirection() == FlowRowReverse)
         mainAxisOffset += isHorizontalFlow() ? verticalScrollbarWidth() : horizontalScrollbarHeight();
 
@@ -1127,7 +1127,7 @@ void RenderFlexibleBox::layoutAndPlaceChildren(LayoutUnit& crossAxisOffset, cons
 
         ++seenInFlowPositionedChildren;
         if (seenInFlowPositionedChildren < numberOfChildrenForJustifyContent)
-            mainAxisOffset += justifyContentSpaceBetweenChildren(availableFreeSpace, style()->justifyContent(), numberOfChildrenForJustifyContent);
+            mainAxisOffset += justifyContentSpaceBetweenChildren(availableFreeSpace, style()->justifyContentDistribution(), numberOfChildrenForJustifyContent);
     }
 
     if (isColumnFlow())
@@ -1153,7 +1153,7 @@ void RenderFlexibleBox::layoutColumnReverse(const OrderedFlexItemList& children,
     // just moving the children to a new position.
     size_t numberOfChildrenForJustifyContent = numberOfInFlowPositionedChildren(children);
     LayoutUnit mainAxisOffset = logicalHeight() - flowAwareBorderEnd() - flowAwarePaddingEnd();
-    mainAxisOffset -= initialJustifyContentOffset(availableFreeSpace, style()->justifyContent(), numberOfChildrenForJustifyContent);
+    mainAxisOffset -= initialJustifyContentOffset(availableFreeSpace, style()->justifyContent(), style()->justifyContentDistribution(), numberOfChildrenForJustifyContent);
     mainAxisOffset -= isHorizontalFlow() ? verticalScrollbarWidth() : horizontalScrollbarHeight();
 
     size_t seenInFlowPositionedChildren = 0;
@@ -1172,7 +1172,7 @@ void RenderFlexibleBox::layoutColumnReverse(const OrderedFlexItemList& children,
 
         ++seenInFlowPositionedChildren;
         if (seenInFlowPositionedChildren < numberOfChildrenForJustifyContent)
-            mainAxisOffset -= justifyContentSpaceBetweenChildren(availableFreeSpace, style()->justifyContent(), numberOfChildrenForJustifyContent);
+            mainAxisOffset -= justifyContentSpaceBetweenChildren(availableFreeSpace, style()->justifyContentDistribution(), numberOfChildrenForJustifyContent);
     }
 }
 

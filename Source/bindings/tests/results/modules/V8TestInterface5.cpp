@@ -338,7 +338,7 @@ static void TestInterface5ImplementationForceSetAttributeOnThisCallback(v8::Loca
 static void voidMethodTestInterfaceEmptyArgMethod(const v8::FunctionCallbackInfo<v8::Value>& info)
 {
     if (UNLIKELY(info.Length() < 1)) {
-        V8ThrowException::throwException(createMinimumArityTypeErrorForMethod("voidMethodTestInterfaceEmptyArg", "TestInterface5", 1, info.Length(), info.GetIsolate()), info.GetIsolate());
+        V8ThrowException::throwException(createMinimumArityTypeErrorForMethod(info.GetIsolate(), "voidMethodTestInterfaceEmptyArg", "TestInterface5", 1, info.Length()), info.GetIsolate());
         return;
     }
     TestInterface5Implementation* impl = V8TestInterface5::toImpl(info.Holder());
@@ -720,7 +720,7 @@ static void namedPropertyEnumeratorCallback(const v8::PropertyCallbackInfo<v8::A
 
 } // namespace TestInterface5ImplementationV8Internal
 
-void V8TestInterface5::visitDOMWrapper(ScriptWrappableBase* scriptWrappableBase, const v8::Persistent<v8::Object>& wrapper, v8::Isolate* isolate)
+void V8TestInterface5::visitDOMWrapper(v8::Isolate* isolate, ScriptWrappableBase* scriptWrappableBase, const v8::Persistent<v8::Object>& wrapper)
 {
     TestInterface5Implementation* impl = scriptWrappableBase->toImpl<TestInterface5Implementation>();
     v8::Local<v8::Object> creationContext = v8::Local<v8::Object>::New(isolate, wrapper);
@@ -728,10 +728,10 @@ void V8TestInterface5::visitDOMWrapper(ScriptWrappableBase* scriptWrappableBase,
     TestInterface5Implementation* referencedName = impl->referencedName();
     if (referencedName) {
         if (!DOMDataStore::containsWrapper<V8TestInterface5>(referencedName, isolate))
-            wrap(referencedName, creationContext, isolate);
+            referencedName->wrap(creationContext, isolate);
         DOMDataStore::setWrapperReference<V8TestInterface5>(wrapper, referencedName, isolate);
     }
-    setObjectGroup(scriptWrappableBase, wrapper, isolate);
+    setObjectGroup(isolate, scriptWrappableBase, wrapper);
 }
 
 static const V8DOMConfiguration::AttributeConfiguration V8TestInterface5Attributes[] = {

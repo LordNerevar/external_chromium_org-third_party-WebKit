@@ -1,5 +1,6 @@
 ../../modules/encoding/TextDecodeOptions.idl
 ../../modules/encoding/TextDecoderOptions.idl
+../../modules/encryptedmedia/MediaKeySystemOptions.idl
 ../../modules/filesystem/FileSystemFlags.idl
 ../../modules/indexeddb/IDBIndexParameters.idl
 ../../modules/notifications/NotificationOptions.idl
@@ -28,6 +29,7 @@
 ../../modules/encryptedmedia/MediaEncryptedEvent.idl
 ../../modules/encryptedmedia/MediaKeyMessageEvent.idl
 ../../modules/encryptedmedia/MediaKeySession.idl
+../../modules/encryptedmedia/MediaKeySystemAccess.idl
 ../../modules/encryptedmedia/MediaKeys.idl
 ../../modules/filesystem/DOMFileSystem.idl
 ../../modules/filesystem/DOMFileSystemSync.idl
@@ -109,6 +111,7 @@
 ../../modules/notifications/NotificationPermissionCallback.idl
 ../../modules/performance/WorkerPerformance.idl
 ../../modules/presentation/Presentation.idl
+../../modules/presentation/PresentationSession.idl
 ../../modules/push_messaging/PushEvent.idl
 ../../modules/push_messaging/PushManager.idl
 ../../modules/push_messaging/PushRegistration.idl
@@ -208,6 +211,7 @@
 ../../modules/device_orientation/WindowDeviceOrientation.idl
 ../../modules/donottrack/NavigatorDoNotTrack.idl
 ../../modules/encryptedmedia/HTMLMediaElementEncryptedMedia.idl
+../../modules/encryptedmedia/NavigatorRequestMediaKeySystemAccess.idl
 ../../modules/filesystem/DataTransferItemFileSystem.idl
 ../../modules/filesystem/HTMLInputElementFileSystem.idl
 ../../modules/filesystem/InspectorFrontendHostFileSystem.idl

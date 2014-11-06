@@ -37,6 +37,7 @@
 #include "core/frame/FrameHost.h"
 #include "core/frame/FrameView.h"
 #include "core/frame/LocalFrame.h"
+#include "core/frame/UseCounter.h"
 #include "core/inspector/ConsoleMessage.h"
 #include "core/inspector/IdentifiersFactory.h"
 #include "core/inspector/InspectorClient.h"
@@ -55,7 +56,7 @@
 #include "core/page/Page.h"
 #include "core/rendering/RenderObject.h"
 #include "core/rendering/RenderView.h"
-#include "core/xml/XMLHttpRequest.h"
+#include "core/xmlhttprequest/XMLHttpRequest.h"
 #include "platform/TraceEvent.h"
 #include "platform/graphics/DeferredImageDecoder.h"
 #include "platform/graphics/GraphicsLayer.h"
@@ -355,6 +356,11 @@ void InspectorTimelineAgent::start(ErrorString* errorString, const int* maxCallS
     if (!m_frontend)
         return;
     m_state->setBoolean(TimelineAgentState::startedFromProtocol, true);
+
+    if (LocalFrame* frame = mainFrame()) {
+        if (UseCounter* useCounter = UseCounter::getFrom(frame->document()))
+            useCounter->count(UseCounter::TimelineStart);
+    }
 
     if (isStarted()) {
         *errorString = "Timeline is already started";

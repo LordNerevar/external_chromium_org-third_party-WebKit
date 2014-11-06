@@ -386,7 +386,7 @@ WebInspector.ConsoleView.prototype = {
      */
     _clearExecutionContextsForTarget: function(target)
     {
-        var executionContexts = this._optionByExecutionContext.keys();
+        var executionContexts = this._optionByExecutionContext.keysArray();
         for (var i = 0; i < executionContexts.length; ++i) {
             if (executionContexts[i].target() === target)
                 this._executionContextDestroyed(executionContexts[i]);
@@ -659,7 +659,7 @@ WebInspector.ConsoleView.prototype = {
         var request = consoleMessage ? consoleMessage.request : null;
         if (request && request.resourceType() === WebInspector.resourceTypes.XHR) {
             contextMenu.appendSeparator();
-            contextMenu.appendItem(WebInspector.UIString("Replay XHR"), NetworkAgent.replayXHR.bind(null, request.requestId));
+            contextMenu.appendItem(WebInspector.UIString("Replay XHR"), request.replayXHR.bind(request));
         }
 
         contextMenu.show();

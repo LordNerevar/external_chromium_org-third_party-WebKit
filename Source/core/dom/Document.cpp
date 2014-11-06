@@ -34,6 +34,7 @@
 #include "bindings/core/v8/ExceptionState.h"
 #include "bindings/core/v8/ExceptionStatePlaceholder.h"
 #include "bindings/core/v8/ScriptController.h"
+#include "bindings/core/v8/UnionTypesCore.h"
 #include "bindings/core/v8/V8DOMWrapper.h"
 #include "bindings/core/v8/WindowProxy.h"
 #include "core/HTMLElementFactory.h"
@@ -3862,6 +3863,13 @@ void Document::enqueueMediaQueryChangeListeners(WillBeHeapVector<RefPtrWillBeMem
     ensureScriptedAnimationController().enqueueMediaQueryChangeListeners(listeners);
 }
 
+void Document::dispatchEventsForPrinting()
+{
+    if (!m_scriptedAnimationController)
+        return;
+    m_scriptedAnimationController->dispatchEventsAndCallbacksForPrinting();
+}
+
 Document::EventFactorySet& Document::eventFactories()
 {
     DEFINE_STATIC_LOCAL(EventFactorySet, s_eventFactory, ());
@@ -4934,7 +4942,7 @@ void Document::detachRange(Range* range)
     m_ranges.remove(range);
 }
 
-void Document::getCSSCanvasContext(const String& type, const String& name, int width, int height, RefPtrWillBeRawPtr<CanvasRenderingContext2D>& context2d, RefPtrWillBeRawPtr<WebGLRenderingContext>& context3d)
+void Document::getCSSCanvasContext(const String& type, const String& name, int width, int height, CanvasRenderingContext2DOrWebGLRenderingContext& returnValue)
 {
     HTMLCanvasElement& element = getCSSCanvasElement(name);
     element.setSize(IntSize(width, height));
@@ -4943,9 +4951,9 @@ void Document::getCSSCanvasContext(const String& type, const String& name, int w
         return;
 
     if (context->is2d()) {
-        context2d = toCanvasRenderingContext2D(context);
+        returnValue.setCanvasRenderingContext2D(toCanvasRenderingContext2D(context));
     } else if (context->is3d()) {
-        context3d = toWebGLRenderingContext(context);
+        returnValue.setWebGLRenderingContext(toWebGLRenderingContext(context));
     }
 }
 
@@ -5745,7 +5753,7 @@ v8::Handle<v8::Object> Document::wrap(v8::Handle<v8::Object> creationContext, v8
 
 v8::Handle<v8::Object> Document::associateWithWrapper(const WrapperTypeInfo* wrapperType, v8::Handle<v8::Object> wrapper, v8::Isolate* isolate)
 {
-    V8DOMWrapper::associateObjectWithWrapperNonTemplate(this, wrapperType, wrapper, isolate);
+    V8DOMWrapper::associateObjectWithWrapperNonTemplate(isolate, this, wrapperType, wrapper);
     DOMWrapperWorld& world = DOMWrapperWorld::current(isolate);
     if (world.isMainWorld() && frame())
         frame()->script().windowProxy(world)->updateDocumentWrapper(wrapper);

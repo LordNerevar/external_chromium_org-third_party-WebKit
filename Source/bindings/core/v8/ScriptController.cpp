@@ -200,7 +200,7 @@ v8::Local<v8::Value> ScriptController::executeScriptAndReturnValue(v8::Handle<v8
         }
         // Keep LocalFrame (and therefore ScriptController) alive.
         RefPtrWillBeRawPtr<LocalFrame> protect(m_frame.get());
-        result = V8ScriptRunner::runCompiledScript(script, m_frame->document(), m_isolate);
+        result = V8ScriptRunner::runCompiledScript(m_isolate, script, m_frame->document());
         ASSERT(!tryCatch.HasCaught() || result.IsEmpty());
     }
 
@@ -274,7 +274,7 @@ void ScriptController::bindToWindowObject(LocalFrame* frame, const String& key, 
         return;
 
     ScriptState::Scope scope(scriptState);
-    v8::Handle<v8::Object> value = createV8ObjectForNPObject(object, 0, m_isolate);
+    v8::Handle<v8::Object> value = createV8ObjectForNPObject(m_isolate, object, 0);
 
     // Attach to the global object.
     scriptState->context()->Global()->Set(v8String(m_isolate, key), value);

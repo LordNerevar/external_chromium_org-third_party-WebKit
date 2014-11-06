@@ -205,7 +205,7 @@ LinkResource* HTMLLinkElement::linkResourceToProcess()
     bool visible = inDocument() && !m_isInShadowTree;
     if (!visible) {
         ASSERT(!linkStyle() || !linkStyle()->hasSheet());
-        return 0;
+        return nullptr;
     }
 
     if (!m_link) {
@@ -227,14 +227,14 @@ LinkResource* HTMLLinkElement::linkResourceToProcess()
 LinkStyle* HTMLLinkElement::linkStyle() const
 {
     if (!m_link || m_link->type() != LinkResource::Style)
-        return 0;
+        return nullptr;
     return static_cast<LinkStyle*>(m_link.get());
 }
 
 LinkImport* HTMLLinkElement::linkImport() const
 {
     if (!m_link || m_link->type() != LinkResource::Import)
-        return 0;
+        return nullptr;
     return static_cast<LinkImport*>(m_link.get());
 }
 
@@ -242,7 +242,7 @@ Document* HTMLLinkElement::import() const
 {
     if (LinkImport* link = linkImport())
         return link->importedDocument();
-    return 0;
+    return nullptr;
 }
 
 void HTMLLinkElement::process()
@@ -276,8 +276,11 @@ Node::InsertionNotificationRequest HTMLLinkElement::insertedInto(ContainerNode* 
         return InsertionDone;
 
     m_isInShadowTree = isInShadowTree();
-    if (m_isInShadowTree)
+    if (m_isInShadowTree) {
+        String message = "HTML element <link> is ignored in shadow tree.";
+        document().addConsoleMessage(ConsoleMessage::create(JSMessageSource, WarningMessageLevel, message));
         return InsertionDone;
+    }
 
     document().styleEngine()->addStyleSheetCandidateNode(this, m_createdByParser);
 

@@ -86,6 +86,7 @@ WebInspector.LayerTreeOutline.prototype = {
     update: function(layerTree)
     {
         var seenLayers = new Map();
+        var root = layerTree && (layerTree.contentRoot() || layerTree.root());
 
         /**
          * @param {!WebInspector.Layer} layer
@@ -97,9 +98,11 @@ WebInspector.LayerTreeOutline.prototype = {
                 console.assert(false, "Duplicate layer: " + layer.id());
             seenLayers.set(layer, true);
             var node = this._treeOutline.getCachedTreeElement(layer);
-            var parent = layer === layerTree.contentRoot() ? this._treeOutline : this._treeOutline.getCachedTreeElement(layer.parent());
-            if (!parent)
+            var parent = layer === root ? this._treeOutline : this._treeOutline.getCachedTreeElement(layer.parent());
+            if (!parent) {
                 console.assert(false, "Parent is not in the tree");
+                return;
+            }
             if (!node) {
                 node = new WebInspector.LayerTreeElement(this, layer);
                 parent.appendChild(node);
@@ -111,8 +114,8 @@ WebInspector.LayerTreeOutline.prototype = {
                 node._update();
             }
         }
-        if (layerTree && layerTree.contentRoot())
-            layerTree.forEachLayer(updateLayer.bind(this), layerTree.contentRoot());
+        if (root)
+            layerTree.forEachLayer(updateLayer.bind(this), root);
         // Cleanup layers that don't exist anymore from tree.
         for (var node = /** @type {!TreeElement|!TreeOutline|null} */ (this._treeOutline.children[0]); node && !node.root;) {
             if (seenLayers.get(node.representedObject)) {
@@ -125,6 +128,8 @@ WebInspector.LayerTreeOutline.prototype = {
                 node = nextNode;
             }
         }
+        if (this._treeOutline.children[0])
+            this._treeOutline.children[0].expand();
     },
 
     /**

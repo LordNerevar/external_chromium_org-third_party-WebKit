@@ -70,6 +70,8 @@
     ],
     "scripts": [
         "Spectrum.js",
+        "ElementsBreadcrumbs.js",
+        "ElementsSidebarPane.js",
         "ElementsTreeOutline.js",
         "EventListenersSidebarPane.js",
         "MetricsSidebarPane.js",
@@ -80,6 +82,7 @@
         "AnimationsSidebarPane.js"
     ],
     "stylesheets": [
+        "breadcrumbs.css",
         "elementsPanel.css",
         "elementsTreeOutline.css",
         "spectrum.css"

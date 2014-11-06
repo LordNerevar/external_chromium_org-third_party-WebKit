@@ -126,6 +126,7 @@
 #include "core/testing/MockPagePopupDriver.h"
 #include "core/testing/PrivateScriptTest.h"
 #include "core/testing/TypeConversions.h"
+#include "core/testing/UnionTypesTest.h"
 #include "core/workers/WorkerThread.h"
 #include "platform/Cursor.h"
 #include "platform/Language.h"
@@ -354,7 +355,8 @@ bool Internals::isLoadingFromMemoryCache(const String& url)
 {
     if (!contextDocument())
         return false;
-    Resource* resource = memoryCache()->resourceForURL(contextDocument()->completeURL(url));
+    const String cacheIdentifier = contextDocument()->fetcher()->getCacheIdentifier();
+    Resource* resource = memoryCache()->resourceForURL(contextDocument()->completeURL(url), cacheIdentifier);
     return resource && resource->status() == Resource::Cached;
 }
 
@@ -1018,7 +1020,7 @@ DOMPoint* Internals::touchPositionAdjustedToBestClickableNode(long x, long y, lo
     IntPoint hitTestPoint = document->frame()->view()->windowToContents(point);
     HitTestResult result = eventHandler.hitTestResultAtPoint(hitTestPoint, HitTestRequest::ReadOnly | HitTestRequest::Active, radius);
 
-    Node* targetNode;
+    Node* targetNode = 0;
     IntPoint adjustedPoint;
 
     bool foundNode = eventHandler.bestClickableNodeForHitTestResult(result, adjustedPoint, targetNode);
@@ -1045,7 +1047,7 @@ Node* Internals::touchNodeAdjustedToBestClickableNode(long x, long y, long width
     IntPoint hitTestPoint = document->frame()->view()->windowToContents(point);
     HitTestResult result = eventHandler.hitTestResultAtPoint(hitTestPoint, HitTestRequest::ReadOnly | HitTestRequest::Active, radius);
 
-    Node* targetNode;
+    Node* targetNode = 0;
     IntPoint adjustedPoint;
     document->frame()->eventHandler().bestClickableNodeForHitTestResult(result, adjustedPoint, targetNode);
     return targetNode;
@@ -1114,7 +1116,7 @@ PassRefPtrWillBeRawPtr<ClientRect> Internals::bestZoomableAreaForTouchPoint(long
     IntSize radius(width / 2, height / 2);
     IntPoint point(x + radius.width(), y + radius.height());
 
-    Node* targetNode;
+    Node* targetNode = 0;
     IntRect zoomableArea;
     bool foundNode = document->frame()->eventHandler().bestZoomableAreaForTouchPoint(point, radius, zoomableArea, targetNode);
     if (foundNode)
@@ -1572,26 +1574,6 @@ bool Internals::scrollsWithRespectTo(Element* element1, Element* element2, Excep
     return layer1->scrollsWithRespectTo(layer2);
 }
 
-bool Internals::isUnclippedDescendant(Element* element, ExceptionState& exceptionState)
-{
-    ASSERT(element);
-    element->document().view()->updateLayoutAndStyleForPainting();
-
-    RenderObject* renderer = element->renderer();
-    if (!renderer || !renderer->isBox()) {
-        exceptionState.throwDOMException(InvalidAccessError, renderer ? "The provided element's renderer is not a box." : "The provided element has no renderer.");
-        return 0;
-    }
-
-    RenderLayer* layer = toRenderBox(renderer)->layer();
-    if (!layer) {
-        exceptionState.throwDOMException(InvalidAccessError, "No render layer can be obtained from the provided element.");
-        return 0;
-    }
-
-    return layer->isUnclippedDescendant();
-}
-
 String Internals::layerTreeAsText(Document* document, unsigned flags, ExceptionState& exceptionState) const
 {
     ASSERT(document);
@@ -1811,6 +1793,11 @@ PrivateScriptTest* Internals::privateScriptTest() const
 DictionaryTest* Internals::dictionaryTest() const
 {
     return DictionaryTest::create();
+}
+
+UnionTypesTest* Internals::unionTypesTest() const
+{
+    return UnionTypesTest::create();
 }
 
 Vector<String> Internals::getReferencedFilePaths() const

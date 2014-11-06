@@ -262,6 +262,8 @@ public:
     void fillBetweenRoundedRects(const RoundedRect&, const RoundedRect&, const Color&);
 
     void drawDisplayList(DisplayList*);
+    void drawPicture(SkPicture*, const FloatPoint& location);
+    void drawPicture(SkPicture*, const FloatRect& dest, const FloatRect& src, CompositeOperator, WebBlendMode);
 
     void drawImage(Image*, const IntPoint&, CompositeOperator = CompositeSourceOver, RespectImageOrientationEnum = DoNotRespectImageOrientation);
     void drawImage(Image*, const IntRect&, CompositeOperator = CompositeSourceOver, RespectImageOrientationEnum = DoNotRespectImageOrientation);
@@ -276,8 +278,6 @@ public:
         CompositeOperator = CompositeSourceOver);
 
     void drawImageBuffer(ImageBuffer*, const FloatRect& destRect, const FloatRect* srcRect = 0, CompositeOperator = CompositeSourceOver, WebBlendMode = WebBlendModeNormal);
-
-    void drawPicture(PassRefPtr<SkPicture>, const FloatRect& dest, const FloatRect& src, CompositeOperator, WebBlendMode);
 
     // These methods write to the canvas and modify the opaque region, if tracked.
     // Also drawLine(const IntPoint& point1, const IntPoint& point2) and fillRoundedRect
@@ -342,7 +342,7 @@ public:
     void setShadow(const FloatSize& offset, float blur, const Color&,
         DrawLooperBuilder::ShadowTransformMode = DrawLooperBuilder::ShadowRespectsTransforms,
         DrawLooperBuilder::ShadowAlphaMode = DrawLooperBuilder::ShadowRespectsAlpha, ShadowMode = DrawShadowAndForeground);
-    void clearShadow() { clearDrawLooper(); }
+    void clearShadow() { clearDrawLooper(); clearDropShadowImageFilter(); }
 
     // It is assumed that this draw looper is used only for shadows
     // (i.e. a draw looper is set if and only if there is a shadow).
@@ -401,6 +401,7 @@ public:
         const SkRect& destRect,
         CompositeOperator,
         WebBlendMode,
+        bool isBitmapWithAlpha,
         bool isLazyDecoded = false,
         bool isDataComplete = true) const;
 
@@ -449,6 +450,10 @@ private:
     void clipRRect(const SkRRect&, AntiAliasingMode = NotAntiAliased, SkRegion::Op = SkRegion::kIntersect_Op);
     void concat(const SkMatrix&);
     void drawRRect(const SkRRect&, const SkPaint&);
+
+    void setDropShadowImageFilter(PassRefPtr<SkImageFilter>);
+    void clearDropShadowImageFilter();
+    SkImageFilter* dropShadowImageFilter() const { return immutableState()->dropShadowImageFilter(); }
 
     // Apply deferred paint state saves
     void realizePaintSave()
@@ -510,13 +515,13 @@ private:
 
     // Activation for the above region tracking features
     unsigned m_regionTrackingMode : 2;
-    bool m_trackTextRegion : 1;
+    unsigned m_trackTextRegion : 1;
 
-    bool m_accelerated : 1;
-    bool m_isCertainlyOpaque : 1;
-    bool m_printing : 1;
-    bool m_antialiasHairlineImages : 1;
-    bool m_shouldSmoothFonts : 1;
+    unsigned m_accelerated : 1;
+    unsigned m_isCertainlyOpaque : 1;
+    unsigned m_printing : 1;
+    unsigned m_antialiasHairlineImages : 1;
+    unsigned m_shouldSmoothFonts : 1;
 };
 
 } // namespace blink

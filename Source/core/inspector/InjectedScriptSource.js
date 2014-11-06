@@ -84,11 +84,18 @@ function concat(array1, array2)
 /**
  * @param {*} obj
  * @return {string}
+ * @suppress {uselessCode}
  */
 function toString(obj)
 {
-    // We don't use String(obj) because it could be overriden.
-    return "" + obj;
+    // We don't use String(obj) because String could be overridden.
+    // Also the ("" + obj) expression may throw.
+    try {
+        return "" + obj;
+    } catch (e) {
+        var name = InjectedScriptHost.internalConstructorName(obj) || InjectedScriptHost.subtype(obj) || (typeof obj);
+        return "#<" + name + ">";
+    }
 }
 
 /**
@@ -99,7 +106,7 @@ function toStringDescription(obj)
 {
     if (typeof obj === "number" && obj === 0 && 1 / obj < 0)
         return "-0"; // Negative zero.
-    return "" + obj;
+    return toString(obj);
 }
 
 /**
@@ -122,7 +129,7 @@ function bind(func, thisObject, var_args)
     }
     bound.toString = function()
     {
-        return "bound: " + func;
+        return "bound: " + toString(func);
     };
     return bound;
 }
@@ -718,7 +725,7 @@ InjectedScript.prototype = {
      */
     _createThrownValue: function(value, objectGroup, generatePreview, exceptionDetails)
     {
-        var remoteObject = this._wrapObject(value, objectGroup, false, generatePreview && !(value instanceof Error));
+        var remoteObject = this._wrapObject(value, objectGroup, false, generatePreview && InjectedScriptHost.subtype(value) !== "error");
         if (!remoteObject.description){
             try {
                 remoteObject.description = toStringDescription(value);
@@ -1005,7 +1012,8 @@ InjectedScript.prototype = {
             return null;
 
         var subtype = InjectedScriptHost.subtype(obj);
-        if (subtype)
+        // FIXME: Consider exposing "error" subtype via protocol.
+        if (subtype && subtype !== "error")
             return subtype;
 
         if (isArrayLike(obj))
@@ -1066,8 +1074,14 @@ InjectedScript.prototype = {
             }
         }
 
-        if (obj instanceof Error && !!obj.message)
-            return className + ": " + obj.message;
+        if (InjectedScriptHost.subtype(obj) === "error") {
+            try {
+                var message = obj.message;
+                if (message)
+                    return className + ": " + message;
+            } catch(e) {
+            }
+        }
 
         return className;
     }

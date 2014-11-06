@@ -1126,7 +1126,7 @@ bool AXRenderObject::supportsARIAOwns() const
 // ARIA live-region features.
 //
 
-const AtomicString& AXRenderObject::ariaLiveRegionStatus() const
+const AtomicString& AXRenderObject::liveRegionStatus() const
 {
     DEFINE_STATIC_LOCAL(const AtomicString, liveRegionStatusAssertive, ("assertive", AtomicString::ConstructFromLiteral));
     DEFINE_STATIC_LOCAL(const AtomicString, liveRegionStatusPolite, ("polite", AtomicString::ConstructFromLiteral));
@@ -1153,7 +1153,7 @@ const AtomicString& AXRenderObject::ariaLiveRegionStatus() const
     return liveRegionStatus;
 }
 
-const AtomicString& AXRenderObject::ariaLiveRegionRelevant() const
+const AtomicString& AXRenderObject::liveRegionRelevant() const
 {
     DEFINE_STATIC_LOCAL(const AtomicString, defaultLiveRegionRelevant, ("additions text", AtomicString::ConstructFromLiteral));
     const AtomicString& relevant = getAttribute(aria_relevantAttr);
@@ -1165,12 +1165,12 @@ const AtomicString& AXRenderObject::ariaLiveRegionRelevant() const
     return relevant;
 }
 
-bool AXRenderObject::ariaLiveRegionAtomic() const
+bool AXRenderObject::liveRegionAtomic() const
 {
     return elementAttributeValue(aria_atomicAttr);
 }
 
-bool AXRenderObject::ariaLiveRegionBusy() const
+bool AXRenderObject::liveRegionBusy() const
 {
     return elementAttributeValue(aria_busyAttr);
 }
@@ -1333,7 +1333,9 @@ AXObject* AXRenderObject::accessibilityHitTest(const IntPoint& point) const
         return 0;
 
     Node* node = hitTestResult.innerNode();
-    if (node->isInShadowTree())
+
+    // Allow the hit test to return media control buttons.
+    if (node->isInShadowTree() && (!isHTMLInputElement(*node) || !node->isMediaControlElement()))
         node = node->shadowHost();
 
     if (isHTMLAreaElement(node))
@@ -1378,7 +1380,7 @@ AXObject* AXRenderObject::elementAccessibilityHitTest(const IntPoint& point) con
 // High-level accessibility tree access.
 //
 
-AXObject* AXRenderObject::parentObject() const
+AXObject* AXRenderObject::computeParent() const
 {
     if (!m_renderer)
         return 0;
@@ -1404,13 +1406,30 @@ AXObject* AXRenderObject::parentObject() const
     return 0;
 }
 
-AXObject* AXRenderObject::parentObjectIfExists() const
+AXObject* AXRenderObject::computeParentIfExists() const
 {
+    if (!m_renderer)
+        return 0;
+
+    if (ariaRoleAttribute() == MenuBarRole)
+        return axObjectCache()->get(m_renderer->parent());
+
+    // menuButton and its corresponding menu are DOM siblings, but Accessibility needs them to be parent/child
+    if (ariaRoleAttribute() == MenuRole) {
+        AXObject* parent = menuButtonForMenu();
+        if (parent)
+            return parent;
+    }
+
+    RenderObject* parentObj = renderParentObject();
+    if (parentObj)
+        return axObjectCache()->get(parentObj);
+
     // WebArea's parent should be the scroll view containing it.
     if (isWebArea())
         return axObjectCache()->get(m_renderer->frame()->view());
 
-    return axObjectCache()->get(renderParentObject());
+    return 0;
 }
 
 //
@@ -1496,6 +1515,11 @@ void AXRenderObject::addChildren()
     addCanvasChildren();
     addRemoteSVGChildren();
     addInlineTextBoxChildren();
+
+    for (unsigned i = 0; i < m_children.size(); ++i) {
+        if (!m_children[i].get()->cachedParentObject())
+            m_children[i].get()->setParent(this);
+    }
 }
 
 bool AXRenderObject::canHaveChildren() const
@@ -1737,8 +1761,17 @@ void AXRenderObject::handleAriaExpandedChanged()
         axObjectCache()->postNotification(containerParent, document(), AXObjectCacheImpl::AXRowCountChanged, true);
 
     // Post that the specific row either collapsed or expanded.
-    if (roleValue() == RowRole || roleValue() == TreeItemRole)
-        axObjectCache()->postNotification(this, document(), isExpanded() ? AXObjectCacheImpl::AXRowExpanded : AXObjectCacheImpl::AXRowCollapsed, true);
+    AccessibilityExpanded expanded = isExpanded();
+    if (!expanded)
+        return;
+
+    if (roleValue() == RowRole || roleValue() == TreeItemRole) {
+        AXObjectCacheImpl::AXNotification notification = AXObjectCacheImpl::AXRowExpanded;
+        if (expanded == ExpandedCollapsed)
+            notification = AXObjectCacheImpl::AXRowCollapsed;
+
+        axObjectCache()->postNotification(this, document(), notification, true);
+    }
 }
 
 void AXRenderObject::textChanged()

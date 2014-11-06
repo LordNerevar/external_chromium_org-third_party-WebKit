@@ -19,6 +19,7 @@
 
 namespace blink {
 
+class ExceptionState;
 class Response;
 class Request;
 class ScriptState;
@@ -31,19 +32,19 @@ public:
 
     // From Cache.idl:
     ScriptPromise match(ScriptState*, Request*, const CacheQueryOptions&);
-    ScriptPromise match(ScriptState*, const String&, const CacheQueryOptions&);
+    ScriptPromise match(ScriptState*, const String&, const CacheQueryOptions&, ExceptionState&);
     ScriptPromise matchAll(ScriptState*, Request*, const CacheQueryOptions&);
-    ScriptPromise matchAll(ScriptState*, const String&, const CacheQueryOptions&);
+    ScriptPromise matchAll(ScriptState*, const String&, const CacheQueryOptions&, ExceptionState&);
     ScriptPromise add(ScriptState*, Request*);
-    ScriptPromise add(ScriptState*, const String&);
+    ScriptPromise add(ScriptState*, const String&, ExceptionState&);
     ScriptPromise addAll(ScriptState*, const Vector<ScriptValue>&);
     ScriptPromise deleteFunction(ScriptState*, Request*, const CacheQueryOptions&);
-    ScriptPromise deleteFunction(ScriptState*, const String&, const CacheQueryOptions&);
+    ScriptPromise deleteFunction(ScriptState*, const String&, const CacheQueryOptions&, ExceptionState&);
     ScriptPromise put(ScriptState*, Request*, Response*);
-    ScriptPromise put(ScriptState*, const String&, Response*);
+    ScriptPromise put(ScriptState*, const String&, Response*, ExceptionState&);
     ScriptPromise keys(ScriptState*);
     ScriptPromise keys(ScriptState*, Request*, const CacheQueryOptions&);
-    ScriptPromise keys(ScriptState*, const String&, const CacheQueryOptions&);
+    ScriptPromise keys(ScriptState*, const String&, const CacheQueryOptions&, ExceptionState&);
 
     static PassRefPtrWillBeRawPtr<DOMException> domExceptionForCacheError(WebServiceWorkerCacheError);
 
@@ -52,14 +53,14 @@ public:
 private:
     explicit Cache(WebServiceWorkerCache*);
 
-    ScriptPromise matchImpl(ScriptState*, Request*, const CacheQueryOptions&);
-    ScriptPromise matchAllImpl(ScriptState*, Request*, const CacheQueryOptions&);
-    ScriptPromise addImpl(ScriptState*, Request*);
-    ScriptPromise addAllImpl(ScriptState*, Vector<Request*>);
-    ScriptPromise deleteImpl(ScriptState*, Request*, const CacheQueryOptions&);
-    ScriptPromise putImpl(ScriptState*, Request*, Response*);
+    ScriptPromise matchImpl(ScriptState*, const Request*, const CacheQueryOptions&);
+    ScriptPromise matchAllImpl(ScriptState*, const Request*, const CacheQueryOptions&);
+    ScriptPromise addImpl(ScriptState*, const Request*);
+    ScriptPromise addAllImpl(ScriptState*, const Vector<const Request*>);
+    ScriptPromise deleteImpl(ScriptState*, const Request*, const CacheQueryOptions&);
+    ScriptPromise putImpl(ScriptState*, const Request*, Response*);
     ScriptPromise keysImpl(ScriptState*);
-    ScriptPromise keysImpl(ScriptState*, Request*, const CacheQueryOptions&);
+    ScriptPromise keysImpl(ScriptState*, const Request*, const CacheQueryOptions&);
 
     OwnPtr<WebServiceWorkerCache> m_webCache;
 };

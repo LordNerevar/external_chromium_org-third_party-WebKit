@@ -247,6 +247,7 @@ class MajorGCWrapperVisitor : public v8::PersistentHandleVisitor {
 public:
     explicit MajorGCWrapperVisitor(v8::Isolate* isolate, bool constructRetainedObjectInfos)
         : m_isolate(isolate)
+        , m_domObjectsWithPendingActivity(0)
         , m_liveRootGroupIdSet(false)
         , m_constructRetainedObjectInfos(constructRetainedObjectInfos)
     {
@@ -269,8 +270,10 @@ public:
         const WrapperTypeInfo* type = toWrapperTypeInfo(*wrapper);
 
         ActiveDOMObject* activeDOMObject = type->toActiveDOMObject(*wrapper);
-        if (activeDOMObject && activeDOMObject->hasPendingActivity())
+        if (activeDOMObject && activeDOMObject->hasPendingActivity()) {
             m_isolate->SetObjectGroupId(*value, liveRootId());
+            ++m_domObjectsWithPendingActivity;
+        }
 
         if (classId == WrapperTypeInfo::NodeClassId) {
             ASSERT(V8Node::hasInstance(*wrapper, m_isolate));
@@ -282,7 +285,7 @@ public:
             if (m_constructRetainedObjectInfos)
                 m_groupsWhichNeedRetainerInfo.append(root);
         } else if (classId == WrapperTypeInfo::ObjectClassId) {
-            type->visitDOMWrapper(toScriptWrappableBase(*wrapper), v8::Persistent<v8::Object>::Cast(*value), m_isolate);
+            type->visitDOMWrapper(m_isolate, toScriptWrappableBase(*wrapper), v8::Persistent<v8::Object>::Cast(*value));
         } else {
             ASSERT_NOT_REACHED();
         }
@@ -302,6 +305,8 @@ public:
                 alreadyAdded = root;
             }
         }
+        if (m_liveRootGroupIdSet)
+            profiler->SetRetainedObjectInfo(liveRootId(), new ActiveDOMObjectsInfo(m_domObjectsWithPendingActivity));
     }
 
 private:
@@ -313,12 +318,14 @@ private:
         if (!m_liveRootGroupIdSet) {
             m_isolate->SetObjectGroupId(liveRoot, id);
             m_liveRootGroupIdSet = true;
+            ++m_domObjectsWithPendingActivity;
         }
         return id;
     }
 
     v8::Isolate* m_isolate;
     WillBePersistentHeapVector<RawPtrWillBeMember<Node> > m_groupsWhichNeedRetainerInfo;
+    int m_domObjectsWithPendingActivity;
     bool m_liveRootGroupIdSet;
     bool m_constructRetainedObjectInfos;
 };
@@ -338,7 +345,7 @@ void V8GCController::gcPrologue(v8::GCType type, v8::GCCallbackFlags flags)
     if (type == v8::kGCTypeScavenge)
         minorGCPrologue(isolate);
     else if (type == v8::kGCTypeMarkSweepCompact)
-        majorGCPrologue(flags & v8::kGCCallbackFlagConstructRetainedObjectInfos, isolate);
+        majorGCPrologue(isolate, flags & v8::kGCCallbackFlagConstructRetainedObjectInfos);
 }
 
 void V8GCController::minorGCPrologue(v8::Isolate* isolate)
@@ -359,7 +366,7 @@ void V8GCController::minorGCPrologue(v8::Isolate* isolate)
 }
 
 // Create object groups for DOM tree nodes.
-void V8GCController::majorGCPrologue(bool constructRetainedObjectInfos, v8::Isolate* isolate)
+void V8GCController::majorGCPrologue(v8::Isolate* isolate, bool constructRetainedObjectInfos)
 {
     v8::HandleScope scope(isolate);
     TRACE_EVENT_BEGIN0("v8", "majorGC");

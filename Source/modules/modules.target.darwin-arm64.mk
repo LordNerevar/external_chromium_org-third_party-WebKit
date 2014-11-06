@@ -27,6 +27,8 @@ $(gyp_intermediate_dir)/TextDecodeOptions.cpp: $(gyp_shared_intermediate_dir)/bl
 	mkdir -p $(@D); cp $< $@
 $(gyp_intermediate_dir)/TextDecoderOptions.cpp: $(gyp_shared_intermediate_dir)/blink/modules/encoding/TextDecoderOptions.cpp
 	mkdir -p $(@D); cp $< $@
+$(gyp_intermediate_dir)/MediaKeySystemOptions.cpp: $(gyp_shared_intermediate_dir)/blink/modules/encryptedmedia/MediaKeySystemOptions.cpp
+	mkdir -p $(@D); cp $< $@
 $(gyp_intermediate_dir)/FileSystemFlags.cpp: $(gyp_shared_intermediate_dir)/blink/modules/filesystem/FileSystemFlags.cpp
 	mkdir -p $(@D); cp $< $@
 $(gyp_intermediate_dir)/IDBIndexParameters.cpp: $(gyp_shared_intermediate_dir)/blink/modules/indexeddb/IDBIndexParameters.cpp
@@ -94,6 +96,7 @@ $(gyp_intermediate_dir)/initPartialInterfacesInModules.cpp: $(gyp_shared_interme
 LOCAL_GENERATED_SOURCES := \
 	$(gyp_intermediate_dir)/TextDecodeOptions.cpp \
 	$(gyp_intermediate_dir)/TextDecoderOptions.cpp \
+	$(gyp_intermediate_dir)/MediaKeySystemOptions.cpp \
 	$(gyp_intermediate_dir)/FileSystemFlags.cpp \
 	$(gyp_intermediate_dir)/IDBIndexParameters.cpp \
 	$(gyp_intermediate_dir)/NotificationOptions.cpp \
@@ -129,6 +132,7 @@ LOCAL_GENERATED_SOURCES := \
 
 GYP_COPIED_SOURCE_ORIGIN_DIRS := \
 	$(gyp_shared_intermediate_dir)/blink/modules/encoding \
+	$(gyp_shared_intermediate_dir)/blink/modules/encryptedmedia \
 	$(gyp_shared_intermediate_dir)/blink/modules/filesystem \
 	$(gyp_shared_intermediate_dir)/blink/modules/indexeddb \
 	$(gyp_shared_intermediate_dir)/blink/modules/notifications \
@@ -180,8 +184,10 @@ LOCAL_SRC_FILES := \
 	third_party/WebKit/Source/modules/encryptedmedia/MediaEncryptedEvent.cpp \
 	third_party/WebKit/Source/modules/encryptedmedia/MediaKeyMessageEvent.cpp \
 	third_party/WebKit/Source/modules/encryptedmedia/MediaKeySession.cpp \
+	third_party/WebKit/Source/modules/encryptedmedia/MediaKeySystemAccess.cpp \
 	third_party/WebKit/Source/modules/encryptedmedia/MediaKeys.cpp \
 	third_party/WebKit/Source/modules/encryptedmedia/MediaKeysController.cpp \
+	third_party/WebKit/Source/modules/encryptedmedia/NavigatorRequestMediaKeySystemAccess.cpp \
 	third_party/WebKit/Source/modules/encryptedmedia/SimpleContentDecryptionModuleResult.cpp \
 	third_party/WebKit/Source/modules/filesystem/DOMFilePath.cpp \
 	third_party/WebKit/Source/modules/filesystem/DOMFileSystem.cpp \
@@ -300,11 +306,13 @@ LOCAL_SRC_FILES := \
 	third_party/WebKit/Source/modules/performance/WorkerPerformance.cpp \
 	third_party/WebKit/Source/modules/presentation/NavigatorPresentation.cpp \
 	third_party/WebKit/Source/modules/presentation/Presentation.cpp \
+	third_party/WebKit/Source/modules/presentation/PresentationSession.cpp \
 	third_party/WebKit/Source/modules/push_messaging/NavigatorPushManager.cpp \
 	third_party/WebKit/Source/modules/push_messaging/PushController.cpp \
 	third_party/WebKit/Source/modules/push_messaging/PushError.cpp \
 	third_party/WebKit/Source/modules/push_messaging/PushEvent.cpp \
 	third_party/WebKit/Source/modules/push_messaging/PushManager.cpp \
+	third_party/WebKit/Source/modules/push_messaging/PushPermissionCallback.cpp \
 	third_party/WebKit/Source/modules/push_messaging/PushRegistration.cpp \
 	third_party/WebKit/Source/modules/quota/DOMWindowQuota.cpp \
 	third_party/WebKit/Source/modules/quota/DeprecatedStorageInfo.cpp \
@@ -450,10 +458,10 @@ LOCAL_SRC_FILES := \
 	third_party/WebKit/Source/modules/webmidi/MIDIPort.cpp \
 	third_party/WebKit/Source/modules/webmidi/NavigatorWebMIDI.cpp \
 	third_party/WebKit/Source/modules/websockets/DOMWebSocket.cpp \
-	third_party/WebKit/Source/modules/websockets/NewWebSocketChannelImpl.cpp \
+	third_party/WebKit/Source/modules/websockets/DocumentWebSocketChannel.cpp \
 	third_party/WebKit/Source/modules/websockets/WebSocketChannel.cpp \
 	third_party/WebKit/Source/modules/websockets/WebSocketFrame.cpp \
-	third_party/WebKit/Source/modules/websockets/WorkerThreadableWebSocketChannel.cpp \
+	third_party/WebKit/Source/modules/websockets/WorkerWebSocketChannel.cpp \
 	third_party/WebKit/Source/bindings/modules/v8/custom/V8CryptoCustom.cpp \
 	third_party/WebKit/Source/bindings/modules/v8/custom/V8CryptoKeyCustom.cpp \
 	third_party/WebKit/Source/bindings/modules/v8/custom/V8CustomSQLStatementErrorCallback.cpp \
@@ -510,11 +518,13 @@ MY_DEFS_Debug := \
 	'-DUSE_PROPRIETARY_CODECS' \
 	'-DENABLE_BROWSER_CDMS' \
 	'-DENABLE_CONFIGURATION_POLICY' \
+	'-DENABLE_NOTIFICATIONS' \
 	'-DDISCARDABLE_MEMORY_ALWAYS_SUPPORTED_NATIVELY' \
 	'-DSYSTEM_NATIVELY_SIGNALS_MEMORY_PRESSURE' \
-	'-DENABLE_EGLIMAGE=1' \
+	'-DDONT_EMBED_BUILD_METADATA' \
 	'-DCLD_VERSION=1' \
 	'-DENABLE_PRINTING=1' \
+	'-DENABLE_BASIC_PRINTING=1' \
 	'-DENABLE_MANAGED_USERS=1' \
 	'-DVIDEO_HOLE=1' \
 	'-DENABLE_LOAD_COMPLETION_HACKS=1' \
@@ -524,6 +534,7 @@ MY_DEFS_Debug := \
 	'-DPNG_USER_CONFIG' \
 	'-DCHROME_PNG_READ_PACK_SUPPORT' \
 	'-DENABLE_OPENTYPE_VERTICAL=1' \
+	'-DENABLE_LAYOUT_UNIT_IN_INLINE_BOXES=0' \
 	'-DWTF_USE_CONCATENATED_IMPULSE_RESPONSES=1' \
 	'-DWTF_USE_WEBAUDIO_OPENMAX_DL_FFT=1' \
 	'-DENABLE_WEB_AUDIO=1' \
@@ -539,9 +550,10 @@ MY_DEFS_Debug := \
 	'-DSK_WILL_NEVER_DRAW_PERSPECTIVE_TEXT' \
 	'-DSK_FM_NEW_MATCH_FAMILY_STYLE_CHARACTER=1' \
 	'-DSK_SUPPORT_LEGACY_TEXTRENDERMODE' \
-	'-DSK_LEGACY_NO_DISTANCE_FIELD_PATHS' \
+	'-DSK_IGNORE_GPU_LAYER_HOISTING' \
 	'-DSK_BUILD_FOR_ANDROID' \
 	'-DSK_USE_POSIX_THREADS' \
+	'-DUSE_LIBPCI=1' \
 	'-DUSE_OPENSSL=1' \
 	'-DUSE_OPENSSL_CERTS=1' \
 	'-D__STDC_CONSTANT_MACROS' \
@@ -648,11 +660,13 @@ MY_DEFS_Release := \
 	'-DUSE_PROPRIETARY_CODECS' \
 	'-DENABLE_BROWSER_CDMS' \
 	'-DENABLE_CONFIGURATION_POLICY' \
+	'-DENABLE_NOTIFICATIONS' \
 	'-DDISCARDABLE_MEMORY_ALWAYS_SUPPORTED_NATIVELY' \
 	'-DSYSTEM_NATIVELY_SIGNALS_MEMORY_PRESSURE' \
-	'-DENABLE_EGLIMAGE=1' \
+	'-DDONT_EMBED_BUILD_METADATA' \
 	'-DCLD_VERSION=1' \
 	'-DENABLE_PRINTING=1' \
+	'-DENABLE_BASIC_PRINTING=1' \
 	'-DENABLE_MANAGED_USERS=1' \
 	'-DVIDEO_HOLE=1' \
 	'-DENABLE_LOAD_COMPLETION_HACKS=1' \
@@ -662,6 +676,7 @@ MY_DEFS_Release := \
 	'-DPNG_USER_CONFIG' \
 	'-DCHROME_PNG_READ_PACK_SUPPORT' \
 	'-DENABLE_OPENTYPE_VERTICAL=1' \
+	'-DENABLE_LAYOUT_UNIT_IN_INLINE_BOXES=0' \
 	'-DWTF_USE_CONCATENATED_IMPULSE_RESPONSES=1' \
 	'-DWTF_USE_WEBAUDIO_OPENMAX_DL_FFT=1' \
 	'-DENABLE_WEB_AUDIO=1' \
@@ -677,9 +692,10 @@ MY_DEFS_Release := \
 	'-DSK_WILL_NEVER_DRAW_PERSPECTIVE_TEXT' \
 	'-DSK_FM_NEW_MATCH_FAMILY_STYLE_CHARACTER=1' \
 	'-DSK_SUPPORT_LEGACY_TEXTRENDERMODE' \
-	'-DSK_LEGACY_NO_DISTANCE_FIELD_PATHS' \
+	'-DSK_IGNORE_GPU_LAYER_HOISTING' \
 	'-DSK_BUILD_FOR_ANDROID' \
 	'-DSK_USE_POSIX_THREADS' \
+	'-DUSE_LIBPCI=1' \
 	'-DUSE_OPENSSL=1' \
 	'-DUSE_OPENSSL_CERTS=1' \
 	'-D__STDC_CONSTANT_MACROS' \

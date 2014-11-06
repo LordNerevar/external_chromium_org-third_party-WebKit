@@ -44,11 +44,14 @@ CSSMaskSourceType status=experimental
 CSSOMSmoothScroll status=experimental
 CSSTouchActionDelay status=test
 CSSViewport status=experimental
+// getPropertyCSSValue, CSSValue, etc. will be removed once layout tests no longer depend on them. crbug.com/331608
+CSSValue status=deprecated
 CustomSchemeHandler depends_on=NavigatorContentUtils, status=experimental
 Database status=stable
 DecodeToYUV status=experimental
 DeviceLight status=experimental
-DisplayList2dCanvas
+DisplayList2dCanvas status=stable
+ForceDisplayList2dCanvas
 EncodingAPI status=stable
 EncryptedMedia status=test
 ExecCommandInJavaScript status=test
@@ -83,6 +86,8 @@ MemoryInfoInWorkers status=experimental
 NavigationTransitions status=experimental
 NavigatorContentUtils
 NetworkInformation status=stable
+// CSS parser based on the css-syntax spec. crbug.com/330389
+NewCSSParser
 Notifications status=stable
 OrientationEvent
 // Only enabled on Android, and for certain layout tests on Linux.

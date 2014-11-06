@@ -7,8 +7,8 @@
  */
 WebInspector.ActionRegistry = function()
 {
-    /** @type {!StringMap.<!Runtime.Extension>} */
-    this._actionsById = new StringMap();
+    /** @type {!Map.<string, !Runtime.Extension>} */
+    this._actionsById = new Map();
     this._registerActions();
 }
 
@@ -43,7 +43,7 @@ WebInspector.ActionRegistry.prototype = {
            if (extension)
                extensions.push(extension);
         }, this);
-        return context.applicableExtensions(extensions).values().map(function(extension) {
+        return context.applicableExtensions(extensions).valuesArray().map(function(extension) {
             return extension.descriptor()["actionId"];
         });
     },

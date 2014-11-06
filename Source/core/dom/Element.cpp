@@ -1212,6 +1212,9 @@ const AtomicString& Element::locateNamespacePrefix(const AtomicString& namespace
 KURL Element::baseURI() const
 {
     const AtomicString& baseAttribute = fastGetAttribute(baseAttr);
+    if (!baseAttribute.isEmpty())
+        UseCounter::count(document(), UseCounter::ElementBaseURIFromXMLBase);
+
     KURL base(KURL(), baseAttribute);
     if (!base.protocol().isEmpty())
         return base;
@@ -1387,6 +1390,7 @@ void Element::detach(const AttachContext& context)
                 activeAnimations->cssAnimations().cancel();
                 activeAnimations->setAnimationStyleChange(false);
             }
+            activeAnimations->clearBaseRenderStyle();
         }
 
         if (ElementShadow* shadow = data->shadow())
@@ -2786,21 +2790,21 @@ void Element::willModifyAttribute(const QualifiedName& name, const AtomicString&
 void Element::didAddAttribute(const QualifiedName& name, const AtomicString& value)
 {
     attributeChanged(name, value);
-    InspectorInstrumentation::didModifyDOMAttr(this, name.localName(), value);
+    InspectorInstrumentation::didModifyDOMAttr(this, name.toString(), value);
     dispatchSubtreeModifiedEvent();
 }
 
 void Element::didModifyAttribute(const QualifiedName& name, const AtomicString& value)
 {
     attributeChanged(name, value);
-    InspectorInstrumentation::didModifyDOMAttr(this, name.localName(), value);
+    InspectorInstrumentation::didModifyDOMAttr(this, name.toString(), value);
     // Do not dispatch a DOMSubtreeModified event here; see bug 81141.
 }
 
 void Element::didRemoveAttribute(const QualifiedName& name)
 {
     attributeChanged(name, nullAtom);
-    InspectorInstrumentation::didRemoveDOMAttr(this, name.localName());
+    InspectorInstrumentation::didRemoveDOMAttr(this, name.toString());
     dispatchSubtreeModifiedEvent();
 }
 
@@ -3269,7 +3273,7 @@ v8::Handle<v8::Object> Element::wrapCustomElement(v8::Handle<v8::Object> creatio
 
     wrapper->SetPrototype(binding->prototype());
 
-    return V8DOMWrapper::associateObjectWithWrapperNonTemplate(this, wrapperType, wrapper, isolate);
+    return V8DOMWrapper::associateObjectWithWrapperNonTemplate(isolate, this, wrapperType, wrapper);
 }
 
 } // namespace blink

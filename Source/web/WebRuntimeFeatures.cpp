@@ -84,6 +84,11 @@ void WebRuntimeFeatures::enableDecodeToYUV(bool enable)
     RuntimeEnabledFeatures::setDecodeToYUVEnabled(enable);
 }
 
+void WebRuntimeFeatures::forceDisplayList2dCanvas(bool enable)
+{
+    RuntimeEnabledFeatures::setForceDisplayList2dCanvasEnabled(enable);
+}
+
 void WebRuntimeFeatures::enableDisplayList2dCanvas(bool enable)
 {
     RuntimeEnabledFeatures::setDisplayList2dCanvasEnabled(enable);
@@ -212,6 +217,11 @@ void WebRuntimeFeatures::enableServiceWorker(bool enable)
 void WebRuntimeFeatures::enableSessionStorage(bool enable)
 {
     RuntimeEnabledFeatures::setSessionStorageEnabled(enable);
+}
+
+void WebRuntimeFeatures::enableSlimmingPaint(bool enable)
+{
+    RuntimeEnabledFeatures::setSlimmingPaintEnabled(enable);
 }
 
 void WebRuntimeFeatures::enableTouch(bool enable)

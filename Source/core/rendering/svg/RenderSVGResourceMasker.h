@@ -45,7 +45,7 @@ public:
     virtual void removeAllClientsFromCache(bool markForInvalidation = true) override;
     virtual void removeClientFromCache(RenderObject*, bool markForInvalidation = true) override;
 
-    bool prepareEffect(RenderObject*, RenderStyle*, GraphicsContext*&);
+    bool prepareEffect(RenderObject*, GraphicsContext*&);
     void finishEffect(RenderObject*, GraphicsContext*&);
 
     FloatRect resourceBoundingBox(const RenderObject*);
@@ -53,8 +53,8 @@ public:
     SVGUnitTypes::SVGUnitType maskUnits() const { return toSVGMaskElement(element())->maskUnits()->currentValue()->enumValue(); }
     SVGUnitTypes::SVGUnitType maskContentUnits() const { return toSVGMaskElement(element())->maskContentUnits()->currentValue()->enumValue(); }
 
+    static const RenderSVGResourceType s_resourceType = MaskerResourceType;
     virtual RenderSVGResourceType resourceType() const override { return s_resourceType; }
-    static const RenderSVGResourceType s_resourceType;
 
 private:
     void calculateMaskContentPaintInvalidationRect();

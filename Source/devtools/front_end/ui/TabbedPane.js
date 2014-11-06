@@ -1149,16 +1149,16 @@ WebInspector.ExtensibleTabbedPaneController = function(tabbedPane, extensionPoin
 
     this._tabbedPane.setRetainTabOrder(true, this._tabOrderComparator.bind(this));
     this._tabbedPane.addEventListener(WebInspector.TabbedPane.EventTypes.TabSelected, this._tabSelected, this);
-    /** @type {!StringMap.<?WebInspector.View>} */
-    this._views = new StringMap();
+    /** @type {!Map.<string, ?WebInspector.View>} */
+    this._views = new Map();
     this._initialize();
 }
 
 WebInspector.ExtensibleTabbedPaneController.prototype = {
     _initialize: function()
     {
-        /** @type {!StringMap.<!Runtime.Extension>} */
-        this._extensions = new StringMap();
+        /** @type {!Map.<string, !Runtime.Extension>} */
+        this._extensions = new Map();
         var extensions = self.runtime.extensions(this._extensionPoint);
 
         for (var i = 0; i < extensions.length; ++i) {
@@ -1198,10 +1198,20 @@ WebInspector.ExtensibleTabbedPaneController.prototype = {
      */
     _tabSelected: function(event)
     {
-        var tabId = this._tabbedPane.selectedTabId;
-        if (!tabId)
-            return;
-        this.viewForId(tabId).then(this._tabbedPane.changeTabView.bind(this._tabbedPane, tabId)).done();
+        var tabId = /** @type {string} */ (event.data.tabId);
+        this.viewForId(tabId).then(viewLoaded.bind(this)).done();
+
+        /**
+         * @this {WebInspector.ExtensibleTabbedPaneController}
+         * @param {!WebInspector.View} view
+         */
+        function viewLoaded(view)
+        {
+            var shouldFocus = this._tabbedPane.visibleView.element.isSelfOrAncestor(WebInspector.currentFocusElement());
+            this._tabbedPane.changeTabView(tabId, view);
+            if (shouldFocus)
+                view.focus();
+        }
     },
 
     /**
@@ -1209,7 +1219,7 @@ WebInspector.ExtensibleTabbedPaneController.prototype = {
      */
     viewIds: function()
     {
-        return this._extensions.keys();
+        return this._extensions.keysArray();
     },
 
     /**

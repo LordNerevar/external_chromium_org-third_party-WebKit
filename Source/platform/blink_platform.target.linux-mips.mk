@@ -191,8 +191,6 @@ LOCAL_SRC_FILES := \
 	third_party/WebKit/Source/platform/exported/WebScrollbarThemeClientImpl.cpp \
 	third_party/WebKit/Source/platform/exported/WebScrollbarThemeGeometryNative.cpp \
 	third_party/WebKit/Source/platform/exported/WebSerializedOrigin.cpp \
-	third_party/WebKit/Source/platform/exported/WebServiceWorkerProxy.cpp \
-	third_party/WebKit/Source/platform/exported/WebServiceWorkerRegistrationProxy.cpp \
 	third_party/WebKit/Source/platform/exported/WebServiceWorkerRequest.cpp \
 	third_party/WebKit/Source/platform/exported/WebServiceWorkerResponse.cpp \
 	third_party/WebKit/Source/platform/exported/WebSocketHandshakeRequestInfo.cpp \
@@ -203,6 +201,7 @@ LOCAL_SRC_FILES := \
 	third_party/WebKit/Source/platform/exported/WebSpeechSynthesizerClientImpl.cpp \
 	third_party/WebKit/Source/platform/exported/WebStorageQuotaCallbacks.cpp \
 	third_party/WebKit/Source/platform/exported/WebThreadSafeData.cpp \
+	third_party/WebKit/Source/platform/exported/WebTraceLocation.cpp \
 	third_party/WebKit/Source/platform/exported/WebTransformKeyframe.cpp \
 	third_party/WebKit/Source/platform/exported/WebURL.cpp \
 	third_party/WebKit/Source/platform/exported/WebURLError.cpp \
@@ -362,7 +361,6 @@ LOCAL_SRC_FILES := \
 	third_party/WebKit/Source/platform/network/HTTPParsers.cpp \
 	third_party/WebKit/Source/platform/network/HTTPRequest.cpp \
 	third_party/WebKit/Source/platform/network/ParsedContentType.cpp \
-	third_party/WebKit/Source/platform/network/ProxyServer.cpp \
 	third_party/WebKit/Source/platform/network/ResourceError.cpp \
 	third_party/WebKit/Source/platform/network/FormData.cpp \
 	third_party/WebKit/Source/platform/network/FormDataBuilder.cpp \
@@ -475,17 +473,20 @@ MY_DEFS_Debug := \
 	'-DUSE_PROPRIETARY_CODECS' \
 	'-DENABLE_BROWSER_CDMS' \
 	'-DENABLE_CONFIGURATION_POLICY' \
+	'-DENABLE_NOTIFICATIONS' \
 	'-DDISCARDABLE_MEMORY_ALWAYS_SUPPORTED_NATIVELY' \
 	'-DSYSTEM_NATIVELY_SIGNALS_MEMORY_PRESSURE' \
-	'-DENABLE_EGLIMAGE=1' \
+	'-DDONT_EMBED_BUILD_METADATA' \
 	'-DCLD_VERSION=1' \
 	'-DENABLE_PRINTING=1' \
+	'-DENABLE_BASIC_PRINTING=1' \
 	'-DENABLE_MANAGED_USERS=1' \
 	'-DVIDEO_HOLE=1' \
 	'-DENABLE_LOAD_COMPLETION_HACKS=1' \
 	'-DBLINK_PLATFORM_IMPLEMENTATION=1' \
 	'-DINSIDE_BLINK' \
 	'-DENABLE_OPENTYPE_VERTICAL=1' \
+	'-DENABLE_LAYOUT_UNIT_IN_INLINE_BOXES=0' \
 	'-DWTF_USE_CONCATENATED_IMPULSE_RESPONSES=1' \
 	'-DWTF_USE_WEBAUDIO_OPENMAX_DL_FFT=1' \
 	'-DENABLE_WEB_AUDIO=1' \
@@ -498,7 +499,7 @@ MY_DEFS_Debug := \
 	'-DSK_WILL_NEVER_DRAW_PERSPECTIVE_TEXT' \
 	'-DSK_FM_NEW_MATCH_FAMILY_STYLE_CHARACTER=1' \
 	'-DSK_SUPPORT_LEGACY_TEXTRENDERMODE' \
-	'-DSK_LEGACY_NO_DISTANCE_FIELD_PATHS' \
+	'-DSK_IGNORE_GPU_LAYER_HOISTING' \
 	'-DSK_BUILD_FOR_ANDROID' \
 	'-DSK_USE_POSIX_THREADS' \
 	'-DU_USING_ICU_NAMESPACE=0' \
@@ -507,6 +508,7 @@ MY_DEFS_Debug := \
 	'-DCHROME_PNG_WRITE_SUPPORT' \
 	'-DPNG_USER_CONFIG' \
 	'-DCHROME_PNG_READ_PACK_SUPPORT' \
+	'-DUSE_LIBPCI=1' \
 	'-DUSE_OPENSSL=1' \
 	'-DUSE_OPENSSL_CERTS=1' \
 	'-D__STDC_CONSTANT_MACROS' \
@@ -617,17 +619,20 @@ MY_DEFS_Release := \
 	'-DUSE_PROPRIETARY_CODECS' \
 	'-DENABLE_BROWSER_CDMS' \
 	'-DENABLE_CONFIGURATION_POLICY' \
+	'-DENABLE_NOTIFICATIONS' \
 	'-DDISCARDABLE_MEMORY_ALWAYS_SUPPORTED_NATIVELY' \
 	'-DSYSTEM_NATIVELY_SIGNALS_MEMORY_PRESSURE' \
-	'-DENABLE_EGLIMAGE=1' \
+	'-DDONT_EMBED_BUILD_METADATA' \
 	'-DCLD_VERSION=1' \
 	'-DENABLE_PRINTING=1' \
+	'-DENABLE_BASIC_PRINTING=1' \
 	'-DENABLE_MANAGED_USERS=1' \
 	'-DVIDEO_HOLE=1' \
 	'-DENABLE_LOAD_COMPLETION_HACKS=1' \
 	'-DBLINK_PLATFORM_IMPLEMENTATION=1' \
 	'-DINSIDE_BLINK' \
 	'-DENABLE_OPENTYPE_VERTICAL=1' \
+	'-DENABLE_LAYOUT_UNIT_IN_INLINE_BOXES=0' \
 	'-DWTF_USE_CONCATENATED_IMPULSE_RESPONSES=1' \
 	'-DWTF_USE_WEBAUDIO_OPENMAX_DL_FFT=1' \
 	'-DENABLE_WEB_AUDIO=1' \
@@ -640,7 +645,7 @@ MY_DEFS_Release := \
 	'-DSK_WILL_NEVER_DRAW_PERSPECTIVE_TEXT' \
 	'-DSK_FM_NEW_MATCH_FAMILY_STYLE_CHARACTER=1' \
 	'-DSK_SUPPORT_LEGACY_TEXTRENDERMODE' \
-	'-DSK_LEGACY_NO_DISTANCE_FIELD_PATHS' \
+	'-DSK_IGNORE_GPU_LAYER_HOISTING' \
 	'-DSK_BUILD_FOR_ANDROID' \
 	'-DSK_USE_POSIX_THREADS' \
 	'-DU_USING_ICU_NAMESPACE=0' \
@@ -649,6 +654,7 @@ MY_DEFS_Release := \
 	'-DCHROME_PNG_WRITE_SUPPORT' \
 	'-DPNG_USER_CONFIG' \
 	'-DCHROME_PNG_READ_PACK_SUPPORT' \
+	'-DUSE_LIBPCI=1' \
 	'-DUSE_OPENSSL=1' \
 	'-DUSE_OPENSSL_CERTS=1' \
 	'-D__STDC_CONSTANT_MACROS' \

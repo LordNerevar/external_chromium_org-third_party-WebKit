@@ -134,8 +134,10 @@ AXObject::AXObject()
     , m_role(UnknownRole)
     , m_lastKnownIsIgnoredValue(DefaultBehavior)
     , m_detached(false)
+    , m_parent(0)
     , m_lastModificationCount(-1)
     , m_cachedIsIgnored(false)
+    , m_cachedLiveRegionRoot(0)
 {
 }
 
@@ -263,8 +265,11 @@ void AXObject::updateCachedAttributeValuesIfNeeded() const
     if (cache->modificationCount() == m_lastModificationCount)
         return;
 
-    m_cachedIsIgnored = computeAccessibilityIsIgnored();
     m_lastModificationCount = cache->modificationCount();
+    m_cachedIsIgnored = computeAccessibilityIsIgnored();
+    m_cachedLiveRegionRoot = isLiveRegion() ?
+        this :
+        (parentObjectIfExists() ? parentObjectIfExists()->liveRegionRoot() : 0);
 }
 
 bool AXObject::accessibilityIsIgnoredByDefault() const
@@ -392,7 +397,7 @@ bool AXObject::ariaPressedIsPresent() const
 
 bool AXObject::supportsARIAAttributes() const
 {
-    return supportsARIALiveRegion()
+    return isLiveRegion()
         || supportsARIADragging()
         || supportsARIADropping()
         || supportsARIAFlowTo()
@@ -424,10 +429,40 @@ void AXObject::ariaTreeRows(AccessibilityChildrenVector& result)
     }
 }
 
-bool AXObject::supportsARIALiveRegion() const
+bool AXObject::isLiveRegion() const
 {
-    const AtomicString& liveRegion = ariaLiveRegionStatus();
+    const AtomicString& liveRegion = liveRegionStatus();
     return equalIgnoringCase(liveRegion, "polite") || equalIgnoringCase(liveRegion, "assertive");
+}
+
+const AXObject* AXObject::liveRegionRoot() const
+{
+    updateCachedAttributeValuesIfNeeded();
+    return m_cachedLiveRegionRoot;
+}
+
+const AtomicString& AXObject::containerLiveRegionStatus() const
+{
+    updateCachedAttributeValuesIfNeeded();
+    return m_cachedLiveRegionRoot ? m_cachedLiveRegionRoot->liveRegionStatus() : nullAtom;
+}
+
+const AtomicString& AXObject::containerLiveRegionRelevant() const
+{
+    updateCachedAttributeValuesIfNeeded();
+    return m_cachedLiveRegionRoot ? m_cachedLiveRegionRoot->liveRegionRelevant() : nullAtom;
+}
+
+bool AXObject::containerLiveRegionAtomic() const
+{
+    updateCachedAttributeValuesIfNeeded();
+    return m_cachedLiveRegionRoot ? m_cachedLiveRegionRoot->liveRegionAtomic() : false;
+}
+
+bool AXObject::containerLiveRegionBusy() const
+{
+    updateCachedAttributeValuesIfNeeded();
+    return m_cachedLiveRegionRoot ? m_cachedLiveRegionRoot->liveRegionBusy() : false;
 }
 
 void AXObject::markCachedElementRectDirty() const
@@ -491,6 +526,28 @@ const AXObject::AccessibilityChildrenVector& AXObject::children()
     return m_children;
 }
 
+AXObject* AXObject::parentObject() const
+{
+    if (m_detached)
+        return 0;
+
+    if (m_parent)
+        return m_parent;
+
+    return computeParent();
+}
+
+AXObject* AXObject::parentObjectIfExists() const
+{
+    if (m_detached)
+        return 0;
+
+    if (m_parent)
+        return m_parent;
+
+    return computeParentIfExists();
+}
+
 AXObject* AXObject::parentObjectUnignored() const
 {
     AXObject* parent;
@@ -530,7 +587,7 @@ void AXObject::updateChildrenIfNecessary()
 
 void AXObject::clearChildren()
 {
-    // Some objects have weak pointers to their parents and those associations need to be detached.
+    // Detach all weak pointers from objects to their parents.
     size_t length = m_children.size();
     for (size_t i = 0; i < length; i++)
         m_children[i]->detachFromParent();

@@ -33,6 +33,7 @@
 #include "core/css/CSSBasicShapes.h"
 #include "core/css/CSSBorderImage.h"
 #include "core/css/CSSCanvasValue.h"
+#include "core/css/CSSContentDistributionValue.h"
 #include "core/css/CSSCrossfadeValue.h"
 #include "core/css/CSSCursorImageValue.h"
 #include "core/css/CSSFontFaceSrcValue.h"
@@ -49,6 +50,7 @@
 #include "core/css/CSSKeyframesRule.h"
 #include "core/css/CSSLineBoxContainValue.h"
 #include "core/css/CSSPrimitiveValue.h"
+#include "core/css/CSSPrimitiveValueMappings.h"
 #include "core/css/CSSPropertyMetadata.h"
 #include "core/css/CSSPropertySourceData.h"
 #include "core/css/CSSReflectValue.h"
@@ -1190,6 +1192,9 @@ bool CSSPropertyParser::parseValue(CSSPropertyID propId, bool important)
         return false;
     }
 
+    case CSSPropertyJustifyContent:
+        parsedValue = parseContentDistributionOverflowPosition();
+        break;
     case CSSPropertyJustifySelf:
         ASSERT(RuntimeEnabledFeatures::cssGridLayoutEnabled());
         return parseItemPositionOverflowPosition(propId, important);
@@ -1397,11 +1402,11 @@ bool CSSPropertyParser::parseValue(CSSPropertyID propId, bool important)
     case CSSPropertyFont:
         // [ [ 'font-style' || 'font-variant' || 'font-weight' ]? 'font-size' [ / 'line-height' ]?
         // 'font-family' ] | caption | icon | menu | message-box | small-caption | status-bar | inherit
-        if (id >= CSSValueCaption && id <= CSSValueStatusBar)
-            validPrimitive = true;
-        else
-            return parseFont(important);
-        break;
+        if (num == 1 && id >= CSSValueCaption && id <= CSSValueStatusBar) {
+            parseSystemFont(important);
+            return true;
+        }
+        return parseFont(important);
     case CSSPropertyListStyle:
         return parseShorthand(propId, listStyleShorthand(), important);
     case CSSPropertyWebkitColumns:
@@ -4017,9 +4022,27 @@ PassRefPtrWillBeRawPtr<CSSBasicShape> CSSPropertyParser::parseBasicShapeInset(CS
     return shape;
 }
 
+static bool isContentDistributionKeyword(CSSValueID id)
+{
+    return id == CSSValueSpaceBetween || id == CSSValueSpaceAround
+        || id == CSSValueSpaceEvenly || id == CSSValueStretch;
+}
+
+static bool isContentPositionKeyword(CSSValueID id)
+{
+    return id == CSSValueStart || id == CSSValueEnd || id == CSSValueCenter
+        || id == CSSValueFlexStart || id == CSSValueFlexEnd
+        || id == CSSValueLeft || id == CSSValueRight;
+}
+
 static bool isBaselinePositionKeyword(CSSValueID id)
 {
     return id == CSSValueBaseline || id == CSSValueLastBaseline;
+}
+
+static bool isAlignmentOverflowKeyword(CSSValueID id)
+{
+    return id == CSSValueTrue || id == CSSValueSafe;
 }
 
 static bool isItemPositionKeyword(CSSValueID id)
@@ -4054,6 +4077,50 @@ bool CSSPropertyParser::parseLegacyPosition(CSSPropertyID propId, bool important
     return !m_valueList->next();
 }
 
+PassRefPtrWillBeRawPtr<CSSValue> CSSPropertyParser::parseContentDistributionOverflowPosition()
+{
+    // auto | <baseline-position> | [ <content-distribution>? && <content-position>? ]! && <overflow-position>?
+    // <baseline-position> = baseline | last-baseline;
+    // <content-distribution> = space-between | space-around | space-evenly | stretch;
+    // <content-position> = center | start | end | flex-start | flex-end | left | right;
+    // <overflow-position> = true | safe
+
+    // auto | <baseline-position>
+    CSSParserValue* value = m_valueList->current();
+    if (value->id == CSSValueAuto || isBaselinePositionKeyword(value->id)) {
+        m_valueList->next();
+        return CSSContentDistributionValue::create(CSSValueInvalid, value->id, CSSValueInvalid);
+    }
+
+    CSSValueID distribution = CSSValueInvalid;
+    CSSValueID position = CSSValueInvalid;
+    CSSValueID overflow = CSSValueInvalid;
+    if (isAlignmentOverflowKeyword(value->id)) {
+        overflow = value->id;
+        value = m_valueList->next();
+    }
+    if (value && isContentDistributionKeyword(value->id)) {
+        distribution = value->id;
+        value = m_valueList->next();
+    }
+    if (value && isContentPositionKeyword(value->id)) {
+        position = value->id;
+        value = m_valueList->next();
+    }
+    if (value) {
+        if (overflow != CSSValueInvalid || !isAlignmentOverflowKeyword(value->id))
+            return nullptr;
+        overflow = value->id;
+    }
+
+    // The grammar states that we should have at least <content-distribution> or
+    // <content-position> ([ <content-distribution>? && <content-position>? ]!).
+    if (m_valueList->next() || (position == CSSValueInvalid && distribution == CSSValueInvalid))
+        return nullptr;
+
+    return CSSContentDistributionValue::create(distribution, position, overflow);
+}
+
 bool CSSPropertyParser::parseItemPositionOverflowPosition(CSSPropertyID propId, bool important)
 {
     // auto | stretch | <baseline-position> | [<item-position> && <overflow-position>? ]
@@ -4079,12 +4146,12 @@ bool CSSPropertyParser::parseItemPositionOverflowPosition(CSSPropertyID propId, 
         position = cssValuePool().createIdentifierValue(value->id);
         value = m_valueList->next();
         if (value) {
-            if (value->id == CSSValueTrue || value->id == CSSValueSafe)
+            if (isAlignmentOverflowKeyword(value->id))
                 overflowAlignmentKeyword = cssValuePool().createIdentifierValue(value->id);
             else
                 return false;
         }
-    } else if (value->id == CSSValueTrue || value->id == CSSValueSafe) {
+    } else if (isAlignmentOverflowKeyword(value->id)) {
         overflowAlignmentKeyword = cssValuePool().createIdentifierValue(value->id);
         value = m_valueList->next();
         if (value && isItemPositionKeyword(value->id))
@@ -4436,6 +4503,30 @@ bool CSSPropertyParser::parseFont(bool important)
         return false;
 
     return true;
+}
+
+void CSSPropertyParser::parseSystemFont(bool important)
+{
+    ASSERT(m_valueList->size() == 1);
+    CSSValueID systemFontID = m_valueList->valueAt(0)->id;
+    ASSERT(systemFontID >= CSSValueCaption && systemFontID <= CSSValueStatusBar);
+    m_valueList->next();
+
+    FontStyle fontStyle = FontStyleNormal;
+    FontWeight fontWeight = FontWeightNormal;
+    float fontSize = 0;
+    AtomicString fontFamily;
+    RenderTheme::theme().systemFont(systemFontID, fontStyle, fontWeight, fontSize, fontFamily);
+
+    ShorthandScope scope(this, CSSPropertyFont);
+    addProperty(CSSPropertyFontStyle, cssValuePool().createIdentifierValue(fontStyle == FontStyleItalic ? CSSValueItalic : CSSValueNormal), important);
+    addProperty(CSSPropertyFontWeight, cssValuePool().createValue(fontWeight), important);
+    addProperty(CSSPropertyFontSize, cssValuePool().createValue(fontSize, CSSPrimitiveValue::CSS_PX), important);
+    RefPtrWillBeRawPtr<CSSValueList> fontFamilyList = CSSValueList::createCommaSeparated();
+    fontFamilyList->append(cssValuePool().createFontFamilyValue(fontFamily));
+    addProperty(CSSPropertyFontFamily, fontFamilyList.release(), important);
+    addProperty(CSSPropertyFontVariant, cssValuePool().createIdentifierValue(CSSValueNormal), important);
+    addProperty(CSSPropertyLineHeight, cssValuePool().createIdentifierValue(CSSValueNormal), important);
 }
 
 class FontFamilyValueBuilder {

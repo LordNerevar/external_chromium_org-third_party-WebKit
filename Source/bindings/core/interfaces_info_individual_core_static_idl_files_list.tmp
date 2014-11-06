@@ -239,6 +239,7 @@
 ../../core/html/canvas/EXTBlendMinMax.idl
 ../../core/html/canvas/EXTFragDepth.idl
 ../../core/html/canvas/EXTShaderTextureLOD.idl
+../../core/html/canvas/EXTsRGB.idl
 ../../core/html/canvas/EXTTextureFilterAnisotropic.idl
 ../../core/html/canvas/OESElementIndexUint.idl
 ../../core/html/canvas/OESStandardDerivatives.idl
@@ -433,16 +434,16 @@
 ../../core/workers/WorkerConsole.idl
 ../../core/workers/WorkerLocation.idl
 ../../core/xml/DOMParser.idl
-../../core/xml/XMLHttpRequest.idl
-../../core/xml/XMLHttpRequestEventTarget.idl
-../../core/xml/XMLHttpRequestProgressEvent.idl
-../../core/xml/XMLHttpRequestUpload.idl
 ../../core/xml/XMLSerializer.idl
 ../../core/xml/XPathEvaluator.idl
 ../../core/xml/XPathExpression.idl
 ../../core/xml/XPathNSResolver.idl
 ../../core/xml/XPathResult.idl
 ../../core/xml/XSLTProcessor.idl
+../../core/xmlhttprequest/XMLHttpRequest.idl
+../../core/xmlhttprequest/XMLHttpRequestEventTarget.idl
+../../core/xmlhttprequest/XMLHttpRequestProgressEvent.idl
+../../core/xmlhttprequest/XMLHttpRequestUpload.idl
 ../../core/clipboard/DataTransferItem.idl
 ../../core/dom/URL.idl
 ../../core/frame/Navigator.idl
@@ -468,6 +469,7 @@
 ../../core/testing/PrivateScriptTest.idl
 ../../core/testing/RefCountedScriptWrappable.idl
 ../../core/testing/TypeConversions.idl
+../../core/testing/UnionTypesTest.idl
 ../../core/testing/Internals.idl
 ../../core/animation/DocumentAnimation.idl
 ../../core/animation/ElementAnimation.idl

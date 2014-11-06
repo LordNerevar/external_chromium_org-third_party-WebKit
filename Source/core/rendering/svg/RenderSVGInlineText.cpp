@@ -80,13 +80,8 @@ void RenderSVGInlineText::styleDidChange(StyleDifference diff, const RenderStyle
 
     bool newPreserves = style() ? style()->whiteSpace() == PRE : false;
     bool oldPreserves = oldStyle ? oldStyle->whiteSpace() == PRE : false;
-    if (oldPreserves && !newPreserves) {
-        setText(applySVGWhitespaceRules(originalText(), false), true);
-        return;
-    }
-
-    if (!oldPreserves && newPreserves) {
-        setText(applySVGWhitespaceRules(originalText(), true), true);
+    if (oldPreserves != newPreserves) {
+        setText(originalText(), true);
         return;
     }
 
@@ -237,6 +232,22 @@ void RenderSVGInlineText::computeNewScaledFontForStyle(RenderObject* renderer, c
 
     scaledFont = Font(fontDescription);
     scaledFont.update(document.styleEngine()->fontSelector());
+}
+
+LayoutRect RenderSVGInlineText::clippedOverflowRectForPaintInvalidation(const RenderLayerModelObject* paintInvalidationContainer, const PaintInvalidationState* paintInvalidationState) const
+{
+    // FIXME: The following works because RenderSVGBlock has forced slow rect mapping of the paintInvalidationState.
+    // Should let this really work with paintInvalidationState's fast mapping and remove the assert.
+    ASSERT(!paintInvalidationState || !paintInvalidationState->canMapToContainer(paintInvalidationContainer));
+    return parent()->clippedOverflowRectForPaintInvalidation(paintInvalidationContainer, paintInvalidationState);
+}
+
+PassRefPtr<StringImpl> RenderSVGInlineText::originalText() const
+{
+    RefPtr<StringImpl> result = RenderText::originalText();
+    if (!result)
+        return nullptr;
+    return applySVGWhitespaceRules(result, style() && style()->whiteSpace() == PRE);
 }
 
 }

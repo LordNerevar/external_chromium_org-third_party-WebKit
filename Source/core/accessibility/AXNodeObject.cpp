@@ -709,12 +709,15 @@ bool AXNodeObject::isEnabled() const
     return !toElement(node)->isDisabledFormControl();
 }
 
-bool AXNodeObject::isExpanded() const
+AccessibilityExpanded AXNodeObject::isExpanded() const
 {
-    if (equalIgnoringCase(getAttribute(aria_expandedAttr), "true"))
-        return true;
+    const AtomicString& expanded = getAttribute(aria_expandedAttr);
+    if (equalIgnoringCase(expanded, "true"))
+        return ExpandedExpanded;
+    if (equalIgnoringCase(expanded, "false"))
+        return ExpandedCollapsed;
 
-    return false;
+    return ExpandedUndefined;
 }
 
 bool AXNodeObject::isIndeterminate() const
@@ -1101,7 +1104,6 @@ String AXNodeObject::ariaDescribedByAttribute() const
     return accessibilityDescriptionForElements(elements);
 }
 
-
 String AXNodeObject::ariaLabeledByAttribute() const
 {
     WillBeHeapVector<RawPtrWillBeMember<Element> > elements;
@@ -1117,7 +1119,7 @@ AccessibilityRole AXNodeObject::ariaRoleAttribute() const
 
 // When building the textUnderElement for an object, determine whether or not
 // we should include the inner text of this given descendant object or skip it.
-static bool shouldUseAccessiblityObjectInnerText(AXObject* obj)
+static bool shouldUseAccessibilityObjectInnerText(AXObject* obj)
 {
     // Consider this hypothetical example:
     // <div tabindex=0>
@@ -1159,7 +1161,7 @@ String AXNodeObject::textUnderElement() const
 
     StringBuilder builder;
     for (AXObject* child = firstChild(); child; child = child->nextSibling()) {
-        if (!shouldUseAccessiblityObjectInnerText(child))
+        if (!shouldUseAccessibilityObjectInnerText(child))
             continue;
 
         if (child->isAXNodeObject()) {
@@ -1346,7 +1348,7 @@ LayoutRect AXNodeObject::elementRect() const
     return boundingBox;
 }
 
-AXObject* AXNodeObject::parentObject() const
+AXObject* AXNodeObject::computeParent() const
 {
     if (!node())
         return 0;
@@ -1358,9 +1360,16 @@ AXObject* AXNodeObject::parentObject() const
     return 0;
 }
 
-AXObject* AXNodeObject::parentObjectIfExists() const
+AXObject* AXNodeObject::computeParentIfExists() const
 {
-    return parentObject();
+    if (!node())
+        return 0;
+
+    Node* parentObj = node()->parentNode();
+    if (parentObj)
+        return axObjectCache()->get(parentObj);
+
+    return 0;
 }
 
 AXObject* AXNodeObject::firstChild() const
@@ -1405,6 +1414,9 @@ void AXNodeObject::addChildren()
 
     for (Node* child = m_node->firstChild(); child; child = child->nextSibling())
         addChild(axObjectCache()->getOrCreate(child));
+
+    for (unsigned i = 0; i < m_children.size(); ++i)
+        m_children[i].get()->setParent(this);
 }
 
 void AXNodeObject::addChild(AXObject* child)
@@ -1623,7 +1635,7 @@ void AXNodeObject::childrenChanged()
         // In other words, they need to be sent even when the screen reader has not accessed this live region since the last update.
 
         // If this element supports ARIA live regions, then notify the AT of changes.
-        if (parent->supportsARIALiveRegion())
+        if (parent->isLiveRegion())
             axObjectCache()->postNotification(parent, parent->document(), AXObjectCacheImpl::AXLiveRegionChanged, true);
 
         // If this element is an ARIA text box or content editable, post a "value changed" notification on it
@@ -1654,7 +1666,7 @@ void AXNodeObject::textChanged()
         if (!parent)
             continue;
 
-        if (parent->supportsARIALiveRegion())
+        if (parent->isLiveRegion())
             cache->postNotification(parentNode, AXObjectCacheImpl::AXLiveRegionChanged, true);
 
         // If this element is an ARIA text box or content editable, post a "value changed" notification on it

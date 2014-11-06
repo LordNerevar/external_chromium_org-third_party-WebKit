@@ -58,6 +58,12 @@ public:
         V8CacheOptionsCode
     };
 
+    enum V8ScriptStreamingMode {
+        V8ScriptStreamingModeAll,
+        V8ScriptStreamingModeOnlyAsyncAndDefer,
+        V8ScriptStreamingModeAllPlusBlockParsingBlocking,
+    };
+
     // Bit field values to tell Blink what kind of pointer/hover types are
     // available on the system. These must match the enums in
     // core/css/PointerProperties.h and their equality is compile-time asserted
@@ -178,6 +184,7 @@ public:
     virtual void setPrimaryHoverType(HoverType) = 0;
     virtual void setRenderVSyncNotificationEnabled(bool) = 0;
     virtual void setReportScreenSizeInPhysicalPixelsQuirk(bool) = 0;
+    virtual void setRootLayerScrolls(bool) = 0;
     virtual void setSansSerifFontFamily(const WebString&, UScriptCode = USCRIPT_COMMON) = 0;
     virtual void setSelectTrailingWhitespaceEnabled(bool) = 0;
     virtual void setSelectionIncludesAltImageText(bool) = 0;
@@ -216,6 +223,7 @@ public:
     virtual void setUsesEncodingDetector(bool) = 0;
     virtual void setV8CacheOptions(V8CacheOptions) = 0;
     virtual void setV8ScriptStreamingEnabled(bool) = 0;
+    virtual void setV8ScriptStreamingMode(V8ScriptStreamingMode) = 0;
     virtual void setValidationMessageTimerMagnification(int) = 0;
     virtual void setViewportEnabled(bool) = 0;
     virtual void setViewportMetaEnabled(bool) = 0;

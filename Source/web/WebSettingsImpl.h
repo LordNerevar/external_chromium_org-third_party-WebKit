@@ -133,6 +133,7 @@ public:
     virtual void setPrimaryHoverType(HoverType) override;
     virtual void setRenderVSyncNotificationEnabled(bool) override;
     virtual void setReportScreenSizeInPhysicalPixelsQuirk(bool) override;
+    virtual void setRootLayerScrolls(bool) override;
     virtual void setSansSerifFontFamily(const WebString&, UScriptCode = USCRIPT_COMMON) override;
     virtual void setSelectTrailingWhitespaceEnabled(bool override);
     virtual void setSelectionIncludesAltImageText(bool) override;
@@ -164,6 +165,7 @@ public:
     virtual void setUseWideViewport(bool) override;
     virtual void setV8CacheOptions(V8CacheOptions) override;
     virtual void setV8ScriptStreamingEnabled(bool) override;
+    virtual void setV8ScriptStreamingMode(V8ScriptStreamingMode) override;
     virtual void setValidationMessageTimerMagnification(int) override;
     virtual void setViewportEnabled(bool) override;
     virtual void setViewportMetaEnabled(bool) override;

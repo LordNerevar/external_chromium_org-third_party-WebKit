@@ -29,6 +29,7 @@
 #include "platform/network/ResourceLoadPriority.h"
 #include "platform/network/ResourceRequest.h"
 #include "platform/network/ResourceResponse.h"
+#include "public/platform/WebDataConsumerHandle.h"
 #include "wtf/HashCountedSet.h"
 #include "wtf/HashSet.h"
 #include "wtf/OwnPtr.h"
@@ -189,7 +190,7 @@ public:
     virtual void willFollowRedirect(ResourceRequest&, const ResourceResponse&);
 
     virtual void updateRequest(const ResourceRequest&) { }
-    virtual void responseReceived(const ResourceResponse&);
+    virtual void responseReceived(const ResourceResponse&, PassOwnPtr<WebDataConsumerHandle>);
     void setResponse(const ResourceResponse& response) { m_response = response; }
     const ResourceResponse& response() const { return m_response; }
 
@@ -241,6 +242,9 @@ public:
     bool isPurgeable() const;
     bool wasPurged() const;
     bool lock();
+
+    void setCacheIdentifier(const String& cacheIdentifier) { m_cacheIdentifier = cacheIdentifier; }
+    String cacheIdentifier() const { return m_cacheIdentifier; };
 
     virtual void didSendData(unsigned long long /* bytesSent */, unsigned long long /* totalBytesToBeSent */) { }
     virtual void didDownloadData(int) { }
@@ -373,6 +377,8 @@ private:
     unsigned m_handleCount;
     unsigned m_preloadCount;
     unsigned m_protectorCount;
+
+    String m_cacheIdentifier;
 
     unsigned m_preloadResult : 2; // PreloadResult
     unsigned m_requestedFromNetworkingLayer : 1;

@@ -33,7 +33,10 @@ private:
     CSSParserToken consumeIdentLikeToken();
     CSSParserToken consumeNumber();
     CSSParserToken consumeStringTokenUntil(UChar);
+    CSSParserToken consumeUnicodeRange();
+    CSSParserToken consumeUrlToken();
 
+    void consumeBadUrlRemnants();
     void consumeUntilNonWhitespace();
     void consumeSingleWhitespaceIfNext();
     bool consumeUntilCommentEndFound();
@@ -70,8 +73,10 @@ private:
     CSSParserToken solidus(UChar);
     CSSParserToken colon(UChar);
     CSSParserToken semiColon(UChar);
+    CSSParserToken hash(UChar);
     CSSParserToken reverseSolidus(UChar);
     CSSParserToken asciiDigit(UChar);
+    CSSParserToken letterU(UChar);
     CSSParserToken nameStart(UChar);
     CSSParserToken stringStart(UChar);
     CSSParserToken endOfFile(UChar);

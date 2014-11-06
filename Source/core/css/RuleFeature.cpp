@@ -95,6 +95,7 @@ static bool supportsInvalidation(CSSSelector::PseudoType type)
     case CSSSelector::PseudoActive:
     case CSSSelector::PseudoChecked:
     case CSSSelector::PseudoEnabled:
+    case CSSSelector::PseudoFullPageMedia:
     case CSSSelector::PseudoDefault:
     case CSSSelector::PseudoDisabled:
     case CSSSelector::PseudoOptional:
@@ -110,6 +111,7 @@ static bool supportsInvalidation(CSSSelector::PseudoType type)
     case CSSSelector::PseudoBackdrop:
     case CSSSelector::PseudoLang:
     case CSSSelector::PseudoNot:
+    case CSSSelector::PseudoResizer:
     case CSSSelector::PseudoRoot:
     case CSSSelector::PseudoScope:
     case CSSSelector::PseudoScrollbar:
@@ -120,8 +122,22 @@ static bool supportsInvalidation(CSSSelector::PseudoType type)
     case CSSSelector::PseudoScrollbarTrackPiece:
     case CSSSelector::PseudoWindowInactive:
     case CSSSelector::PseudoSelection:
+    case CSSSelector::PseudoCornerPresent:
+    case CSSSelector::PseudoDecrement:
+    case CSSSelector::PseudoIncrement:
+    case CSSSelector::PseudoHorizontal:
+    case CSSSelector::PseudoVertical:
+    case CSSSelector::PseudoStart:
+    case CSSSelector::PseudoEnd:
+    case CSSSelector::PseudoDoubleButton:
+    case CSSSelector::PseudoSingleButton:
+    case CSSSelector::PseudoNoButton:
+    case CSSSelector::PseudoFullScreen:
+    case CSSSelector::PseudoFullScreenDocument:
+    case CSSSelector::PseudoFullScreenAncestor:
     case CSSSelector::PseudoInRange:
     case CSSSelector::PseudoOutOfRange:
+    case CSSSelector::PseudoWebKitCustomElement:
     case CSSSelector::PseudoUnresolved:
     case CSSSelector::PseudoContent:
     case CSSSelector::PseudoHost:
@@ -155,22 +171,6 @@ static bool requiresSubtreeInvalidation(const CSSSelector& selector)
     switch (selector.pseudoType()) {
     case CSSSelector::PseudoFirstLine:
     case CSSSelector::PseudoFirstLetter:
-    case CSSSelector::PseudoFullPageMedia:
-    case CSSSelector::PseudoResizer:
-    case CSSSelector::PseudoCornerPresent:
-    case CSSSelector::PseudoDecrement:
-    case CSSSelector::PseudoIncrement:
-    case CSSSelector::PseudoHorizontal:
-    case CSSSelector::PseudoVertical:
-    case CSSSelector::PseudoStart:
-    case CSSSelector::PseudoEnd:
-    case CSSSelector::PseudoDoubleButton:
-    case CSSSelector::PseudoSingleButton:
-    case CSSSelector::PseudoNoButton:
-    case CSSSelector::PseudoFullScreen:
-    case CSSSelector::PseudoFullScreenDocument:
-    case CSSSelector::PseudoFullScreenAncestor:
-    case CSSSelector::PseudoWebKitCustomElement:
     case CSSSelector::PseudoCue:
     case CSSSelector::PseudoFutureCue:
     case CSSSelector::PseudoPastCue:

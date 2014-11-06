@@ -116,7 +116,7 @@ public:
 
     void setLayerType(LayerType layerType) { m_layerType = layerType; }
 
-    bool isTransparent() const { return renderer()->isTransparent() || renderer()->hasMask(); }
+    bool isTransparent() const { return renderer()->isTransparent() || renderer()->hasBlendMode() || renderer()->hasMask(); }
     RenderLayer* transparentPaintingAncestor();
 
     bool isReflection() const { return renderer()->isReplica(); }
@@ -275,8 +275,6 @@ public:
     void filterNeedsPaintInvalidation();
     bool hasFilter() const { return renderer()->hasFilter(); }
 
-    bool paintsWithBlendMode() const;
-
     void* operator new(size_t);
     // Only safe to call from RenderLayerModelObject::destroyLayer()
     void operator delete(void*);
@@ -400,7 +398,6 @@ public:
             , ancestorScrollingLayer(0)
             , scrollParent(0)
             , clipParent(0)
-            , isUnclippedDescendant(false)
             , hasAncestorWithClipPath(false)
         { }
 
@@ -426,18 +423,6 @@ public:
         // clipping logic.
         const RenderLayer* clipParent;
 
-        // The "is unclipped descendant" concept is now only being used for one
-        // purpose: when traversing the RenderLayers in stacking order, we check
-        // if we scroll wrt to these unclipped descendants. We do this to
-        // proactively promote in the same way that we do for animated layers.
-        // Since we have no idea where scrolled content will scroll to, we just
-        // assume that it can overlap the unclipped thing at some point, so we
-        // promote. But this is unfortunate. We should be able to inflate the
-        // bounds of scrolling content for overlap the same way we're doing for
-        // animation and only promote what's necessary. Once we're doing that,
-        // we won't need to use the "unclipped" concept for promotion any
-        // longer.
-        unsigned isUnclippedDescendant : 1;
         unsigned hasAncestorWithClipPath : 1;
     };
 
@@ -477,7 +462,6 @@ public:
     const RenderLayer* ancestorScrollingLayer() const { return ancestorDependentCompositingInputs().ancestorScrollingLayer; }
     RenderLayer* scrollParent() const { return const_cast<RenderLayer*>(ancestorDependentCompositingInputs().scrollParent); }
     RenderLayer* clipParent() const { return const_cast<RenderLayer*>(ancestorDependentCompositingInputs().clipParent); }
-    bool isUnclippedDescendant() const { return ancestorDependentCompositingInputs().isUnclippedDescendant; }
     bool hasAncestorWithClipPath() const { return ancestorDependentCompositingInputs().hasAncestorWithClipPath; }
     bool hasDescendantWithClipPath() const { return descendantDependentCompositingInputs().hasDescendantWithClipPath; }
     bool hasNonIsolatedDescendantWithBlendMode() const { return descendantDependentCompositingInputs().hasNonIsolatedDescendantWithBlendMode; }

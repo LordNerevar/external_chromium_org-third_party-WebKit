@@ -564,7 +564,7 @@ WebInspector.ElementsTreeOutline.prototype = {
      */
     _treeElementFromEvent: function(event)
     {
-        var scrollContainer = this._element.parentElement;
+        var scrollContainer = this.element.parentElement;
 
         // We choose this X coordinate based on the knowledge that our list
         // items extend at least to the right edge of the outer <ol> container.
@@ -913,7 +913,14 @@ WebInspector.ElementsTreeOutline.prototype = {
                 const classNamePrefix = "__web-inspector-hide";
                 const classNameSuffix = "-shortcut__";
                 const styleTagId = "__web-inspector-hide-shortcut-style__";
-                const styleRules = ".__web-inspector-hide-shortcut__, .__web-inspector-hide-shortcut__ * { visibility: hidden !important; } .__web-inspector-hidebefore-shortcut__::before { visibility: hidden !important; } .__web-inspector-hideafter-shortcut__::after { visibility: hidden !important; }";
+                var selectors = [];
+                selectors.push("html /deep/ .__web-inspector-hide-shortcut__");
+                selectors.push("html /deep/ .__web-inspector-hide-shortcut__ /deep/ *");
+                selectors.push("html /deep/ .__web-inspector-hidebefore-shortcut__::before");
+                selectors.push("html /deep/ .__web-inspector-hideafter-shortcut__::after");
+                var selector = selectors.join(", ");
+                var ruleBody = "    visibility: hidden !important;";
+                var rule = "\n" + selector + "\n{\n" + ruleBody + "\n}\n";
 
                 var className = classNamePrefix + (pseudoType || "") + classNameSuffix;
                 this.classList.toggle(className);
@@ -925,7 +932,7 @@ WebInspector.ElementsTreeOutline.prototype = {
                 style = document.createElement("style");
                 style.id = styleTagId;
                 style.type = "text/css";
-                style.textContent = styleRules;
+                style.textContent = rule;
                 document.head.appendChild(style);
             }
 
@@ -2863,7 +2870,7 @@ WebInspector.ElementsTreeUpdater.prototype = {
             delete this._updateModifiedNodesTimeout;
         }
 
-        var updatedNodes = this._recentlyModifiedNodes.values().concat(this._recentlyModifiedParentNodes.values());
+        var updatedNodes = this._recentlyModifiedNodes.valuesArray().concat(this._recentlyModifiedParentNodes.valuesArray());
         var hidePanelWhileUpdating = updatedNodes.length > 10;
         if (hidePanelWhileUpdating) {
             var treeOutlineContainerElement = this._treeOutline.element.parentNode;
@@ -2871,18 +2878,18 @@ WebInspector.ElementsTreeUpdater.prototype = {
             this._treeOutline._element.classList.add("hidden");
         }
 
-        if (this._treeOutline._rootDOMNode && this._recentlyModifiedParentNodes.contains(this._treeOutline._rootDOMNode)) {
+        if (this._treeOutline._rootDOMNode && this._recentlyModifiedParentNodes.has(this._treeOutline._rootDOMNode)) {
             // Document's children have changed, perform total update.
             this._treeOutline.update();
         } else {
-            var nodes = this._recentlyModifiedNodes.values();
+            var nodes = this._recentlyModifiedNodes.valuesArray();
             for (var i = 0, size = nodes.length; i < size; ++i) {
                 var nodeItem = this._treeOutline.findTreeElement(nodes[i]);
                 if (nodeItem)
                     nodeItem.updateTitle();
             }
 
-            var parentNodes = this._recentlyModifiedParentNodes.values();
+            var parentNodes = this._recentlyModifiedParentNodes.valuesArray();
             for (var i = 0, size = parentNodes.length; i < size; ++i) {
                 var parentNodeItem = this._treeOutline.findTreeElement(parentNodes[i]);
                 if (parentNodeItem && parentNodeItem.populated)

@@ -13,7 +13,7 @@ gyp_shared_intermediate_dir := $(call intermediates-dir-for,GYP,shared,,,$(GYP_V
 
 # Make sure our deps are built first.
 GYP_TARGET_DEPENDENCIES := \
-	$(call intermediates-dir-for,GYP,third_party_WebKit_Source_bindings_modules_v8_bindings_modules_dictionary_impl_generated_gyp,,,$(GYP_VAR_PREFIX))/bindings_modules_dictionary_impl_generated.stamp \
+	$(call intermediates-dir-for,GYP,third_party_WebKit_Source_bindings_modules_v8_bindings_modules_impl_generated_gyp,,,$(GYP_VAR_PREFIX))/bindings_modules_impl_generated.stamp \
 	$(call intermediates-dir-for,GYP,third_party_WebKit_Source_bindings_modules_v8_bindings_modules_v8_generated_aggregate_gyp,,,$(GYP_VAR_PREFIX))/bindings_modules_v8_generated_aggregate.stamp \
 	$(call intermediates-dir-for,GYP,third_party_WebKit_Source_bindings_modules_v8_bindings_modules_v8_generated_individual_gyp,,,$(GYP_VAR_PREFIX))/bindings_modules_v8_generated_individual.stamp \
 	$(call intermediates-dir-for,GYP,third_party_WebKit_Source_bindings_modules_v8_bindings_modules_v8_generated_init_partial_gyp,,,$(GYP_VAR_PREFIX))/bindings_modules_v8_generated_init_partial.stamp \

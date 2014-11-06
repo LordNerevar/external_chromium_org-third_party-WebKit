@@ -1577,9 +1577,10 @@ bool RenderLayer::hitTest(const HitTestRequest& request, const HitTestLocation& 
     ASSERT(!renderer()->frame()->view()->layoutPending());
     ASSERT(!renderer()->document().renderView()->needsLayout());
 
-    LayoutRect hitTestArea = renderer()->view()->documentRect();
-    if (!request.ignoreClipping())
-        hitTestArea.intersect(frameVisibleRect(renderer()));
+    // Start with frameVisibleRect to ensure we include the scrollbars.
+    LayoutRect hitTestArea = frameVisibleRect(renderer());
+    if (request.ignoreClipping())
+        hitTestArea.unite(renderer()->view()->documentRect());
 
     RenderLayer* insideLayer = hitTestLayer(this, 0, request, result, hitTestArea, hitTestLocation, false);
     if (!insideLayer) {
@@ -2283,7 +2284,7 @@ LayoutRect RenderLayer::fragmentsBoundingBox(const RenderLayer* ancestorLayer) c
 
 LayoutRect RenderLayer::boundingBoxForCompositingOverlapTest() const
 {
-    return overlapBoundsIncludeChildren() ? boundingBoxForCompositing() : flippedLogicalBoundingBox(logicalBoundingBox(), renderer());
+    return overlapBoundsIncludeChildren() ? boundingBoxForCompositing() : fragmentsBoundingBox(this);
 }
 
 static void expandRectForReflectionAndStackingChildren(const RenderLayer* ancestorLayer, RenderLayer::CalculateBoundsOptions options, LayoutRect& result)
@@ -2504,11 +2505,6 @@ bool RenderLayer::clipsCompositingDescendantsWithBorderRadius() const
 bool RenderLayer::paintsWithTransform(PaintBehavior paintBehavior) const
 {
     return transform() && ((paintBehavior & PaintBehaviorFlattenCompositingLayers) || compositingState() != PaintsIntoOwnBacking);
-}
-
-bool RenderLayer::paintsWithBlendMode() const
-{
-    return m_renderer->hasBlendMode() && compositingState() != PaintsIntoOwnBacking;
 }
 
 bool RenderLayer::backgroundIsKnownToBeOpaqueInRect(const LayoutRect& localRect) const

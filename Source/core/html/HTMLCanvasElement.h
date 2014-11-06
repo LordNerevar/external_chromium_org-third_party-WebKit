@@ -180,6 +180,7 @@ private:
     void createImageBuffer();
     void createImageBufferInternal();
     void clearImageBuffer();
+    bool shouldUseDisplayList(const IntSize& deviceSize);
 
     void resetDirtyRect();
 
@@ -191,7 +192,7 @@ private:
 
     String toDataURLInternal(const String& mimeType, const double* quality, bool isSaving = false) const;
 
-    WillBeHeapHashSet<RawPtrWillBeWeakMember<CanvasObserver> > m_observers;
+    WillBeHeapHashSet<RawPtrWillBeWeakMember<CanvasObserver>> m_observers;
 
     IntSize m_size;
 

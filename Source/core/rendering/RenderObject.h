@@ -357,6 +357,7 @@ public:
     bool isRenderIFrame() const { return isOfType(RenderObjectRenderIFrame); }
     bool isRenderImage() const { return isOfType(RenderObjectRenderImage); }
     bool isRenderMultiColumnSet() const { return isOfType(RenderObjectRenderMultiColumnSet); }
+    bool isRenderMultiColumnSpannerSet() const { return isOfType(RenderObjectRenderMultiColumnSpannerSet); }
     bool isRenderRegion() const { return isOfType(RenderObjectRenderRegion); }
     bool isRenderScrollbarPart() const { return isOfType(RenderObjectRenderScrollbarPart); }
     bool isRenderTableCol() const { return isOfType(RenderObjectRenderTableCol); }
@@ -507,7 +508,7 @@ public:
         // RenderBlock::createAnonymousBlock(). This includes creating an anonymous
         // RenderBlock having a BLOCK or BOX display. Other classes such as RenderTextFragment
         // are not RenderBlocks and will return false. See https://bugs.webkit.org/show_bug.cgi?id=56709.
-        return isAnonymous() && (style()->display() == BLOCK || style()->display() == BOX) && style()->styleType() == NOPSEUDO && isRenderBlock() && !isListMarker() && !isRenderFlowThread()
+        return isAnonymous() && (style()->display() == BLOCK || style()->display() == BOX) && style()->styleType() == NOPSEUDO && isRenderBlock() && !isListMarker() && !isRenderFlowThread() && !isRenderMultiColumnSet()
             && !isRenderFullScreen()
             && !isRenderFullScreenPlaceholder();
     }
@@ -851,7 +852,7 @@ public:
     // Invalidate the paint of a specific subrectangle within a given object. The rect |r| is in the object's coordinate space.
     void invalidatePaintRectangle(const LayoutRect&) const;
 
-    void invalidateSelectionIfNeeded(const RenderLayerModelObject&);
+    void invalidateSelectionIfNeeded(const RenderLayerModelObject&, PaintInvalidationReason);
 
     // Walk the tree after layout issuing paint invalidations for renderers that have changed or moved, updating bounds that have changed, and clearing paint invalidation state.
     virtual void invalidateTreeIfNeeded(const PaintInvalidationState&);
@@ -1083,6 +1084,7 @@ protected:
         RenderObjectRenderImage,
         RenderObjectRenderInline,
         RenderObjectRenderMultiColumnSet,
+        RenderObjectRenderMultiColumnSpannerSet,
         RenderObjectRenderPart,
         RenderObjectRenderRegion,
         RenderObjectRenderScrollbarPart,
@@ -1194,13 +1196,14 @@ private:
 
     void invalidatePaintIncludingNonCompositingDescendantsInternal(const RenderLayerModelObject* repaintContainer);
 
+    LayoutRect previousSelectionRectForPaintInvalidation() const;
+    void setPreviousSelectionRectForPaintInvalidation(const LayoutRect&);
+
     const RenderLayerModelObject* enclosingCompositedContainer() const;
 
     RenderFlowThread* locateFlowThreadContainingBlock() const;
     void removeFromRenderFlowThread();
     void removeFromRenderFlowThreadRecursive(RenderFlowThread*);
-
-    bool hasImmediateNonWhitespaceTextChildOrPropertiesDependentOnColor() const;
 
     RenderStyle* cachedFirstLineStyle() const;
     StyleDifference adjustStyleDifference(StyleDifference) const;
@@ -1297,7 +1300,7 @@ private:
         {
         }
 
-        // 32 bits have been used in the first word, and 13 in the second.
+        // 32 bits have been used in the first word, and 14 in the second.
         ADD_BOOLEAN_BITFIELD(selfNeedsLayout, SelfNeedsLayout);
         ADD_BOOLEAN_BITFIELD(shouldInvalidateOverflowForPaint, ShouldInvalidateOverflowForPaint);
         ADD_BOOLEAN_BITFIELD(mayNeedPaintInvalidation, MayNeedPaintInvalidation);
@@ -1345,7 +1348,7 @@ private:
         unsigned m_selectionState : 3; // SelectionState
         unsigned m_flowThreadState : 2; // FlowThreadState
         unsigned m_boxDecorationBackgroundState : 2; // BoxDecorationBackgroundState
-        unsigned m_fullPaintInvalidationReason : 4; // PaintInvalidationReason
+        unsigned m_fullPaintInvalidationReason : 5; // PaintInvalidationReason
 
     public:
         bool isOutOfFlowPositioned() const { return m_positionedState == IsOutOfFlowPositioned; }
@@ -1391,7 +1394,7 @@ private:
     // Store state between styleWillChange and styleDidChange
     static bool s_affectsParentBlock;
 
-    // This stores the paint invalidation rect from the previous layout.
+    // This stores the paint invalidation rect from the previous frame.
     LayoutRect m_previousPaintInvalidationRect;
 
     // This stores the position in the paint invalidation backing's coordinate.

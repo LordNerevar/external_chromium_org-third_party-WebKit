@@ -69,6 +69,8 @@ $(gyp_intermediate_dir)/V8GeneratedCoreBindings18.cpp: $(gyp_shared_intermediate
 	mkdir -p $(@D); cp $< $@
 $(gyp_intermediate_dir)/V8GeneratedCoreBindings19.cpp: $(gyp_shared_intermediate_dir)/blink/bindings/core/v8/V8GeneratedCoreBindings19.cpp
 	mkdir -p $(@D); cp $< $@
+$(gyp_intermediate_dir)/UnionTypesCore.cpp: $(gyp_shared_intermediate_dir)/blink/bindings/core/v8/UnionTypesCore.cpp
+	mkdir -p $(@D); cp $< $@
 $(gyp_intermediate_dir)/CSSPropertyNames.cpp: $(gyp_shared_intermediate_dir)/blink/core/CSSPropertyNames.cpp
 	mkdir -p $(@D); cp $< $@
 $(gyp_intermediate_dir)/CSSValueKeywords.cpp: $(gyp_shared_intermediate_dir)/blink/core/CSSValueKeywords.cpp
@@ -173,6 +175,7 @@ LOCAL_GENERATED_SOURCES := \
 	$(gyp_intermediate_dir)/V8GeneratedCoreBindings17.cpp \
 	$(gyp_intermediate_dir)/V8GeneratedCoreBindings18.cpp \
 	$(gyp_intermediate_dir)/V8GeneratedCoreBindings19.cpp \
+	$(gyp_intermediate_dir)/UnionTypesCore.cpp \
 	$(gyp_intermediate_dir)/CSSPropertyNames.cpp \
 	$(gyp_intermediate_dir)/CSSValueKeywords.cpp \
 	$(gyp_intermediate_dir)/Event.cpp \
@@ -389,17 +392,20 @@ MY_DEFS_Debug := \
 	'-DUSE_PROPRIETARY_CODECS' \
 	'-DENABLE_BROWSER_CDMS' \
 	'-DENABLE_CONFIGURATION_POLICY' \
+	'-DENABLE_NOTIFICATIONS' \
 	'-DDISCARDABLE_MEMORY_ALWAYS_SUPPORTED_NATIVELY' \
 	'-DSYSTEM_NATIVELY_SIGNALS_MEMORY_PRESSURE' \
-	'-DENABLE_EGLIMAGE=1' \
+	'-DDONT_EMBED_BUILD_METADATA' \
 	'-DCLD_VERSION=1' \
 	'-DENABLE_PRINTING=1' \
+	'-DENABLE_BASIC_PRINTING=1' \
 	'-DENABLE_MANAGED_USERS=1' \
 	'-DVIDEO_HOLE=1' \
 	'-DENABLE_LOAD_COMPLETION_HACKS=1' \
 	'-DBLINK_IMPLEMENTATION=1' \
 	'-DINSIDE_BLINK' \
 	'-DENABLE_OPENTYPE_VERTICAL=1' \
+	'-DENABLE_LAYOUT_UNIT_IN_INLINE_BOXES=0' \
 	'-DWTF_USE_CONCATENATED_IMPULSE_RESPONSES=1' \
 	'-DWTF_USE_WEBAUDIO_OPENMAX_DL_FFT=1' \
 	'-DENABLE_WEB_AUDIO=1' \
@@ -415,7 +421,7 @@ MY_DEFS_Debug := \
 	'-DSK_WILL_NEVER_DRAW_PERSPECTIVE_TEXT' \
 	'-DSK_FM_NEW_MATCH_FAMILY_STYLE_CHARACTER=1' \
 	'-DSK_SUPPORT_LEGACY_TEXTRENDERMODE' \
-	'-DSK_LEGACY_NO_DISTANCE_FIELD_PATHS' \
+	'-DSK_IGNORE_GPU_LAYER_HOISTING' \
 	'-DSK_BUILD_FOR_ANDROID' \
 	'-DSK_USE_POSIX_THREADS' \
 	'-DCHROME_PNG_WRITE_SUPPORT' \
@@ -423,6 +429,7 @@ MY_DEFS_Debug := \
 	'-DCHROME_PNG_READ_PACK_SUPPORT' \
 	'-DLIBXML_STATIC' \
 	'-DLIBXSLT_STATIC' \
+	'-DUSE_LIBPCI=1' \
 	'-DUSE_OPENSSL=1' \
 	'-DUSE_OPENSSL_CERTS=1' \
 	'-D__STDC_CONSTANT_MACROS' \
@@ -544,17 +551,20 @@ MY_DEFS_Release := \
 	'-DUSE_PROPRIETARY_CODECS' \
 	'-DENABLE_BROWSER_CDMS' \
 	'-DENABLE_CONFIGURATION_POLICY' \
+	'-DENABLE_NOTIFICATIONS' \
 	'-DDISCARDABLE_MEMORY_ALWAYS_SUPPORTED_NATIVELY' \
 	'-DSYSTEM_NATIVELY_SIGNALS_MEMORY_PRESSURE' \
-	'-DENABLE_EGLIMAGE=1' \
+	'-DDONT_EMBED_BUILD_METADATA' \
 	'-DCLD_VERSION=1' \
 	'-DENABLE_PRINTING=1' \
+	'-DENABLE_BASIC_PRINTING=1' \
 	'-DENABLE_MANAGED_USERS=1' \
 	'-DVIDEO_HOLE=1' \
 	'-DENABLE_LOAD_COMPLETION_HACKS=1' \
 	'-DBLINK_IMPLEMENTATION=1' \
 	'-DINSIDE_BLINK' \
 	'-DENABLE_OPENTYPE_VERTICAL=1' \
+	'-DENABLE_LAYOUT_UNIT_IN_INLINE_BOXES=0' \
 	'-DWTF_USE_CONCATENATED_IMPULSE_RESPONSES=1' \
 	'-DWTF_USE_WEBAUDIO_OPENMAX_DL_FFT=1' \
 	'-DENABLE_WEB_AUDIO=1' \
@@ -570,7 +580,7 @@ MY_DEFS_Release := \
 	'-DSK_WILL_NEVER_DRAW_PERSPECTIVE_TEXT' \
 	'-DSK_FM_NEW_MATCH_FAMILY_STYLE_CHARACTER=1' \
 	'-DSK_SUPPORT_LEGACY_TEXTRENDERMODE' \
-	'-DSK_LEGACY_NO_DISTANCE_FIELD_PATHS' \
+	'-DSK_IGNORE_GPU_LAYER_HOISTING' \
 	'-DSK_BUILD_FOR_ANDROID' \
 	'-DSK_USE_POSIX_THREADS' \
 	'-DCHROME_PNG_WRITE_SUPPORT' \
@@ -578,6 +588,7 @@ MY_DEFS_Release := \
 	'-DCHROME_PNG_READ_PACK_SUPPORT' \
 	'-DLIBXML_STATIC' \
 	'-DLIBXSLT_STATIC' \
+	'-DUSE_LIBPCI=1' \
 	'-DUSE_OPENSSL=1' \
 	'-DUSE_OPENSSL_CERTS=1' \
 	'-D__STDC_CONSTANT_MACROS' \

@@ -238,7 +238,7 @@ if (!{{method.cpp_value}})
 {{cpp_value}};
 {% elif method.is_constructor %}
 {{method.cpp_type}} impl = {{cpp_value}};
-{% elif method.use_local_result and not method.union_arguments %}
+{% elif method.use_local_result %}
 {{method.cpp_type}} result = {{cpp_value}};
 {% endif %}
 {# Post-call #}
@@ -251,8 +251,6 @@ if (exceptionState.hadException()) {
 {# Set return value #}
 {% if method.is_constructor %}
 {{generate_constructor_wrapper(method)}}
-{%- elif method.union_arguments %}
-{{union_type_method_call_and_set_return_value(method)}}
 {%- elif v8_set_return_value %}
 {% if method.is_explicit_nullable %}
 if (result.isNull())
@@ -278,37 +276,12 @@ if (info.Length() >= {{argument_index}} + 1 && listener && !impl->toNode())
 
 
 {######################################}
-{% macro union_type_method_call_and_set_return_value(method) %}
-{% for argument in method.union_arguments %}
-{{argument.cpp_type}} {{argument.cpp_value}}{{argument.cpp_type_initializer}};
-{% endfor %}
-{{method.cpp_value}};
-{% if method.is_null_expression %}{# used by getters #}
-if ({{method.is_null_expression}})
-    return;
-{% endif %}
-{% for argument in method.union_arguments %}
-if ({{argument.null_check_value}}) {
-    {{argument.v8_set_return_value}};
-    return;
-}
-{% endfor %}
-{# Fall back to null if none of the union members results are returned #}
-{% if method.is_null_expression %}
-ASSERT_NOT_REACHED();
-{% else %}
-v8SetReturnValueNull(info);
-{% endif %}
-{% endmacro %}
-
-
-{######################################}
 {% macro throw_type_error(method, error_message) %}
 {% if method.has_exception_state %}
 exceptionState.throwTypeError({{error_message}});
 {{throw_from_exception_state(method)}};
 {% elif method.idl_type == 'Promise' %}
-v8SetReturnValue(info, ScriptPromise::rejectRaw(info.GetIsolate(), V8ThrowException::createTypeError({{type_error_message(method, error_message)}}, info.GetIsolate())));
+v8SetReturnValue(info, ScriptPromise::rejectRaw(info.GetIsolate(), V8ThrowException::createTypeError(info.GetIsolate(), {{type_error_message(method, error_message)}})));
 {% else %}
 V8ThrowException::throwTypeError({{type_error_message(method, error_message)}}, info.GetIsolate());
 {% endif %}{# method.has_exception_state #}
@@ -351,9 +324,9 @@ V8ThrowException::throwException({{create_minimum_arity_type_error_without_excep
 {######################################}
 {% macro create_minimum_arity_type_error_without_exception_state(method, number_of_required_arguments) %}
 {% if method.is_constructor %}
-createMinimumArityTypeErrorForConstructor("{{interface_name}}", {{number_of_required_arguments}}, info.Length(), info.GetIsolate())
+createMinimumArityTypeErrorForConstructor(info.GetIsolate(), "{{interface_name}}", {{number_of_required_arguments}}, info.Length())
 {%- else %}
-createMinimumArityTypeErrorForMethod("{{method.name}}", "{{interface_name}}", {{number_of_required_arguments}}, info.Length(), info.GetIsolate())
+createMinimumArityTypeErrorForMethod(info.GetIsolate(), "{{method.name}}", "{{interface_name}}", {{number_of_required_arguments}}, info.Length())
 {%- endif %}
 {%- endmacro %}
 
@@ -606,7 +579,7 @@ v8::Handle<v8::Object> wrapper = info.Holder();
 {% if is_script_wrappable %}
 impl->associateWithWrapper(&{{constructor_class}}::wrapperTypeInfo, wrapper, info.GetIsolate());
 {% else %}
-V8DOMWrapper::associateObjectWithWrapper<{{v8_class}}>(impl.release(), &{{constructor_class}}::wrapperTypeInfo, wrapper, info.GetIsolate());
+V8DOMWrapper::associateObjectWithWrapper<{{v8_class}}>(info.GetIsolate(), impl.release(), &{{constructor_class}}::wrapperTypeInfo, wrapper);
 {% endif %}
 {% endif %}
 v8SetReturnValue(info, wrapper);

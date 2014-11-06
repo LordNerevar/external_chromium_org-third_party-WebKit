@@ -1686,9 +1686,6 @@ void WebViewImpl::performResize()
     if (pinchVirtualViewportEnabled())
         page()->frameHost().pinchViewport().setSize(m_size);
 
-    // In case we didn't have a size when the top controls were updated.
-    didUpdateTopControls();
-
     // When device emulation is enabled, device size values may change - they are
     // usually set equal to the view size. These values are not considered viewport-dependent
     // (see MediaQueryExp::isViewportDependent), since they are only viewport-dependent in emulation mode,
@@ -3231,8 +3228,13 @@ void WebViewImpl::refreshPageScaleFactorAfterLayout()
         m_pageScaleConstraintsSet.adjustFinalConstraintsToContentsSize(contentsSize(), verticalScrollbarWidth);
     }
 
-    if (pinchVirtualViewportEnabled())
-        mainFrameImpl()->frameView()->resize(m_pageScaleConstraintsSet.mainFrameSize(contentsSize()));
+    if (pinchVirtualViewportEnabled()) {
+        int contentAndScrollbarWidth = contentsSize().width();
+        if (view->verticalScrollbar() && !view->verticalScrollbar()->isOverlayScrollbar())
+            contentAndScrollbarWidth += view->verticalScrollbar()->width();
+
+        view->resize(m_pageScaleConstraintsSet.mainFrameSize(contentAndScrollbarWidth));
+    }
 
     float newPageScaleFactor = pageScaleFactor();
     if (m_pageScaleConstraintsSet.needsReset() && m_pageScaleConstraintsSet.finalConstraints().initialScale != -1) {
@@ -3954,6 +3956,9 @@ void WebViewImpl::layoutUpdated(WebLocalFrameImpl* webframe)
 
     if (m_pageScaleConstraintsSet.constraintsDirty())
         refreshPageScaleFactorAfterLayout();
+
+    // In case we didn't have a size when the top controls were updated.
+    didUpdateTopControls();
 
     m_client->didUpdateLayout();
 }

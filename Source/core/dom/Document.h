@@ -68,6 +68,7 @@ class CDATASection;
 class CSSStyleDeclaration;
 class CSSStyleSheet;
 class CanvasRenderingContext2D;
+class CanvasRenderingContext2DOrWebGLRenderingContext;
 class Chrome;
 class Comment;
 class ConsoleMessage;
@@ -845,7 +846,7 @@ public:
     void cancelFocusAppearanceUpdate();
 
     // Extension for manipulating canvas drawing contexts for use in CSS
-    void getCSSCanvasContext(const String& type, const String& name, int width, int height, RefPtrWillBeRawPtr<CanvasRenderingContext2D>&, RefPtrWillBeRawPtr<WebGLRenderingContext>&);
+    void getCSSCanvasContext(const String& type, const String& name, int width, int height, CanvasRenderingContext2DOrWebGLRenderingContext&);
     HTMLCanvasElement& getCSSCanvasElement(const String& name);
 
     bool isDNSPrefetchEnabled() const { return m_isDNSPrefetchEnabled; }
@@ -904,6 +905,7 @@ public:
     bool processingLoadEvent() const { return m_loadEventProgress == LoadEventInProgress; }
     bool loadEventFinished() const { return m_loadEventProgress >= LoadEventCompleted; }
     bool unloadStarted() const { return m_loadEventProgress >= PageHideInProgress; }
+    bool processingBeforeUnload() const { return m_loadEventProgress == BeforeUnloadEventInProgress; }
 
     void setContainsPlugins() { m_containsPlugins = true; }
     bool containsPlugins() const { return m_containsPlugins; }
@@ -920,6 +922,8 @@ public:
     // Only one event for a target/event type combination will be dispatched per frame.
     void enqueueUniqueAnimationFrameEvent(PassRefPtrWillBeRawPtr<Event>);
     void enqueueMediaQueryChangeListeners(WillBeHeapVector<RefPtrWillBeMember<MediaQueryListListener>>&);
+
+    void dispatchEventsForPrinting();
 
     bool hasFullscreenSupplement() const { return m_hasFullscreenSupplement; }
     void setHasFullscreenSupplement() { m_hasFullscreenSupplement = true; }

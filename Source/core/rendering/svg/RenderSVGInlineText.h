@@ -43,6 +43,8 @@ public:
     // Preserves floating point precision for the use in DRT. It knows how to round and does a better job than enclosingIntRect.
     FloatRect floatLinesBoundingBox() const;
 
+    virtual PassRefPtr<StringImpl> originalText() const override;
+
 private:
     virtual const char* renderName() const override { return "RenderSVGInlineText"; }
 
@@ -57,6 +59,8 @@ private:
     virtual LayoutRect localCaretRect(InlineBox*, int caretOffset, LayoutUnit* extraWidthToEndOfLine = 0) override;
     virtual IntRect linesBoundingBox() const override;
     virtual InlineTextBox* createTextBox(int start, unsigned short length) override;
+
+    virtual LayoutRect clippedOverflowRectForPaintInvalidation(const RenderLayerModelObject* paintInvalidationContainer, const PaintInvalidationState*) const override final;
 
     float m_scalingFactor;
     Font m_scaledFont;

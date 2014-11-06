@@ -48,7 +48,7 @@ namespace {
 // throwStackOverflowException and call it.
 void throwStackOverflowException(const v8::FunctionCallbackInfo<v8::Value>& info)
 {
-    V8ThrowException::throwRangeError("Maximum call stack size exceeded.", info.GetIsolate());
+    V8ThrowException::throwRangeError(info.GetIsolate(), "Maximum call stack size exceeded.");
 }
 
 v8::Local<v8::Value> throwStackOverflowExceptionIfNeeded(v8::Isolate* isolate)
@@ -161,7 +161,7 @@ v8::Local<v8::Script> V8ScriptRunner::compileScript(v8::Handle<v8::String> code,
     return script;
 }
 
-v8::Local<v8::Value> V8ScriptRunner::runCompiledScript(v8::Handle<v8::Script> script, ExecutionContext* context, v8::Isolate* isolate)
+v8::Local<v8::Value> V8ScriptRunner::runCompiledScript(v8::Isolate* isolate, v8::Handle<v8::Script> script, ExecutionContext* context)
 {
     if (script.IsEmpty())
         return v8::Local<v8::Value>();
@@ -203,7 +203,7 @@ v8::Local<v8::Value> V8ScriptRunner::compileAndRunInternalScript(v8::Handle<v8::
     return result;
 }
 
-v8::Local<v8::Value> V8ScriptRunner::runCompiledInternalScript(v8::Handle<v8::Script> script, v8::Isolate* isolate)
+v8::Local<v8::Value> V8ScriptRunner::runCompiledInternalScript(v8::Isolate* isolate, v8::Handle<v8::Script> script)
 {
     TRACE_EVENT0("v8", "v8.run");
     TRACE_EVENT_SCOPED_SAMPLING_STATE("v8", "V8Execution");

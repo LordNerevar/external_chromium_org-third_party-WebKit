@@ -34,6 +34,7 @@
 
 #include "core/dom/Document.h"
 #include "core/fetch/MemoryCache.h"
+#include "core/fetch/ResourceFetcher.h"
 #include "core/frame/FrameConsole.h"
 #include "core/frame/LocalFrame.h"
 #include "core/frame/UseCounter.h"
@@ -195,17 +196,17 @@ static void srcsetError(Document* document, String message)
 template<typename CharType>
 static bool parseDescriptors(const CharType* attribute, Vector<DescriptorToken>& descriptors, DescriptorParsingResult& result, Document* document)
 {
-    for (Vector<DescriptorToken>::iterator it = descriptors.begin(); it != descriptors.end(); ++it) {
-        if (it->length == 0)
+    for (DescriptorToken& descriptor : descriptors) {
+        if (descriptor.length == 0)
             continue;
-        CharType c = attribute[it->lastIndex()];
+        CharType c = attribute[descriptor.lastIndex()];
         bool isValid = false;
         if (RuntimeEnabledFeatures::pictureSizesEnabled() && c == 'w') {
             if (result.hasDensity() || result.hasWidth()) {
                 srcsetError(document, "it has multiple 'w' descriptors or a mix of 'x' and 'w' descriptors.");
                 return false;
             }
-            int resourceWidth = it->toInt(attribute, isValid);
+            int resourceWidth = descriptor.toInt(attribute, isValid);
             if (!isValid || resourceWidth <= 0) {
                 srcsetError(document, "its 'w' descriptor is invalid.");
                 return false;
@@ -218,7 +219,7 @@ static bool parseDescriptors(const CharType* attribute, Vector<DescriptorToken>&
                 srcsetError(document, "it has multiple 'h' descriptors or a mix of 'x' and 'h' descriptors.");
                 return false;
             }
-            int resourceHeight = it->toInt(attribute, isValid);
+            int resourceHeight = descriptor.toInt(attribute, isValid);
             if (!isValid || resourceHeight <= 0) {
                 srcsetError(document, "its 'h' descriptor is invalid.");
                 return false;
@@ -229,7 +230,7 @@ static bool parseDescriptors(const CharType* attribute, Vector<DescriptorToken>&
                 srcsetError(document, "it has multiple 'x' descriptors or a mix of 'x' and 'w'/'h' descriptors.");
                 return false;
             }
-            float density = it->toFloat(attribute, isValid);
+            float density = descriptor.toFloat(attribute, isValid);
             if (!isValid || density < 0) {
                 srcsetError(document, "its 'x' descriptor is invalid.");
                 return false;
@@ -264,7 +265,7 @@ static void parseImageCandidatesFromSrcsetAttribute(const String& attribute, con
 
     while (position < attributeEnd) {
         // 4. Splitting loop: Collect a sequence of characters that are space characters or U+002C COMMA characters.
-        skipWhile<CharType, isHTMLSpaceOrComma<CharType> >(position, attributeEnd);
+        skipWhile<CharType, isHTMLSpaceOrComma<CharType>>(position, attributeEnd);
         if (position == attributeEnd) {
             // Contrary to spec language - descriptor parsing happens on each candidate, so when we reach the attributeEnd, we can exit.
             break;
@@ -272,7 +273,7 @@ static void parseImageCandidatesFromSrcsetAttribute(const String& attribute, con
         const CharType* imageURLStart = position;
 
         // 6. Collect a sequence of characters that are not space characters, and let that be url.
-        skipUntil<CharType, isHTMLSpace<CharType> >(position, attributeEnd);
+        skipUntil<CharType, isHTMLSpace<CharType>>(position, attributeEnd);
         const CharType* imageURLEnd = position;
 
         DescriptorParsingResult result;
@@ -361,7 +362,7 @@ static unsigned avoidDownloadIfHigherDensityResourceIsInCache(Vector<ImageCandid
         return winner;
     for (unsigned i = imageCandidates.size() - 1; i > winner; --i) {
         KURL url = document->completeURL(stripLeadingAndTrailingHTMLSpaces(imageCandidates[i].url()));
-        if (memoryCache()->resourceForURL(url))
+        if (memoryCache()->resourceForURL(url, document->fetcher()->getCacheIdentifier()))
             return i;
     }
     return winner;
@@ -375,12 +376,12 @@ static ImageCandidate pickBestImageCandidate(float deviceScaleFactor, float sour
         return ImageCandidate();
 
     // http://picture.responsiveimages.org/#normalize-source-densities
-    for (Vector<ImageCandidate>::iterator it = imageCandidates.begin(); it != imageCandidates.end(); ++it) {
-        if (it->resourceWidth() > 0) {
-            it->setDensity((float)it->resourceWidth() / sourceSize);
+    for (ImageCandidate& image : imageCandidates) {
+        if (image.resourceWidth() > 0) {
+            image.setDensity((float)image.resourceWidth() / sourceSize);
             ignoreSrc = true;
-        } else if (it->density() < 0) {
-            it->setDensity(defaultDensityValue);
+        } else if (image.density() < 0) {
+            image.setDensity(defaultDensityValue);
         }
     }
 

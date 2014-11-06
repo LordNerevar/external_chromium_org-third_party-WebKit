@@ -155,7 +155,7 @@ WebInspector.Main.prototype = {
         Runtime.experiments.register("fileSystemInspection", "FileSystem inspection");
         Runtime.experiments.register("gpuTimeline", "GPU data on timeline", true);
         Runtime.experiments.register("layersPanel", "Layers panel");
-        Runtime.experiments.register("promiseTracker", "Enable Promise inspection", true);
+        Runtime.experiments.register("promiseTracker", "Enable Promise inspection");
         Runtime.experiments.register("timelineOnTraceEvents", "Timeline on trace events");
         Runtime.experiments.register("timelinePowerProfiler", "Timeline power profiler");
         Runtime.experiments.register("timelineJSCPUProfile", "Timeline with JS sampling");
@@ -172,6 +172,8 @@ WebInspector.Main.prototype = {
                 Runtime.experiments.enableForTest("timelineOnTraceEvents");
             if (testPath.indexOf("documentation/") !== -1)
                 Runtime.experiments.enableForTest("documentation");
+            if (testPath.indexOf("elements/") !== -1)
+                Runtime.experiments.enableForTest("animationInspection");
         } else {
             Runtime.experiments.setDefaultExperiments([
                 "timelineOnTraceEvents",
@@ -182,7 +184,6 @@ WebInspector.Main.prototype = {
     },
 
     /**
-     * @private // FIXME: this is a workaround for validator bug (http://crbug.com/425506).
      * @suppressGlobalPropertiesCheck
      */
     _createAppUI: function()
@@ -359,6 +360,8 @@ WebInspector.Main.prototype = {
         {
             console.timeStamp("Main.inspectorAgentEnableCallback");
             WebInspector.notifications.dispatchEventToListeners(WebInspector.NotificationService.Events.InspectorAgentEnabledForTests);
+            // Asynchronously run the extensions.
+            setTimeout(function() { WebInspector.extensionServer.initializeExtensions(); }, 0);
         }
 
         WebInspector.overridesSupport.applyInitialOverrides();
@@ -407,11 +410,6 @@ WebInspector.Main.prototype = {
 
         if (anchor.preventFollow)
             return;
-
-        if (anchor.target === "_blank") {
-            InspectorFrontendHost.openInNewTab(anchor.href);
-            return;
-        }
 
         function followLink()
         {

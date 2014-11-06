@@ -24,22 +24,7 @@ WebInspector.ShortcutRegistry.prototype = {
      */
     applicableActions: function(key)
     {
-        return this._actionRegistry.applicableActions(this._actionIdsForKey(key), WebInspector.context);
-    },
-
-    /**
-     * @param {number} key
-     * @return {!Array.<string>}
-     */
-    _actionIdsForKey: function(key)
-    {
-        var result = new StringSet();
-        var defaults = this._defaultActionsForKey(key);
-        defaults.values().forEach(function(actionId) {
-            result.add(actionId);
-        }, this);
-
-        return result.values();
+        return this._actionRegistry.applicableActions(this._defaultActionsForKey(key).valuesArray(), WebInspector.context);
     },
 
     /**
@@ -57,7 +42,7 @@ WebInspector.ShortcutRegistry.prototype = {
      */
     shortcutDescriptorsForAction: function(actionId)
     {
-        return this._defaultActionToShortcut.get(actionId).values();
+        return this._defaultActionToShortcut.get(actionId).valuesArray();
     },
 
     /**

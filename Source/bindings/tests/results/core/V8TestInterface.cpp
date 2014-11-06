@@ -929,7 +929,7 @@ static void TestInterfaceImplementationForceSetAttributeOnThisCallback(v8::Local
 static void voidMethodTestInterfaceEmptyArgMethod(const v8::FunctionCallbackInfo<v8::Value>& info)
 {
     if (UNLIKELY(info.Length() < 1)) {
-        V8ThrowException::throwException(createMinimumArityTypeErrorForMethod("voidMethodTestInterfaceEmptyArg", "TestInterface", 1, info.Length(), info.GetIsolate()), info.GetIsolate());
+        V8ThrowException::throwException(createMinimumArityTypeErrorForMethod(info.GetIsolate(), "voidMethodTestInterfaceEmptyArg", "TestInterface", 1, info.Length()), info.GetIsolate());
         return;
     }
     TestInterfaceImplementation* impl = V8TestInterface::toImpl(info.Holder());
@@ -1164,7 +1164,7 @@ static void promiseMethodPartialOverload2Method(const v8::FunctionCallbackInfo<v
     LocalDOMWindow* window;
     {
         if (info.Length() > 0 && !V8Window::hasInstance(info[0], info.GetIsolate())) {
-            v8SetReturnValue(info, ScriptPromise::rejectRaw(info.GetIsolate(), V8ThrowException::createTypeError(ExceptionMessages::failedToExecute("promiseMethodPartialOverload", "TestInterface", "parameter 1 is not of type 'Window'."), info.GetIsolate())));
+            v8SetReturnValue(info, ScriptPromise::rejectRaw(info.GetIsolate(), V8ThrowException::createTypeError(info.GetIsolate(), ExceptionMessages::failedToExecute("promiseMethodPartialOverload", "TestInterface", "parameter 1 is not of type 'Window'."))));
             return;
         }
         window = toDOMWindow(info[0], info.GetIsolate());
@@ -1370,7 +1370,7 @@ static void partialCallWithExecutionContextRaisesExceptionVoidMethodMethodCallba
 static void partialVoidMethodPartialCallbackTypeArgMethod(const v8::FunctionCallbackInfo<v8::Value>& info)
 {
     if (UNLIKELY(info.Length() < 1)) {
-        V8ThrowException::throwException(createMinimumArityTypeErrorForMethod("partialVoidMethodPartialCallbackTypeArg", "TestInterface", 1, info.Length(), info.GetIsolate()), info.GetIsolate());
+        V8ThrowException::throwException(createMinimumArityTypeErrorForMethod(info.GetIsolate(), "partialVoidMethodPartialCallbackTypeArg", "TestInterface", 1, info.Length()), info.GetIsolate());
         return;
     }
     TestInterfaceImplementation* impl = V8TestInterface::toImpl(info.Holder());
@@ -1774,7 +1774,7 @@ static void namedPropertyEnumeratorCallback(const v8::PropertyCallbackInfo<v8::A
 
 } // namespace TestInterfaceImplementationV8Internal
 
-void V8TestInterface::visitDOMWrapper(ScriptWrappableBase* scriptWrappableBase, const v8::Persistent<v8::Object>& wrapper, v8::Isolate* isolate)
+void V8TestInterface::visitDOMWrapper(v8::Isolate* isolate, ScriptWrappableBase* scriptWrappableBase, const v8::Persistent<v8::Object>& wrapper)
 {
     TestInterfaceImplementation* impl = scriptWrappableBase->toImpl<TestInterfaceImplementation>();
     v8::Local<v8::Object> creationContext = v8::Local<v8::Object>::New(isolate, wrapper);
@@ -1782,10 +1782,10 @@ void V8TestInterface::visitDOMWrapper(ScriptWrappableBase* scriptWrappableBase, 
     TestInterfaceImplementation* referencedName = impl->referencedName();
     if (referencedName) {
         if (!DOMDataStore::containsWrapper<V8TestInterface>(referencedName, isolate))
-            wrap(referencedName, creationContext, isolate);
+            referencedName->wrap(creationContext, isolate);
         DOMDataStore::setWrapperReference<V8TestInterface>(wrapper, referencedName, isolate);
     }
-    setObjectGroup(scriptWrappableBase, wrapper, isolate);
+    setObjectGroup(isolate, scriptWrappableBase, wrapper);
 }
 
 static const V8DOMConfiguration::AttributeConfiguration V8TestInterfaceAttributes[] = {

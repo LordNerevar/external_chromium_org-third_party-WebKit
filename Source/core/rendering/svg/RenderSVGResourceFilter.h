@@ -64,7 +64,7 @@ public:
     virtual void removeAllClientsFromCache(bool markForInvalidation = true) override;
     virtual void removeClientFromCache(RenderObject*, bool markForInvalidation = true) override;
 
-    bool prepareEffect(RenderObject*, RenderStyle*, GraphicsContext*&);
+    bool prepareEffect(RenderObject*, GraphicsContext*&);
     void finishEffect(RenderObject*, GraphicsContext*&);
 
     FloatRect resourceBoundingBox(const RenderObject*);
@@ -76,8 +76,8 @@ public:
 
     void primitiveAttributeChanged(RenderObject*, const QualifiedName&);
 
+    static const RenderSVGResourceType s_resourceType = FilterResourceType;
     virtual RenderSVGResourceType resourceType() const override { return s_resourceType; }
-    static const RenderSVGResourceType s_resourceType;
 
     FloatRect drawingRegion(RenderObject*) const;
 private:
