@@ -32,7 +32,6 @@ GYP_COPIED_SOURCE_ORIGIN_DIRS :=
 LOCAL_SRC_FILES := \
 	third_party/WebKit/Source/web/AssertMatchingEnums.cpp \
 	third_party/WebKit/Source/web/AssociatedURLLoader.cpp \
-	third_party/WebKit/Source/web/BackForwardClientImpl.cpp \
 	third_party/WebKit/Source/web/ChromeClientImpl.cpp \
 	third_party/WebKit/Source/web/ColorChooserPopupUIController.cpp \
 	third_party/WebKit/Source/web/ColorChooserUIController.cpp \
@@ -69,6 +68,7 @@ LOCAL_SRC_FILES := \
 	third_party/WebKit/Source/web/PopupListBox.cpp \
 	third_party/WebKit/Source/web/PopupMenuChromium.cpp \
 	third_party/WebKit/Source/web/PrerendererClientImpl.cpp \
+	third_party/WebKit/Source/web/PushPermissionClientImpl.cpp \
 	third_party/WebKit/Source/web/RemoteFrameClientImpl.cpp \
 	third_party/WebKit/Source/web/ScrollbarGroup.cpp \
 	third_party/WebKit/Source/web/ServiceWorkerGlobalScopeClientImpl.cpp \

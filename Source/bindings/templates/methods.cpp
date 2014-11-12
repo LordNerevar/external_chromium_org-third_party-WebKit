@@ -283,7 +283,7 @@ exceptionState.throwTypeError({{error_message}});
 {% elif method.idl_type == 'Promise' %}
 v8SetReturnValue(info, ScriptPromise::rejectRaw(info.GetIsolate(), V8ThrowException::createTypeError(info.GetIsolate(), {{type_error_message(method, error_message)}})));
 {% else %}
-V8ThrowException::throwTypeError({{type_error_message(method, error_message)}}, info.GetIsolate());
+V8ThrowException::throwTypeError(info.GetIsolate(), {{type_error_message(method, error_message)}});
 {% endif %}{# method.has_exception_state #}
 {% endmacro %}
 
@@ -540,7 +540,7 @@ static void {{name}}(const v8::FunctionCallbackInfo<v8::Value>& info)
 {
     {% if constructor.is_named_constructor %}
     if (!info.IsConstructCall()) {
-        V8ThrowException::throwTypeError(ExceptionMessages::constructorNotCallableAsFunction("{{constructor.name}}"), info.GetIsolate());
+        V8ThrowException::throwTypeError(info.GetIsolate(), ExceptionMessages::constructorNotCallableAsFunction("{{constructor.name}}"));
         return;
     }
 
@@ -570,7 +570,7 @@ static void {{name}}(const v8::FunctionCallbackInfo<v8::Value>& info)
 {##############################################################################}
 {% macro generate_constructor_wrapper(constructor) %}
 {% if has_custom_wrap %}
-v8::Handle<v8::Object> wrapper = wrap(impl.get(), info.Holder(), info.GetIsolate());
+v8::Handle<v8::Object> wrapper = wrapCustom(impl.get(), info.Holder(), info.GetIsolate());
 {% else %}
 {% set constructor_class = v8_class + ('Constructor'
                                        if constructor.is_named_constructor else
@@ -579,7 +579,7 @@ v8::Handle<v8::Object> wrapper = info.Holder();
 {% if is_script_wrappable %}
 impl->associateWithWrapper(&{{constructor_class}}::wrapperTypeInfo, wrapper, info.GetIsolate());
 {% else %}
-V8DOMWrapper::associateObjectWithWrapper<{{v8_class}}>(info.GetIsolate(), impl.release(), &{{constructor_class}}::wrapperTypeInfo, wrapper);
+V8DOMWrapper::associateObjectWithWrapper(info.GetIsolate(), impl.get(), &{{constructor_class}}::wrapperTypeInfo, wrapper);
 {% endif %}
 {% endif %}
 v8SetReturnValue(info, wrapper);

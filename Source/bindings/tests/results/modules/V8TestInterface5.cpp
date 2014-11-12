@@ -345,7 +345,7 @@ static void voidMethodTestInterfaceEmptyArgMethod(const v8::FunctionCallbackInfo
     TestInterfaceEmpty* testInterfaceEmptyArg;
     {
         if (info.Length() > 0 && !V8TestInterfaceEmpty::hasInstance(info[0], info.GetIsolate())) {
-            V8ThrowException::throwTypeError(ExceptionMessages::failedToExecute("voidMethodTestInterfaceEmptyArg", "TestInterface5", "parameter 1 is not of type 'TestInterfaceEmpty'."), info.GetIsolate());
+            V8ThrowException::throwTypeError(info.GetIsolate(), ExceptionMessages::failedToExecute("voidMethodTestInterfaceEmptyArg", "TestInterface5", "parameter 1 is not of type 'TestInterfaceEmpty'."));
             return;
         }
         testInterfaceEmptyArg = V8TestInterfaceEmpty::toImpl(v8::Handle<v8::Object>::Cast(info[0]));
@@ -727,9 +727,9 @@ void V8TestInterface5::visitDOMWrapper(v8::Isolate* isolate, ScriptWrappableBase
     V8WrapperInstantiationScope scope(creationContext, isolate);
     TestInterface5Implementation* referencedName = impl->referencedName();
     if (referencedName) {
-        if (!DOMDataStore::containsWrapper<V8TestInterface5>(referencedName, isolate))
+        if (!DOMDataStore::containsWrapper(referencedName, isolate))
             referencedName->wrap(creationContext, isolate);
-        DOMDataStore::setWrapperReference<V8TestInterface5>(wrapper, referencedName, isolate);
+        DOMDataStore::setWrapperReference(wrapper, referencedName, isolate);
     }
     setObjectGroup(isolate, scriptWrappableBase, wrapper);
 }

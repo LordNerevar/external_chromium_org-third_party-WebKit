@@ -234,7 +234,7 @@ static void toStringMethodCallback(const v8::FunctionCallbackInfo<v8::Value>& in
 static void constructor(const v8::FunctionCallbackInfo<v8::Value>& info)
 {
     RefPtr<TestInterface2> impl = TestInterface2::create();
-    v8::Handle<v8::Object> wrapper = wrap(impl.get(), info.Holder(), info.GetIsolate());
+    v8::Handle<v8::Object> wrapper = wrapCustom(impl.get(), info.Holder(), info.GetIsolate());
     v8SetReturnValue(info, wrapper);
 }
 
@@ -439,7 +439,7 @@ void V8TestInterface2::constructorCallback(const v8::FunctionCallbackInfo<v8::Va
 {
     TRACE_EVENT_SCOPED_SAMPLING_STATE("blink", "DOMConstructor");
     if (!info.IsConstructCall()) {
-        V8ThrowException::throwTypeError(ExceptionMessages::constructorNotCallableAsFunction("TestInterface2"), info.GetIsolate());
+        V8ThrowException::throwTypeError(info.GetIsolate(), ExceptionMessages::constructorNotCallableAsFunction("TestInterface2"));
         return;
     }
 

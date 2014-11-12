@@ -273,7 +273,6 @@ LOCAL_SRC_FILES := \
 	third_party/WebKit/Source/bindings/core/v8/BindingSecurity.cpp \
 	third_party/WebKit/Source/bindings/core/v8/CustomElementBinding.cpp \
 	third_party/WebKit/Source/bindings/core/v8/CustomElementConstructorBuilder.cpp \
-	third_party/WebKit/Source/bindings/core/v8/DOMDataStore.cpp \
 	third_party/WebKit/Source/bindings/core/v8/DOMWrapperWorld.cpp \
 	third_party/WebKit/Source/bindings/core/v8/Dictionary.cpp \
 	third_party/WebKit/Source/bindings/core/v8/DictionaryHelperForCore.cpp \

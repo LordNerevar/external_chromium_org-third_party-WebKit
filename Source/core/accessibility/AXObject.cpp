@@ -34,6 +34,7 @@
 #include "core/editing/VisibleUnits.h"
 #include "core/editing/htmlediting.h"
 #include "core/frame/LocalFrame.h"
+#include "core/frame/Settings.h"
 #include "core/rendering/RenderListItem.h"
 #include "core/rendering/RenderTheme.h"
 #include "core/rendering/RenderView.h"
@@ -76,6 +77,7 @@ static ARIARoleMap* createARIARoleMap()
         { "definition", DefinitionRole },
         { "document", DocumentRole },
         { "rowheader", RowHeaderRole },
+        { "form", FormRole },
         { "group", GroupRole },
         { "heading", HeadingRole },
         { "img", ImageRole },
@@ -189,6 +191,7 @@ bool AXObject::isLandmarkRelated() const
     case ComplementaryRole:
     case ContentInfoRole:
     case FooterRole:
+    case FormRole:
     case MainRole:
     case NavigationRole:
     case RegionRole:
@@ -212,6 +215,15 @@ bool AXObject::isMenuRelated() const
     default:
         return false;
     }
+}
+
+bool AXObject::isPasswordFieldAndShouldHideValue() const
+{
+    Settings* settings = document()->settings();
+    if (!settings || settings->accessibilityPasswordValuesEnabled())
+        return false;
+
+    return isPasswordField();
 }
 
 bool AXObject::isTextControl() const

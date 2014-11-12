@@ -2491,8 +2491,10 @@ void Document::implicitClose()
     ASSERT(!inStyleRecalc());
     if (processingLoadEvent() || !m_parser)
         return;
-    if (frame() && frame()->navigationScheduler().locationChangePending())
+    if (frame() && frame()->navigationScheduler().locationChangePending()) {
+        suppressLoadEvent();
         return;
+    }
 
     // The call to dispatchWindowLoadEvent can detach the LocalDOMWindow and cause it (and its
     // attached Document) to be destroyed.
@@ -2580,6 +2582,9 @@ bool Document::dispatchBeforeUnloadEvent(Chrome& chrome, bool& didAllowNavigatio
 
     if (!body())
         return true;
+
+    if (processingBeforeUnload())
+        return false;
 
     RefPtrWillBeRawPtr<Document> protect(this);
 
@@ -4425,12 +4430,16 @@ void Document::applyXSLTransform(ProcessingInstruction* pi)
     String resultMIMEType;
     String newSource;
     String resultEncoding;
-    if (!processor->transformToString(this, resultMIMEType, newSource, resultEncoding))
+    setParsing(true);
+    if (!processor->transformToString(this, resultMIMEType, newSource, resultEncoding)) {
+        setParsing(false);
         return;
+    }
     // FIXME: If the transform failed we should probably report an error (like Mozilla does).
     LocalFrame* ownerFrame = frame();
     processor->createDocumentFromSource(newSource, resultEncoding, resultMIMEType, this, ownerFrame);
     InspectorInstrumentation::frameDocumentUpdated(ownerFrame);
+    setParsing(false);
 }
 
 void Document::setTransformSource(PassOwnPtr<TransformSource> source)
@@ -4716,9 +4725,6 @@ Vector<IconURL> Document::iconURLs(int iconTypesMask)
 
 Color Document::themeColor() const
 {
-    if (!RuntimeEnabledFeatures::themeColorEnabled())
-        return Color();
-
     for (HTMLMetaElement* metaElement = head() ? Traversal<HTMLMetaElement>::firstChild(*head()) : 0; metaElement; metaElement = Traversal<HTMLMetaElement>::nextSibling(*metaElement)) {
         RGBA32 rgb = Color::transparent;
         if (equalIgnoringCase(metaElement->name(), "theme-color") && CSSParser::parseColor(rgb, metaElement->content().string().stripWhiteSpace(), true))
@@ -5732,13 +5738,13 @@ v8::Handle<v8::Object> Document::wrap(v8::Handle<v8::Object> creationContext, v8
     // object gets associated with the wrapper.
     RefPtrWillBeRawPtr<Document> protect(this);
 
-    ASSERT(!DOMDataStore::containsWrapperNonTemplate(this, isolate));
+    ASSERT(!DOMDataStore::containsWrapper(this, isolate));
 
     const WrapperTypeInfo* wrapperType = wrapperTypeInfo();
 
     if (frame() && frame()->script().initializeMainWorld()) {
         // initializeMainWorld may have created a wrapper for the object, retry from the start.
-        v8::Handle<v8::Object> wrapper = DOMDataStore::getWrapperNonTemplate(this, isolate);
+        v8::Handle<v8::Object> wrapper = DOMDataStore::getWrapper(this, isolate);
         if (!wrapper.IsEmpty())
             return wrapper;
     }
@@ -5753,7 +5759,7 @@ v8::Handle<v8::Object> Document::wrap(v8::Handle<v8::Object> creationContext, v8
 
 v8::Handle<v8::Object> Document::associateWithWrapper(const WrapperTypeInfo* wrapperType, v8::Handle<v8::Object> wrapper, v8::Isolate* isolate)
 {
-    V8DOMWrapper::associateObjectWithWrapperNonTemplate(isolate, this, wrapperType, wrapper);
+    V8DOMWrapper::associateObjectWithWrapper(isolate, this, wrapperType, wrapper);
     DOMWrapperWorld& world = DOMWrapperWorld::current(isolate);
     if (world.isMainWorld() && frame())
         frame()->script().windowProxy(world)->updateDocumentWrapper(wrapper);

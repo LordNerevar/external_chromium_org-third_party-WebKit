@@ -149,6 +149,7 @@ LOCAL_SRC_FILES := \
 	third_party/WebKit/Source/modules/battery/NavigatorBattery.cpp \
 	third_party/WebKit/Source/modules/beacon/NavigatorBeacon.cpp \
 	third_party/WebKit/Source/modules/bluetooth/BluetoothDiscovery.cpp \
+	third_party/WebKit/Source/modules/bluetooth/BluetoothError.cpp \
 	third_party/WebKit/Source/modules/bluetooth/NavigatorBluetooth.cpp \
 	third_party/WebKit/Source/modules/credentialmanager/Credential.cpp \
 	third_party/WebKit/Source/modules/credentialmanager/CredentialManagerClient.cpp \
@@ -312,7 +313,9 @@ LOCAL_SRC_FILES := \
 	third_party/WebKit/Source/modules/push_messaging/PushError.cpp \
 	third_party/WebKit/Source/modules/push_messaging/PushEvent.cpp \
 	third_party/WebKit/Source/modules/push_messaging/PushManager.cpp \
-	third_party/WebKit/Source/modules/push_messaging/PushPermissionCallback.cpp \
+	third_party/WebKit/Source/modules/push_messaging/PushPermissionClient.cpp \
+	third_party/WebKit/Source/modules/push_messaging/PushPermissionRequestCallback.cpp \
+	third_party/WebKit/Source/modules/push_messaging/PushPermissionStatusCallback.cpp \
 	third_party/WebKit/Source/modules/push_messaging/PushRegistration.cpp \
 	third_party/WebKit/Source/modules/quota/DOMWindowQuota.cpp \
 	third_party/WebKit/Source/modules/quota/DeprecatedStorageInfo.cpp \

@@ -579,9 +579,9 @@ void {{v8_class}}::visitDOMWrapper(v8::Isolate* isolate, ScriptWrappableBase* sc
     {% for set_wrapper_reference_to in set_wrapper_reference_to_list %}
     {{set_wrapper_reference_to.cpp_type}} {{set_wrapper_reference_to.name}} = impl->{{set_wrapper_reference_to.name}}();
     if ({{set_wrapper_reference_to.name}}) {
-        if (!DOMDataStore::containsWrapper<{{set_wrapper_reference_to.v8_type}}>({{set_wrapper_reference_to.name}}, isolate))
+        if (!DOMDataStore::containsWrapper({{set_wrapper_reference_to.name}}, isolate))
             {{set_wrapper_reference_to.name}}->wrap(creationContext, isolate);
-        DOMDataStore::setWrapperReference<{{set_wrapper_reference_to.v8_type}}>(wrapper, {{set_wrapper_reference_to.name}}, isolate);
+        DOMDataStore::setWrapperReference(wrapper, {{set_wrapper_reference_to.name}}, isolate);
     }
     {% endfor %}
     {% endif %}
@@ -658,7 +658,7 @@ void {{v8_class}}::constructorCallback(const v8::FunctionCallbackInfo<v8::Value>
     UseCounter::countIfNotPrivateScript(info.GetIsolate(), callingExecutionContext(info.GetIsolate()), UseCounter::{{measure_as}});
     {% endif %}
     if (!info.IsConstructCall()) {
-        V8ThrowException::throwTypeError(ExceptionMessages::constructorNotCallableAsFunction("{{interface_name}}"), info.GetIsolate());
+        V8ThrowException::throwTypeError(info.GetIsolate(), ExceptionMessages::constructorNotCallableAsFunction("{{interface_name}}"));
         return;
     }
 
@@ -933,43 +933,6 @@ v8::Handle<v8::ObjectTemplate> V8Window::getShadowObjectTemplate(v8::Isolate* is
         }
         return v8::Local<v8::ObjectTemplate>::New(isolate, V8WindowShadowObjectCacheForNonMainWorld);
     }
-}
-
-{% endif %}
-{% endblock %}
-
-
-{##############################################################################}
-{% block wrap %}
-{% if not is_script_wrappable %}
-{% if not has_custom_to_v8 and not has_custom_wrap %}
-v8::Handle<v8::Object> wrap({{cpp_class}}* impl, v8::Handle<v8::Object> creationContext, v8::Isolate* isolate)
-{
-    ASSERT(impl);
-    ASSERT(!DOMDataStore::containsWrapper<{{v8_class}}>(impl, isolate));
-    return {{v8_class}}::createWrapper(impl, creationContext, isolate);
-}
-
-{% endif %}
-{% endif %}
-{% endblock %}
-
-
-{##############################################################################}
-{% block create_wrapper %}
-{% if not has_custom_to_v8 and not is_script_wrappable %}
-v8::Handle<v8::Object> {{v8_class}}::createWrapper({{pass_cpp_type}} impl, v8::Handle<v8::Object> creationContext, v8::Isolate* isolate)
-{
-    ASSERT(impl);
-    ASSERT(!DOMDataStore::containsWrapper<{{v8_class}}>(impl.get(), isolate));
-
-    v8::Handle<v8::Object> wrapper = V8DOMWrapper::createWrapper(creationContext, &wrapperTypeInfo, impl->toScriptWrappableBase(), isolate);
-    if (UNLIKELY(wrapper.IsEmpty()))
-        return wrapper;
-
-    installConditionallyEnabledProperties(wrapper, isolate);
-    V8DOMWrapper::associateObjectWithWrapper<{{v8_class}}>(isolate, impl, &wrapperTypeInfo, wrapper);
-    return wrapper;
 }
 
 {% endif %}

@@ -481,8 +481,18 @@ WebInspector.TimelinePanel.prototype = {
             this._updateToggleTimelineButton(false);
             this._stopRecording();
         }
+
+        /**
+         * @this {!WebInspector.TimelinePanel}
+         */
+        function finishLoading()
+        {
+            this._setOperationInProgress(null);
+            this._updateToggleTimelineButton(false);
+            this._hideProgressPane();
+        }
         var progressIndicator = new WebInspector.ProgressIndicator();
-        progressIndicator.addEventListener(WebInspector.Progress.Events.Done, this._setOperationInProgress.bind(this, null));
+        progressIndicator.addEventListener(WebInspector.Progress.Events.Done, finishLoading.bind(this));
         this._setOperationInProgress(progressIndicator);
         return progressIndicator;
     },
@@ -602,10 +612,15 @@ WebInspector.TimelinePanel.prototype = {
         else
             this._overviewControls.push(new WebInspector.TimelineEventOverview(this._model, this._uiUtils));
 
-        if (this._tracingTimelineModel && this._flameChartEnabledSetting.get())
+        if (this._tracingTimelineModel && this._flameChartEnabledSetting.get()) {
+            this._filterBar.filterButton().setEnabled(false);
+            this._filtersContainer.classList.toggle("hidden", true);
             this._addModeView(new WebInspector.TimelineFlameChart(this, this._tracingTimelineModel, this._frameModel()));
-        else
+        } else {
+            this._filterBar.filterButton().setEnabled(true);
+            this._filtersContainer.classList.toggle("hidden", !this._filterBar.filtersToggled());
             this._addModeView(this._timelineView());
+        }
 
         if (this._captureMemorySetting.get()) {
             if (!isFrameMode)  // Frame mode skews time, don't render aux overviews.
@@ -746,10 +761,16 @@ WebInspector.TimelinePanel.prototype = {
         this._updateSelectionDetails();
     },
 
-    _onRecordingStarted: function()
+    /**
+     * @param {!WebInspector.Event} event
+     */
+    _onRecordingStarted: function(event)
     {
         this._updateToggleTimelineButton(true);
-        this._updateProgress(WebInspector.UIString("%d events collected", 0));
+        if (event.data && event.data.fromFile)
+            this._updateProgress(WebInspector.UIString("Loading from file..."));
+        else
+            this._updateProgress(WebInspector.UIString("%d events collected", 0));
     },
 
     _recordingInProgress: function()
@@ -814,23 +835,19 @@ WebInspector.TimelinePanel.prototype = {
         }
         this._hideProgressPane();
         this._overviewPane.update();
-    },
-
-    _onRecordAdded: function(event)
-    {
-        this._addRecord(/** @type {!WebInspector.TimelineModel.Record} */(event.data));
+        this._updateSearchHighlight(false, true);
     },
 
     /**
-     * @param {!WebInspector.TimelineModel.Record} record
+     * @param {!WebInspector.Event} event
      */
-    _addRecord: function(record)
+    _onRecordAdded: function(event)
     {
+        var record = /** @type {!WebInspector.TimelineModel.Record} */ (event.data);
         if (this._lazyFrameModel && !this._tracingModel)
             this._lazyFrameModel.addRecord(record);
         for (var i = 0; i < this._currentViews.length; ++i)
             this._currentViews[i].addRecord(record);
-        this._updateSearchHighlight(false, true);
     },
 
     /**
