@@ -242,8 +242,11 @@ void RenderView::mapLocalToContainer(const RenderLayerModelObject* paintInvalida
         transformState.applyTransform(t);
     }
 
-    if (mode & IsFixed && m_frameView)
+    if ((mode & IsFixed) && m_frameView) {
         transformState.move(m_frameView->scrollOffsetForFixedPosition());
+        // IsFixed flag is only applicable within this RenderView.
+        mode &= ~IsFixed;
+    }
 
     if (paintInvalidationContainer == this)
         return;
@@ -382,13 +385,7 @@ void RenderView::mapRectToPaintInvalidationBacking(const RenderLayerModelObject*
             rect.setX(viewWidth() - rect.maxX());
     }
 
-    if (viewportConstraint == IsFixedPosition && m_frameView) {
-        rect.move(m_frameView->scrollOffsetForFixedPosition());
-        // If we have a pending scroll, invalidate the previous scroll position.
-        if (!m_frameView->pendingScrollDelta().isZero()) {
-            rect.move(-LayoutSize(m_frameView->pendingScrollDelta()));
-        }
-    }
+    adjustViewportConstrainedOffset(rect, viewportConstraint);
 
     // Apply our transform if we have one (because of full page zooming).
     if (!paintInvalidationContainer && layer() && layer()->transform())
@@ -416,6 +413,18 @@ void RenderView::mapRectToPaintInvalidationBacking(const RenderLayerModelObject*
     }
 }
 
+void RenderView::adjustViewportConstrainedOffset(LayoutRect& rect, ViewportConstrainedPosition viewportConstraint) const
+{
+    if (viewportConstraint != IsFixedPosition)
+        return;
+
+    if (m_frameView) {
+        rect.move(m_frameView->scrollOffsetForFixedPosition());
+        // If we have a pending scroll, invalidate the previous scroll position.
+        if (!m_frameView->pendingScrollDelta().isZero())
+            rect.move(-LayoutSize(m_frameView->pendingScrollDelta()));
+    }
+}
 
 void RenderView::absoluteRects(Vector<IntRect>& rects, const LayoutPoint& accumulatedOffset) const
 {

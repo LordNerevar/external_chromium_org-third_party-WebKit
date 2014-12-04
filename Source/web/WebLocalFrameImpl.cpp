@@ -332,7 +332,7 @@ public:
 
     float spoolSinglePage(GraphicsContext& graphicsContext, int pageNumber)
     {
-        frame()->document()->dispatchEventsForPrinting();
+        dispatchEventsForPrintingOnAllFrames();
         if (!frame()->document() || !frame()->document()->renderView())
             return 0;
 
@@ -345,7 +345,7 @@ public:
 
     void spoolAllPagesWithBoundaries(GraphicsContext& graphicsContext, const FloatSize& pageSizeInPixels)
     {
-        frame()->document()->dispatchEventsForPrinting();
+        dispatchEventsForPrintingOnAllFrames();
         if (!frame()->document() || !frame()->document()->renderView())
             return;
 
@@ -414,6 +414,18 @@ protected:
     }
 
 private:
+    void dispatchEventsForPrintingOnAllFrames()
+    {
+        WillBeHeapVector<RefPtrWillBeMember<Document>> documents;
+        for (Frame* currentFrame = frame(); currentFrame; currentFrame = currentFrame->tree().traverseNext(frame())) {
+            if (currentFrame->isLocalFrame())
+                documents.append(toLocalFrame(currentFrame)->document());
+        }
+
+        for (auto& doc : documents)
+            doc->dispatchEventsForPrinting();
+    }
+
     // Set when printing.
     float m_printedPageWidth;
 };
@@ -1154,11 +1166,7 @@ WebString WebLocalFrameImpl::selectionAsMarkup() const
 
 void WebLocalFrameImpl::selectWordAroundPosition(LocalFrame* frame, VisiblePosition position)
 {
-    VisibleSelection selection(position);
-    selection.expandUsingGranularity(WordGranularity);
-
-    TextGranularity granularity = selection.isRange() ? WordGranularity : CharacterGranularity;
-    frame->selection().setSelection(selection, granularity);
+    frame->selection().selectWordAroundPosition(position);
 }
 
 bool WebLocalFrameImpl::selectWordAroundCaret()
@@ -1166,8 +1174,7 @@ bool WebLocalFrameImpl::selectWordAroundCaret()
     FrameSelection& selection = frame()->selection();
     if (selection.isNone() || selection.isRange())
         return false;
-    selectWordAroundPosition(frame(), selection.selection().visibleStart());
-    return true;
+    return frame()->selection().selectWordAroundPosition(selection.selection().visibleStart());
 }
 
 void WebLocalFrameImpl::selectRange(const WebPoint& base, const WebPoint& extent)
@@ -1666,7 +1673,7 @@ void WebLocalFrameImpl::createFrameView()
     if (isLocalRoot)
         webView->suppressInvalidations(true);
 
-    frame()->createView(webView->size(), webView->baseBackgroundColor(), webView->isTransparent());
+    frame()->createView(webView->mainFrameSize(), webView->baseBackgroundColor(), webView->isTransparent());
     if (webView->shouldAutoResize() && isLocalRoot)
         frame()->view()->enableAutoSizeMode(webView->minAutoSize(), webView->maxAutoSize());
 

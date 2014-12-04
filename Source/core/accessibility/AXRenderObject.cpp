@@ -883,6 +883,19 @@ KURL AXRenderObject::url() const
 }
 
 //
+// Load inline text boxes.
+//
+
+void AXRenderObject::loadInlineTextBoxes()
+{
+    if (!renderer() || !renderer()->isText())
+        return;
+
+    clearChildren();
+    addInlineTextBoxChildren(true);
+}
+
+//
 // Properties of interactive elements.
 //
 
@@ -961,6 +974,24 @@ String AXRenderObject::stringValue() const
 
     if (m_renderer->isFileUploadControl())
         return toRenderFileUploadControl(m_renderer)->fileTextValue();
+
+     // Handle other HTML input elements that aren't text controls, like date and time
+     // controls, by returning the string value, with the exception of checkboxes
+     // and radio buttons (which would return "on").
+     if (node() && isHTMLInputElement(node())) {
+         HTMLInputElement* input = toHTMLInputElement(node());
+         if (input->type() != InputTypeNames::checkbox && input->type() != InputTypeNames::radio)
+             return input->value();
+    }
+
+    // Handle other HTML input elements that aren't text controls, like date and time
+    // controls, by returning the string value, with the exception of checkboxes
+    // and radio buttons (which would return "on").
+    if (node() && isHTMLInputElement(node())) {
+        HTMLInputElement* input = toHTMLInputElement(node());
+        if (input->type() != InputTypeNames::checkbox && input->type() != InputTypeNames::radio)
+            return input->value();
+    }
 
     // FIXME: We might need to implement a value here for more types
     // FIXME: It would be better not to advertise a value at all for the types for which we don't implement one;
@@ -1514,7 +1545,7 @@ void AXRenderObject::addChildren()
     addTextFieldChildren();
     addCanvasChildren();
     addRemoteSVGChildren();
-    addInlineTextBoxChildren();
+    addInlineTextBoxChildren(false);
 
     for (unsigned i = 0; i < m_children.size(); ++i) {
         if (!m_children[i].get()->cachedParentObject())
@@ -1857,10 +1888,10 @@ int AXRenderObject::indexForVisiblePosition(const VisiblePosition& pos) const
     return TextIterator::rangeLength(range.get());
 }
 
-void AXRenderObject::addInlineTextBoxChildren()
+void AXRenderObject::addInlineTextBoxChildren(bool force)
 {
     Settings* settings = document()->settings();
-    if (!settings || !settings->inlineTextBoxAccessibilityEnabled())
+    if (!force && (!settings || !settings->inlineTextBoxAccessibilityEnabled()))
         return;
 
     if (!renderer() || !renderer()->isText())
