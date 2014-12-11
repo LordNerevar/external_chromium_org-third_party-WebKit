@@ -1203,13 +1203,7 @@ void FrameView::adjustMediaTypeForPrinting(bool printing)
 bool FrameView::contentsInCompositedLayer() const
 {
     RenderView* renderView = this->renderView();
-    if (renderView && renderView->compositingState() == PaintsIntoOwnBacking) {
-        GraphicsLayer* layer = renderView->layer()->compositedLayerMapping()->mainGraphicsLayer();
-        if (layer && layer->drawsContent())
-            return true;
-    }
-
-    return false;
+    return renderView && renderView->compositingState() == PaintsIntoOwnBacking;
 }
 
 void FrameView::addSlowRepaintObject()
@@ -1488,6 +1482,7 @@ void FrameView::scrollElementToRect(Element* element, const IntRect& rect)
 
     bool pinchVirtualViewportEnabled = m_frame->settings()->pinchVirtualViewportEnabled();
 
+    // FIXME: This needs an isMainFrame() check as well. crbug.com/378776.
     if (pinchVirtualViewportEnabled) {
         PinchViewport& pinchViewport = m_frame->page()->frameHost().pinchViewport();
 
@@ -3176,6 +3171,17 @@ IntRect FrameView::visibleContentRect(IncludeScrollbarsInRect scollbarInclusion)
     FloatSize visibleContentSize = unscaledVisibleContentSize(scollbarInclusion);
     visibleContentSize.scale(1 / visibleContentScaleFactor());
     return IntRect(flooredIntPoint(m_scrollPosition), expandedIntSize(visibleContentSize));
+}
+
+IntRect FrameView::visualViewportRect() const
+{
+    if (!m_frame->isMainFrame()
+        || !m_frame->settings()
+        || !m_frame->settings()->pinchVirtualViewportEnabled())
+        return visibleContentRect();
+
+    PinchViewport& pinchViewport = m_frame->page()->frameHost().pinchViewport();
+    return enclosingIntRect(pinchViewport.visibleRectInDocument());
 }
 
 IntSize FrameView::contentsSize() const
