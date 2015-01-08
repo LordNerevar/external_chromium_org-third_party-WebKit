@@ -1009,6 +1009,36 @@ TEST_F(PinchViewportTest, TestScrollingDocumentRegionIntoView)
     EXPECT_FLOAT_POINT_EQ(FloatPoint(0, 10), pinchViewport.visibleRect().location());
 }
 
+#if OS(ANDROID)
+
+// Top controls can make an unscrollable page temporarily scrollable, causing
+// a scroll clamp when the page is resized. Make sure this bug is fixed.
+// crbug.com/437620
+TEST_F(PinchViewportTest, TestResizeDoesntChangeScrollOffset)
+{
+    initializeWithAndroidSettings();
+    webViewImpl()->resize(IntSize(100, 150));
+
+    navigateTo("about:blank");
+
+    PinchViewport& pinchViewport = frame()->page()->frameHost().pinchViewport();
+    FrameView& frameView = *webViewImpl()->mainFrameImpl()->frameView();
+
+    pinchViewport.setScale(2);
+    pinchViewport.move(FloatPoint(0, 40));
+
+    // Simulate bringing down the top controls by 20px but counterscrolling the outer viewport.
+    webViewImpl()->applyViewportDeltas(WebSize(), WebSize(0, 20), 1, 20);
+
+    EXPECT_EQ(20, frameView.scrollPosition().y());
+
+    webViewImpl()->setTopControlsLayoutHeight(20);
+    webViewImpl()->resize(WebSize(100, 130));
+
+    EXPECT_EQ(0, frameView.scrollPosition().y());
+    EXPECT_EQ(60, pinchViewport.location().y());
+}
+
 static IntPoint expectedMaxFrameViewScrollOffset(PinchViewport& pinchViewport, FrameView& frameView)
 {
     float aspectRatio = pinchViewport.visibleRect().width() / pinchViewport.visibleRect().height();
@@ -1165,25 +1195,6 @@ TEST_F(PinchViewportTest, TestTopControlsAdjustmentAndResize)
     EXPECT_POINT_EQ(pinchViewportExpected, pinchViewport.location());
 }
 
-// Tests that the layout viewport's scroll layer bounds are updated in a compositing
-// change update. crbug.com/423188.
-TEST_F(PinchViewportTest, TestChangingContentSizeAffectsScrollBounds)
-{
-    initializeWithAndroidSettings();
-    webViewImpl()->resize(IntSize(100, 150));
-
-    registerMockedHttpURLLoad("content-width-1000.html");
-    navigateTo(m_baseURL + "content-width-1000.html");
-
-    FrameView& frameView = *webViewImpl()->mainFrameImpl()->frameView();
-    WebLayer* scrollLayer = frameView.layerForScrolling()->platformLayer();
-
-    frameView.setContentsSize(IntSize(1500, 2400));
-    frameView.updateLayoutAndStyleForPainting();
-
-    EXPECT_SIZE_EQ(IntSize(1500, 2400), IntSize(scrollLayer->bounds()));
-}
-
 // Tests that a resize due to top controls hiding doesn't incorrectly clamp the
 // main frame's scroll offset. crbug.com/428193.
 TEST_F(PinchViewportTest, TestTopControlHidingResizeDoesntClampMainFrame)
@@ -1208,6 +1219,26 @@ TEST_F(PinchViewportTest, TestTopControlHidingResizeDoesntClampMainFrame)
     webViewImpl()->setTopControlsLayoutHeight(0);
     webViewImpl()->resize(IntSize(1000, 1500));
     EXPECT_EQ(500, frameView.scrollPositionDouble().y());
+}
+#endif
+
+// Tests that the layout viewport's scroll layer bounds are updated in a compositing
+// change update. crbug.com/423188.
+TEST_F(PinchViewportTest, TestChangingContentSizeAffectsScrollBounds)
+{
+    initializeWithAndroidSettings();
+    webViewImpl()->resize(IntSize(100, 150));
+
+    registerMockedHttpURLLoad("content-width-1000.html");
+    navigateTo(m_baseURL + "content-width-1000.html");
+
+    FrameView& frameView = *webViewImpl()->mainFrameImpl()->frameView();
+    WebLayer* scrollLayer = frameView.layerForScrolling()->platformLayer();
+
+    frameView.setContentsSize(IntSize(1500, 2400));
+    frameView.updateLayoutAndStyleForPainting();
+
+    EXPECT_SIZE_EQ(IntSize(1500, 2400), IntSize(scrollLayer->bounds()));
 }
 
 // Tests that resizing the pinch viepwort keeps its bounds within the outer
