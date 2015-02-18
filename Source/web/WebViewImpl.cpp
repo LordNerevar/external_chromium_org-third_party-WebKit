@@ -1685,6 +1685,11 @@ void WebViewImpl::performResize()
     if (pinchVirtualViewportEnabled())
         page()->frameHost().pinchViewport().setSize(m_size);
 
+    if (localFrameRootTemporary()->frameView()) {
+        if (!localFrameRootTemporary()->frameView()->needsLayout())
+            postLayoutResize(localFrameRootTemporary());
+    }
+
     // When device emulation is enabled, device size values may change - they are
     // usually set equal to the view size. These values are not considered viewport-dependent
     // (see MediaQueryExp::isViewportDependent), since they are only viewport-dependent in emulation mode,
@@ -3255,8 +3260,7 @@ void WebViewImpl::refreshPageScaleFactorAfterLayout()
         m_pageScaleConstraintsSet.adjustFinalConstraintsToContentsSize(contentsSize(), verticalScrollbarWidth);
     }
 
-    if (pinchVirtualViewportEnabled())
-        view->resize(mainFrameSize());
+    postLayoutResize(localFrameRootTemporary());
 
     float newPageScaleFactor = pageScaleFactor();
     if (m_pageScaleConstraintsSet.needsReset() && m_pageScaleConstraintsSet.finalConstraints().initialScale != -1) {
@@ -3951,6 +3955,18 @@ void WebViewImpl::resumeTreeViewCommits()
         if (m_layerTreeView)
             m_layerTreeView->setDeferCommits(false);
         m_layerTreeViewCommitsDeferred = false;
+    }
+}
+
+void WebViewImpl::postLayoutResize(WebLocalFrameImpl* webframe)
+{
+    FrameView* view = webframe->frame()->view();
+    if (pinchVirtualViewportEnabled()) {
+        if (webframe == mainFrame()) {
+            view->resize(mainFrameSize());
+        } else {
+            view->resize(webframe->frameView()->layoutSize());
+        }
     }
 }
 
